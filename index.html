@@ -2,26 +2,24 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Firebase Coin Quest</title>
+<title>Drive Mad - Login</title>
 <style>
   body {
     background: #111;
     color: white;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
   }
-
-  .ui {
+  .box {
     background: #222;
-    padding: 15px;
+    padding: 20px;
     border-radius: 10px;
     width: 300px;
-    margin-right: 20px;
+    text-align: center;
   }
-
   input, button {
     width: 100%;
     margin: 5px 0;
@@ -29,30 +27,17 @@
     border-radius: 5px;
     border: none;
   }
-
   button {
     background: #4caf50;
     color: white;
     cursor: pointer;
   }
-
-  canvas {
-    background: #000;
-    border: 2px solid #4caf50;
-  }
-
-  pre {
-    font-size: 11px;
-    background: #000;
-    padding: 5px;
-    margin-top: 5px;
-  }
 </style>
 </head>
 <body>
 
-<div class="ui">
-  <h2>Firebase Coin Quest</h2>
+<div class="box">
+  <h2>Drive Mad Cloud</h2>
 
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Wachtwoord">
@@ -64,13 +49,8 @@
 
   <hr>
 
-  <button onclick="saveProgress()">Save</button>
-  <button onclick="loadProgress()">Load</button>
-
-  <pre id="output"></pre>
+  <button onclick="play()">▶ Play Game</button>
 </div>
-
-<canvas id="game" width="400" height="400"></canvas>
 
 <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -89,199 +69,43 @@
   };
 
 
+};
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-</script>
 
-<script>
-// ===================
-// GAME STATE
-// ===================
-let gameState = {
-  level: 1,
-  coins: 0,
-  playerX: 200,
-  playerY: 200,
-  lastSave: null
-};
-
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-
-const player = {
-  size: 20,
-  speed: 3
-};
-
-let coin = {
-  x: Math.random() * 380,
-  y: Math.random() * 380,
-  size: 10
-};
-
-// ===================
-// INPUT
-// ===================
-const keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
-
-// ===================
-// FIREBASE AUTH
-// ===================
 auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById("status").innerText =
       "Ingelogd als: " + user.email;
-    loadProgress();
   } else {
     document.getElementById("status").innerText =
       "Niet ingelogd";
   }
 });
 
-// ===================
-// AUTH FUNCTIES
-// ===================
 function register() {
-  const email = emailInput();
-  const password = passwordInput();
-
-  auth.createUserWithEmailAndPassword(email, password)
-    .then(() => {
-      document.getElementById("status").innerText = "Account gemaakt";
-    })
-    .catch(err => alert(err.message));
+  auth.createUserWithEmailAndPassword(
+    email.value,
+    password.value
+  ).catch(e => alert(e.message));
 }
 
 function login() {
-  const email = emailInput();
-  const password = passwordInput();
-
-  auth.signInWithEmailAndPassword(email, password)
-    .then(() => {
-      document.getElementById("status").innerText = "Ingelogd";
-    })
-    .catch(err => alert(err.message));
+  auth.signInWithEmailAndPassword(
+    email.value,
+    password.value
+  ).catch(e => alert(e.message));
 }
 
-function emailInput() {
-  return document.getElementById("email").value;
-}
-
-function passwordInput() {
-  return document.getElementById("password").value;
-}
-
-// ===================
-// SAVE / LOAD
-// ===================
-function getGameState() {
-  return {
-    level: gameState.level,
-    coins: gameState.coins,
-    playerX: gameState.playerX,
-    playerY: gameState.playerY,
-    lastSave: new Date()
-  };
-}
-
-function setGameState(data) {
-  gameState = data;
-}
-
-function saveProgress() {
-  const user = auth.currentUser;
-  if (!user) return alert("Niet ingelogd");
-
-  db.collection("users").doc(user.uid).set({
-    game: getGameState()
-  }).then(() => {
-    document.getElementById("output").innerText =
-      "Saved:\n" + JSON.stringify(gameState, null, 2);
-  });
-}
-
-function loadProgress() {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  db.collection("users").doc(user.uid).get()
-    .then(doc => {
-      if (doc.exists) {
-        setGameState(doc.data().game);
-        document.getElementById("output").innerText =
-          "Loaded:\n" + JSON.stringify(gameState, null, 2);
-      }
-    });
-}
-
-// ===================
-// GAME LOGIC
-// ===================
-function update() {
-  if (keys["ArrowUp"] || keys["w"]) gameState.playerY -= player.speed;
-  if (keys["ArrowDown"] || keys["s"]) gameState.playerY += player.speed;
-  if (keys["ArrowLeft"] || keys["a"]) gameState.playerX -= player.speed;
-  if (keys["ArrowRight"] || keys["d"]) gameState.playerX += player.speed;
-
-  // Coin collision
-  const dx = gameState.playerX - coin.x;
-  const dy = gameState.playerY - coin.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  if (dist < player.size) {
-    gameState.coins++;
-    coin.x = Math.random() * 380;
-    coin.y = Math.random() * 380;
-
-    if (gameState.coins % 5 === 0) {
-      gameState.level++;
-    }
+function play() {
+  if (!auth.currentUser) {
+    alert("Je moet eerst inloggen");
+    return;
   }
+  window.location.href = "drive_mad.html";
 }
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Player
-  ctx.fillStyle = "lime";
-  ctx.fillRect(
-    gameState.playerX,
-    gameState.playerY,
-    player.size,
-    player.size
-  );
-
-  // Coin
-  ctx.fillStyle = "gold";
-  ctx.beginPath();
-  ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
-  ctx.fill();
-
-  // UI
-  ctx.fillStyle = "white";
-  ctx.fillText("Coins: " + gameState.coins, 10, 15);
-  ctx.fillText("Level: " + gameState.level, 10, 30);
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-loop();
-
-// ===================
-// AUTOSAVE
-// ===================
-setInterval(() => {
-  if (auth.currentUser) {
-    saveProgress();
-  }
-}, 30000);
 </script>
 
 </body>
