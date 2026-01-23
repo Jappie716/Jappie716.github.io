@@ -1463,3 +1463,36 @@ class Money {
         ctx.restore();
     }
 }
+/* ===== FIREBASE SAVE / LOAD ===== */
+
+function getCurrentState() {
+  return {
+    playerName: playerName || "",
+    greenMoney: greenMoney || 0,
+    yellowMoney: yellowMoney || 0,
+    sizeLevel: sizeLevel || 1,
+    speedLevel: speedLevel || 1,
+    multiplierLevel: multiplierLevel || 1,
+    selectedSkin: selectedSkin || 0
+  };
+}
+
+// Wordt aangeroepen na login
+window.applyLoadedState = function (data) {
+  if (data.playerName !== undefined) playerName = data.playerName;
+  if (data.greenMoney !== undefined) greenMoney = data.greenMoney;
+  if (data.yellowMoney !== undefined) yellowMoney = data.yellowMoney;
+  if (data.sizeLevel !== undefined) sizeLevel = data.sizeLevel;
+  if (data.speedLevel !== undefined) speedLevel = data.speedLevel;
+  if (data.multiplierLevel !== undefined) multiplierLevel = data.multiplierLevel;
+  if (data.selectedSkin !== undefined) selectedSkin = data.selectedSkin;
+
+  if (typeof updateUI === "function") updateUI();
+};
+
+// Auto‑save elke 15 sec
+setInterval(() => {
+  if (typeof saveGreedyState === "function") {
+    saveGreedyState(getCurrentState());
+  }
+}, 15000);
