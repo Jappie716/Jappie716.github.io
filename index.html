@@ -1,51 +1,58 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <title>Mijn Firebase Game</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .box {
-      background: #222;
-      padding: 20px;
-      border-radius: 10px;
-      width: 300px;
-      text-align: center;
-    }
-    input, button {
-      width: 100%;
-      margin: 5px 0;
-      padding: 8px;
-      border-radius: 5px;
-      border: none;
-    }
-    button {
-      background: #4caf50;
-      color: white;
-      cursor: pointer;
-    }
-    pre {
-      text-align: left;
-      background: #000;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 12px;
-      overflow-x: auto;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Firebase Coin Quest</title>
+<style>
+  body {
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .ui {
+    background: #222;
+    padding: 15px;
+    border-radius: 10px;
+    width: 300px;
+    margin-right: 20px;
+  }
+
+  input, button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+  }
+
+  button {
+    background: #4caf50;
+    color: white;
+    cursor: pointer;
+  }
+
+  canvas {
+    background: #000;
+    border: 2px solid #4caf50;
+  }
+
+  pre {
+    font-size: 11px;
+    background: #000;
+    padding: 5px;
+    margin-top: 5px;
+  }
+</style>
 </head>
 <body>
 
-<div class="box">
-  <h2>Firebase Game Login</h2>
+<div class="ui">
+  <h2>Firebase Coin Quest</h2>
 
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Wachtwoord">
@@ -57,31 +64,21 @@
 
   <hr>
 
-  <button onclick="saveProgress()">Save Progress</button>
-  <button onclick="loadProgress()">Load Progress</button>
+  <button onclick="saveProgress()">Save</button>
+  <button onclick="loadProgress()">Load</button>
 
   <pre id="output"></pre>
 </div>
 
-<!-- FIREBASE MODULE SCRIPT -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+<canvas id="game" width="400" height="400"></canvas>
 
-  import {
-    getAuth,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  import {
-    getFirestore,
-    doc,
-    setDoc,
-    getDoc
-  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-  // 🔑 JOUW FIREBASE CONFIG
+<script>
+ // 🔑 JOUW FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -91,84 +88,200 @@
     appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
   };
 
-  // Init
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
 
-  // Maak functies globaal voor de knoppen
-  window.register = async function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+</script>
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
+<script>
+// ===================
+// GAME STATE
+// ===================
+let gameState = {
+  level: 1,
+  coins: 0,
+  playerX: 200,
+  playerY: 200,
+  lastSave: null
+};
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const player = {
+  size: 20,
+  speed: 3
+};
+
+let coin = {
+  x: Math.random() * 380,
+  y: Math.random() * 380,
+  size: 10
+};
+
+// ===================
+// INPUT
+// ===================
+const keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// ===================
+// FIREBASE AUTH
+// ===================
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById("status").innerText =
+      "Ingelogd als: " + user.email;
+    loadProgress();
+  } else {
+    document.getElementById("status").innerText =
+      "Niet ingelogd";
+  }
+});
+
+// ===================
+// AUTH FUNCTIES
+// ===================
+function register() {
+  const email = emailInput();
+  const password = passwordInput();
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => {
       document.getElementById("status").innerText = "Account gemaakt";
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+    })
+    .catch(err => alert(err.message));
+}
 
-  window.login = async function () {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+function login() {
+  const email = emailInput();
+  const password = passwordInput();
 
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
       document.getElementById("status").innerText = "Ingelogd";
-    } catch (e) {
-      alert(e.message);
-    }
+    })
+    .catch(err => alert(err.message));
+}
+
+function emailInput() {
+  return document.getElementById("email").value;
+}
+
+function passwordInput() {
+  return document.getElementById("password").value;
+}
+
+// ===================
+// SAVE / LOAD
+// ===================
+function getGameState() {
+  return {
+    level: gameState.level,
+    coins: gameState.coins,
+    playerX: gameState.playerX,
+    playerY: gameState.playerY,
+    lastSave: new Date()
   };
+}
 
-  // Progress opslaan
-  window.saveProgress = async function () {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Niet ingelogd");
-      return;
-    }
+function setGameState(data) {
+  gameState = data;
+}
 
-    const gameData = {
-      level: 1,
-      coins: Math.floor(Math.random() * 500),
-      lastSave: new Date()
-    };
+function saveProgress() {
+  const user = auth.currentUser;
+  if (!user) return alert("Niet ingelogd");
 
-    await setDoc(doc(db, "users", user.uid), {
-      game: gameData
-    });
-
+  db.collection("users").doc(user.uid).set({
+    game: getGameState()
+  }).then(() => {
     document.getElementById("output").innerText =
-      "Opgeslagen:\n" + JSON.stringify(gameData, null, 2);
-  };
-
-  // Progress laden
-  window.loadProgress = async function () {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) {
-      document.getElementById("output").innerText =
-        "Geladen:\n" + JSON.stringify(snap.data().game, null, 2);
-    } else {
-      document.getElementById("output").innerText =
-        "Nog geen save gevonden";
-    }
-  };
-
-  // Auto login check
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      document.getElementById("status").innerText =
-        "Ingelogd als: " + user.email;
-      window.loadProgress();
-    } else {
-      document.getElementById("status").innerText =
-        "Niet ingelogd";
-    }
+      "Saved:\n" + JSON.stringify(gameState, null, 2);
   });
+}
+
+function loadProgress() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  db.collection("users").doc(user.uid).get()
+    .then(doc => {
+      if (doc.exists) {
+        setGameState(doc.data().game);
+        document.getElementById("output").innerText =
+          "Loaded:\n" + JSON.stringify(gameState, null, 2);
+      }
+    });
+}
+
+// ===================
+// GAME LOGIC
+// ===================
+function update() {
+  if (keys["ArrowUp"] || keys["w"]) gameState.playerY -= player.speed;
+  if (keys["ArrowDown"] || keys["s"]) gameState.playerY += player.speed;
+  if (keys["ArrowLeft"] || keys["a"]) gameState.playerX -= player.speed;
+  if (keys["ArrowRight"] || keys["d"]) gameState.playerX += player.speed;
+
+  // Coin collision
+  const dx = gameState.playerX - coin.x;
+  const dy = gameState.playerY - coin.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist < player.size) {
+    gameState.coins++;
+    coin.x = Math.random() * 380;
+    coin.y = Math.random() * 380;
+
+    if (gameState.coins % 5 === 0) {
+      gameState.level++;
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Player
+  ctx.fillStyle = "lime";
+  ctx.fillRect(
+    gameState.playerX,
+    gameState.playerY,
+    player.size,
+    player.size
+  );
+
+  // Coin
+  ctx.fillStyle = "gold";
+  ctx.beginPath();
+  ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
+  ctx.fill();
+
+  // UI
+  ctx.fillStyle = "white";
+  ctx.fillText("Coins: " + gameState.coins, 10, 15);
+  ctx.fillText("Level: " + gameState.level, 10, 30);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+// ===================
+// AUTOSAVE
+// ===================
+setInterval(() => {
+  if (auth.currentUser) {
+    saveProgress();
+  }
+}, 30000);
 </script>
 
 </body>
