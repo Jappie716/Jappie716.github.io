@@ -1,1 +1,165 @@
-<p>hoi</p>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Mijn Firebase Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .box {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      text-align: center;
+    }
+    input, button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+    pre {
+      text-align: left;
+      background: #000;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>Firebase Game Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Wachtwoord">
+
+  <button onclick="register()">Register</button>
+  <button onclick="login()">Login</button>
+
+  <p id="status">Niet ingelogd</p>
+
+  <hr>
+
+  <button onclick="saveProgress()">Save Progress</button>
+  <button onclick="loadProgress()">Load Progress</button>
+
+  <pre id="output"></pre>
+</div>
+
+<!-- FIREBASE SCRIPTS -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // 🔑 HIER JE FIREBASE CONFIG PLAKKEN
+  const firebaseConfig = {
+    apiKey: "HIER_JOUW_API_KEY",
+    authDomain: "HIER_JOUW_AUTH_DOMAIN",
+    projectId: "HIER_JOUW_PROJECT_ID",
+    storageBucket: "HIER_JOUW_STORAGE_BUCKET",
+    messagingSenderId: "HIER_JOUW_SENDER_ID",
+    appId: "HIER_JOUW_APP_ID"
+  };
+
+  // Init Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Auto-check login status
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById("status").innerText =
+        "Ingelogd als: " + user.email;
+      loadProgress();
+    } else {
+      document.getElementById("status").innerText =
+        "Niet ingelogd";
+    }
+  });
+
+  // Account maken
+  function register() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("status").innerText = "Account gemaakt";
+      })
+      .catch(err => alert(err.message));
+  }
+
+  // Inloggen
+  function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("status").innerText = "Ingelogd";
+      })
+      .catch(err => alert(err.message));
+  }
+
+  // Progress opslaan
+  function saveProgress() {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Niet ingelogd");
+      return;
+    }
+
+    const gameData = {
+      level: 1,
+      coins: Math.floor(Math.random() * 500),
+      lastSave: new Date()
+    };
+
+    db.collection("users").doc(user.uid).set({
+      game: gameData
+    }).then(() => {
+      document.getElementById("output").innerText =
+        "Opgeslagen:\n" + JSON.stringify(gameData, null, 2);
+    });
+  }
+
+  // Progress laden
+  function loadProgress() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    db.collection("users").doc(user.uid).get()
+      .then(doc => {
+        if (doc.exists) {
+          document.getElementById("output").innerText =
+            "Geladen:\n" + JSON.stringify(doc.data().game, null, 2);
+        } else {
+          document.getElementById("output").innerText =
+            "Nog geen save gevonden";
+        }
+      });
+  }
+</script>
+
+</body>
+</html>
