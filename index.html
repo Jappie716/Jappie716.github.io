@@ -1,0 +1,444 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Paradise 2</title>
+    <link rel="stylesheet" href="style/variables.css">
+    <link rel="stylesheet" href="style/layout.css">
+    
+</head>
+  <!-- LOGIN UI -->
+<style>
+#login-btn {
+  position: fixed;
+  top: 10px;
+  right: 15px;
+  z-index: 9999;
+  background: #6d4cff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#login-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+#login-box {
+  background: #222;
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
+}
+
+#login-box input, #login-box button {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+}
+</style>
+
+<button id="login-btn">Login</button>
+
+<div id="login-modal">
+  <div id="login-box">
+    <h3>Game Paradise Login</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button id="register-btn">Register</button>
+    <button id="login-btn-modal">Login</button>
+    <p id="login-status">Not logged in</p>
+  </div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+  authDomain: "gameparadise-80490.firebaseapp.com",
+  projectId: "gameparadise-80490",
+  storageBucket: "gameparadise-80490.firebasestorage.app",
+  messagingSenderId: "335620903527",
+  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// LOGIN UI
+const loginBtn = document.getElementById("login-btn");
+const modal = document.getElementById("login-modal");
+
+loginBtn.onclick = () => {
+  modal.style.display = "flex";
+};
+
+modal.onclick = e => {
+  if (e.target === modal) modal.style.display = "none";
+};
+
+document.getElementById("register-btn").onclick = () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => alert("Account created!"))
+    .catch(err => alert(err.message));
+};
+
+document.getElementById("login-btn-modal").onclick = () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => modal.style.display = "none")
+    .catch(err => alert(err.message));
+};
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    loginBtn.innerText = user.email;
+    loadAllProgress();
+  } else {
+    loginBtn.innerText = "Login";
+  }
+});
+
+// SAVE GAME PROGRESS
+function saveGame(gameName, level) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  db.collection("users").doc(user.uid).set({
+    games: {
+      [gameName]: {
+        level: level,
+        lastPlayed: new Date()
+      }
+    }
+  }, { merge: true });
+}
+
+// LOAD PROGRESS
+function loadAllProgress() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  db.collection("users").doc(user.uid).get()
+    .then(doc => {
+      if (doc.exists) {
+        console.log("Saved games:", doc.data().games);
+      }
+    });
+}
+
+// FIX PLAY BUTTONS (WIT SCHERM BUG)
+document.querySelectorAll(".action-play").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const section = btn.closest("section");
+    const iframe = section.querySelector("iframe");
+    const url = section.dataset.playUrl;
+
+    iframe.src = url;
+
+    const gameName = section.id;
+    saveGame(gameName, 1);
+  });
+});
+</script>
+<body>
+    <div id="wrapper">
+        <aside id="sidebar">
+            <div class="sidebar-category">
+                <h3>Games</h3>
+                <a href="#featured-games" id="btn-popular" class="sidebar-link">Popular Games</a>
+                <a href="#featured-games" id="btn-2player" class="sidebar-link">2 Player Games</a>
+                <a href="#featured-games" id="btn-awarded" class="sidebar-link">Awarded Games</a>
+            </div>
+            <div class="sidebar-category collapsible open">
+                <h3 class="collapsible-header">More <span class="collapse-icon">▲</span></h3>
+                <div class="collapsible-content">
+                    <a href="#" id="btn-about" class="sidebar-link">About</a>
+                    <a href="#" id="btn-community" class="sidebar-link">Community</a>
+                    <a href="#" id="btn-settings" class="sidebar-link">Settings</a>
+                </div>
+            </div>
+        </aside>
+
+        <div id="main-content-area">
+            <header>
+                <button id="sidebar-toggle" aria-label="Open menu" class="hamburger">☰</button>
+                <div class="header-logo">
+                    <h1><a href="#" id="home-link">Game paradise 2</a></h1>
+                </div>
+                
+            </header>
+
+            <main>
+                <section id="hero">
+                    <h2>Welcome to Game Paradise 2</h2>
+                    <p>Your shield against boredom. Discover amazing games and connect with a vibrant community.</p>
+                    <button>Explore Games</button>
+                </section>
+
+                <section id="featured-games">
+                    <h2>Featured Games</h2>
+                    <div class="game-grid">
+                        <div class="game-card" data-tags="popular">
+                            <img src="https://via.placeholder.com/150" alt="Game 1">
+                            <h3>Game Title 1</h3>
+                            <p>Short description of the game.</p>
+                        </div>
+                        <div class="game-card" data-tags="multiplayer,2player">
+                            <img src="https://via.placeholder.com/150" alt="Game 2">
+                            <h3>Game Title 2</h3>
+                            <p>Short description of the game.</p>
+                        </div>
+                        <div class="game-card" data-tags="popular,awarded">
+                            <img src="https://via.placeholder.com/150" alt="Game 3">
+                            <h3>Game Title 3</h3>
+                            <p>Short description of the game.</p>
+                        </div>
+                    </div>
+                </section>
+                <!-- Data Diggers page -->
+                <section id="game-page-datadiggers" class="hidden" data-play-url="https://www.110i.com/asset/games/Data%20Diggers/">
+                    <div class="game-page-inner">
+                        <button id="game-back-datadiggers" class="btn-link">← Back</button>
+                        <div class="game-detail">
+                            <h2 class="game-page-title">Data Diggers</h2>
+                            <div class="play-area">
+                                <iframe id="game-iframe-datadiggers" src="" title="Data Diggers play area" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" allowfullscreen></iframe>
+                            </div>
+                            <div class="action-bar" aria-label="Game actions">
+                                <div class="action-left">
+                                    <button class="btn action-play">Play</button>
+                                    <button class="btn action-info">Info</button>
+                                </div>
+                                <div class="action-right">
+                                    <button data-fullscreen-target="game-iframe-datadiggers" class="btn btn-fullscreen fullscreen-btn">⤢ Fullscreen</button>
+                                </div>
+                            </div>
+                            <p class="meta">By <strong>Rike Games</strong></p>
+                            <p class="game-page-desc">Dig into data, solve puzzles, and reclaim lost knowledge. This is a placeholder description for Data Diggers.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Drive Mad page -->
+                <section id="game-page-drive" class="hidden" data-play-url="https://far0ffgames.github.io/Strg/drive-mad/game/index.html">
+                    <div class="game-page-inner">
+                        <button id="game-back-drive" class="btn-link">← Back</button>
+                        <div class="game-detail">
+                            <h2 class="game-page-title">Drive Mad</h2>
+                            <div class="play-area">
+                                <iframe id="game-iframe-drive" src="" title="Drive Mad play area" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" allowfullscreen></iframe>
+                            </div>
+                            <div class="action-bar" aria-label="Game actions">
+                                <div class="action-left">
+                                    <button class="btn action-play">Play</button>
+                                    <button class="btn action-info">Info</button>
+                                </div>
+                                <div class="action-right">
+                                    <button data-fullscreen-target="game-iframe-drive" class="btn btn-fullscreen fullscreen-btn">⤢ Fullscreen</button>
+                                </div>
+                            </div>
+                            <p class="meta">By <strong>Fancade</strong></p>
+                            <p class="game-page-desc">Fancade</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Generic game page template (for other items) -->
+                <section id="game-page-generic" class="hidden">
+                    <div class="game-page-inner">
+                        <button id="game-back-generic" class="btn-link">← Back</button>
+                        <div class="game-detail">
+                            <h2 class="game-page-title" id="generic-title">Game</h2>
+                            <div class="play-area">
+                                <iframe id="game-iframe-generic" src="" title="Game play area" sandbox="allow-same-origin allow-scripts allow-forms allow-popups" allowfullscreen></iframe>
+                            </div>
+                            <div class="action-bar" aria-label="Game actions">
+                                <div class="action-left">
+                                    <button class="btn action-play">Play</button>
+                                    <button class="btn action-info">Info</button>
+                                </div>
+                                <div class="action-right">
+                                    <button data-fullscreen-target="game-iframe-generic" class="btn btn-fullscreen fullscreen-btn">⤢ Fullscreen</button>
+                                </div>
+                            </div>
+                            <p class="meta">By <strong id="generic-author">Unknown</strong></p>
+                            <p class="game-page-desc" id="generic-desc">Description not available.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- About page -->
+                <section id="about-page" class="hidden">
+                    <div class="game-page-inner">
+                        <button id="about-back" class="btn-link">← Back</button>
+                        <div class="game-detail">
+                            <h2>Hello</h2>
+                            <p>Welcome on Game Paradise 2,</p>
+                            <p>a site made for fun games on mellekoster.nl!</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Community page (new) -->
+                <section id="community-page" class="hidden">
+                    <div class="game-page-inner">
+                        <button id="community-back" class="btn-link">← Back</button>
+                        <div class="game-detail">
+                            <h2>Community</h2>
+                            <p>This page is currently empty!</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <p>&copy; 2025 Melle Koster. All rights reserved.</p>
+            </footer>
+        </div>
+
+        <section id="settings-page" class="hidden">
+            <div class="settings-inner">
+                <div class="settings-header">
+                    <h2 id="settings-title">Settings</h2>
+                </div>
+                <div class="settings-body">
+                    <div class="settings-panel">
+                        <h3>Appearance</h3>
+                        <div class="setting-row">
+                            <label>Theme</label>
+                            <div class="theme-choices" role="radiogroup" aria-label="Theme">
+                                <button type="button" class="theme-btn" data-theme="dark" aria-pressed="true">Dark</button>
+                                <button type="button" class="theme-btn" data-theme="light" aria-pressed="false">Light</button>
+                                <button type="button" class="theme-btn" data-theme="system" aria-pressed="false">System</button>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Accent color</label>
+                            <div class="accent-choices" role="radiogroup" aria-label="Accent color">
+                                <button type="button" class="accent-btn" data-accent="aegis" aria-pressed="true">Standard purple</button>
+                                <button type="button" class="accent-btn" data-accent="custom" aria-pressed="false">Custom</button>
+                                <!-- hidden custom picker group -->
+                                <div id="custom-accent-picker" class="custom-accent hidden" aria-hidden="true">
+                                    <input type="color" id="accent-color-input" value="#6d4cff" />
+                                    <input type="text" id="accent-hex-input" value="#6d4cff" placeholder="#rrggbb" />
+                                    <button id="accent-save" class="btn">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-panel">
+                        <h3>Background</h3>
+                        <div class="setting-row">
+                            <div class="bg-subsection">
+                                <h4 class="bg-subtitle">Upload</h4>
+                                <label class="upload-btn" for="bg-upload-input">Choose image…</label>
+                                <input id="bg-upload-input" type="file" accept=".png,.jpg,.jpeg,.webp,.gif" class="hidden" />
+                                <div class="muted">Supported: png, jpg, jpeg, webp, gif — saved to your device storage for this site.</div>
+                            </div>
+                            <div class="bg-subsection">
+                                <h4 class="bg-subtitle">Colors</h4>
+                                <div class="bg-choices" role="group" aria-label="Background colors">
+                                    <button type="button" id="bg-standard-btn" class="btn bg-btn" data-bg="standard">Standard</button>
+                                </div>
+                            </div>
+                            <div class="bg-subsection">
+                                <h4 class="bg-subtitle">Gallery</h4>
+                                <div class="muted">The gallery is currently not available — check back later.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-panel" id="cookies-panel">
+                        <h3>Cookies</h3>
+                        <p class="setting-row" id="cookies-text">Currently we cannot disable cookies so if you dont want cookies just leave the site</p>
+                        <div class="setting-row">
+                            <button id="reset-cookies-btn" class="btn btn-danger">Reset cookies</button>
+                        </div>
+                    </div>
+                </div>
+                <footer class="settings-footer">
+                    <!-- Cancel button removed per request -->
+                </footer>
+            </div>
+        </section>
+
+        <!-- Accent picker modal (new) -->
+        <div id="accent-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="accent-modal-title">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="accent-modal-title">Choose accent color</h3>
+                    <button id="accent-modal-close" class="modal-close" aria-label="Close">✕</button>
+                </div>
+                <div class="modal-body">
+                    <label for="accent-modal-color">Pick a color</label>
+                    <input type="color" id="accent-modal-color" value="#6d4cff" />
+                    <label for="accent-modal-hex">Hex code</label>
+                    <input type="text" id="accent-modal-hex" value="#6d4cff" placeholder="#rrggbb" />
+                </div>
+                <div class="modal-footer">
+                    <button id="accent-modal-cancel" class="btn">Cancel</button>
+                    <button id="accent-modal-save" class="btn">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cookies confirmation modal -->
+        <div id="cookies-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cookies-modal-title">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="cookies-modal-title">Reset cookies</h3>
+                    <button id="cookies-modal-close" class="modal-close" aria-label="Close">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p>By resetting your cookies you may lose some saved things.</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="cookies-cancel" class="btn">Cancel</button>
+                    <button id="cookies-confirm" class="btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cookie consent banner (bottom) -->
+        <div id="cookie-banner" class="cookie-banner hidden" role="dialog" aria-live="polite">
+            <div class="cookie-banner-inner">
+                <p>Currently we cannot disable cookies so if you dont want cookies just leave the site</p>
+                <div class="cookie-actions">
+                    <button id="cookie-leave" class="btn btn-danger">Leave</button>
+                    <button id="cookie-accept" class="btn accept-glow">Accept</button>
+                </div>
+            </div>
+        </div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "./settings.js": "./settings.js",
+        "./ui.js": "./ui.js",
+        "./utils.js": "./utils.js",
+        "./main.js": "./main.js"
+      }
+    }
+    </script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
