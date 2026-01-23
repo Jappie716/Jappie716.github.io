@@ -1463,31 +1463,74 @@ class Money {
         ctx.restore();
     }
 }
-/* ===== FIREBASE SAVE / LOAD ===== */
+/* ===== FIREBASE SAVE / LOAD (Greedy Snakes) ===== */
 
 function getCurrentState() {
   return {
-    playerName: playerName || "",
-    greenMoney: greenMoney || 0,
-    yellowMoney: yellowMoney || 0,
-    sizeLevel: sizeLevel || 1,
-    speedLevel: speedLevel || 1,
-    multiplierLevel: multiplierLevel || 1,
-    selectedSkin: selectedSkin || 0
+    playerName: gameState.playerName,
+    yellowMoney: gameState.yellowMoney,
+    ownedSkins: gameState.ownedSkins,
+    selectedSkin: gameState.selectedSkin,
+
+    // Alleen saven als er echt een player is
+    greenMoney: playerSnake ? playerSnake.greenMoney : 0,
+    sizeLevel: playerSnake ? playerSnake.sizeLevel : 1,
+    speedLevel: playerSnake ? playerSnake.speedLevel : 1,
+    multiplierLevel: playerSnake ? playerSnake.multiplierLevel : 1
   };
 }
 
-// Wordt aangeroepen na login
+// Wordt aangeroepen na login vanuit index.html
 window.applyLoadedState = function (data) {
-  if (data.playerName !== undefined) playerName = data.playerName;
-  if (data.greenMoney !== undefined) greenMoney = data.greenMoney;
-  if (data.yellowMoney !== undefined) yellowMoney = data.yellowMoney;
-  if (data.sizeLevel !== undefined) sizeLevel = data.sizeLevel;
-  if (data.speedLevel !== undefined) speedLevel = data.speedLevel;
-  if (data.multiplierLevel !== undefined) multiplierLevel = data.multiplierLevel;
-  if (data.selectedSkin !== undefined) selectedSkin = data.selectedSkin;
+  console.log("Greedy save laden:", data);
 
-  if (typeof updateUI === "function") updateUI();
+  if (data.playerName !== undefined) gameState.playerName = data.playerName;
+  if (data.yellowMoney !== undefined) {
+    saveYellowMoney(data.yellowMoney); // gebruikt jullie checksum-systeem
+  }
+
+  if (Array.isArray(data.ownedSkins)) {
+    gameState.ownedSkins = data.ownedSkins;
+    localStorage.setItem("ownedSkins", JSON.stringify(data.ownedSkins));
+  }
+
+  if (data.selectedSkin) {
+    gameState.selectedSkin = data.selectedSkin;
+    localStorage.setItem("selectedSkin", data.selectedSkin);
+  }
+
+  // Player stats pas toepassen NA initGame()
+  window._loadedPlayerStats = {
+    greenMoney: data.greenMoney ?? 0,
+    sizeLevel: data.sizeLevel ?? 1,
+    speedLevel: data.speedLevel ?? 1,
+    multiplierLevel: data.multiplierLevel ?? 1
+  };
+
+  updateYellowMoneyDisplay();
+  updateSkinsDisplay();
+};
+
+// Na initGame() player stats toepassen
+const _originalInitGame = initGame;
+initGame = function () {
+  _originalInitGame();
+
+  if (window._loadedPlayerStats && playerSnake) {
+    const s = window._loadedPlayerStats;
+
+    playerSnake.greenMoney = s.greenMoney;
+    playerSnake.sizeLevel = s.sizeLevel;
+    playerSnake.speedLevel = s.speedLevel;
+    playerSnake.multiplierLevel = s.multiplierLevel;
+
+    // Afgeleide stats opnieuw zetten
+    playerSnake.size = 15 + (playerSnake.sizeLevel - 1) * 1;
+    playerSnake.speed = 100 + (playerSnake.speedLevel - 1) * 20;
+    playerSnake.multiplier = playerSnake.multiplierLevel;
+
+    delete window._loadedPlayerStats;
+  }
 };
 
 // Auto‑save elke 15 sec
