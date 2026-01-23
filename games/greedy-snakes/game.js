@@ -1539,3 +1539,20 @@ setInterval(() => {
     saveGreedyState(getCurrentState());
   }
 }, 15000);
+/* ===== AUTO‑SAVE BIJ GAME OVER ===== */
+
+// Bewaar originele gameOver (als die bestaat)
+if (typeof gameOver === "function") {
+  const _originalGameOver = gameOver;
+
+  gameOver = function () {
+    // Eerst originele gameOver laten draaien
+    _originalGameOver();
+
+    // Daarna saven
+    if (typeof saveGreedyState === "function") {
+      console.log("Autosave bij game over...");
+      saveGreedyState(getCurrentState());
+    }
+  };
+}
