@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Paradise - Login</title>
+    <style>
+        body { background: #111; color: white; font-family: Arial; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: #222; padding: 30px; border-radius: 15px; width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: #4caf50; margin-bottom: 20px; }
+        input { width: 100%; margin: 10px 0; padding: 12px; border-radius: 5px; border: none; box-sizing: border-box; background: #333; color: white; }
+        button { width: 100%; margin: 10px 0; padding: 12px; border-radius: 5px; border: none; background: #4caf50; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #45a049; }
+        .secondary-btn { background: #555; }
+        #status { font-size: 0.9em; margin-top: 15px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Game Paradise 🎮</h2>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Wachtwoord">
+    
+    <button onclick="login()">Inloggen</button>
+    <button class="secondary-btn" onclick="register()">Account maken</button>
+    
+    <p id="status">Niet ingelogd</p>
+    <hr>
+    <button id="playBtn" onclick="play()" style="display:none;">▶ Start Drive Mad</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  const statusText = document.getElementById("status");
+  const playBtn = document.getElementById("playBtn");
+
+  // Check of gebruiker is ingelogd
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      statusText.innerText = "Ingelogd als: " + user.email;
+      playBtn.style.display = "block";
+    } else {
+      statusText.innerText = "Log in om te spelen";
+      playBtn.style.display = "none";
+    }
+  });
+
+  function register() {
+    auth.createUserWithEmailAndPassword(document.getElementById("email").value, document.getElementById("password").value)
+      .then(() => alert("Account aangemaakt!"))
+      .catch(e => alert(e.message));
+  }
+
+  function login() {
+    auth.signInWithEmailAndPassword(document.getElementById("email").value, document.getElementById("password").value)
+      .catch(e => alert(e.message));
+  }
+
+  function play() {
+    window.location.href = "drive_mad.html";
+  }
+</script>
+
+</body>
+</html>
