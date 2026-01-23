@@ -69,33 +69,33 @@
   };
 
 
-};
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const statusText = document.getElementById("status");
+
 auth.onAuthStateChanged(user => {
   if (user) {
-    document.getElementById("status").innerText =
-      "Ingelogd als: " + user.email;
+    statusText.innerText = "Ingelogd als: " + user.email;
   } else {
-    document.getElementById("status").innerText =
-      "Niet ingelogd";
+    statusText.innerText = "Niet ingelogd";
   }
 });
 
 function register() {
   auth.createUserWithEmailAndPassword(
-    email.value,
-    password.value
+    emailInput.value,
+    passwordInput.value
   ).catch(e => alert(e.message));
 }
 
 function login() {
   auth.signInWithEmailAndPassword(
-    email.value,
-    password.value
+    emailInput.value,
+    passwordInput.value
   ).catch(e => alert(e.message));
 }
 
