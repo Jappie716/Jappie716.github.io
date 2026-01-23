@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Game Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0f1115;
+  --sidebar: #161a21;
+  --card: #1e2330;
+  --accent: #4caf50;
+  --text: #eaeaea;
+  --muted: #999;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* HEADER */
+header {
+  height: 60px;
+  background: #0c0f14;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #222;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.hamburger {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  background: #333;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: black;
+}
+
+/* LAYOUT */
+#wrapper {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+/* SIDEBAR */
+#sidebar {
+  width: 250px;
+  background: var(--sidebar);
+  padding: 15px;
+  overflow-y: auto;
+  transition: transform 0.3s;
+}
+
+body.sidebar-open #sidebar {
+  transform: translateX(0);
+}
+
+@media (max-width: 700px) {
+  #sidebar {
+    position: absolute;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 10;
+  }
+  body.sidebar-open #sidebar {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-section {
+  margin-bottom: 20px;
+}
+
+.sidebar-section h3 {
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 8px;
+  border-radius: 5px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sidebar-link:hover {
+  background: #222;
+}
+
+/* SEARCH */
+.search {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  border: none;
+  background: #000;
+  color: white;
+}
+
+/* MAIN */
+#main {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* GAME GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.game-card {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 15px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+
+.game-thumb {
+  background: #000;
+  height: 100px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.game-title {
+  font-weight: bold;
+}
+
+.game-cat {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* LOGIN MODAL */
+#login-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#login-box {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
+  text-align: center;
+}
+
+#login-box input {
+  width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+  border-radius: 5px;
+  border: none;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <button class="hamburger" id="hamburger">☰</button>
+    <div class="logo">Game Hub</div>
+  </div>
+  <div class="header-right">
+    <span id="user-email">Niet ingelogd</span>
+    <button class="btn-primary" id="login-open">Login</button>
+    <button class="btn" id="logout-btn">Logout</button>
+  </div>
+</header>
+
+<div id="wrapper">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-section">
+      <input class="search" id="search" placeholder="Zoek games...">
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Categorieën</h3>
+      <a class="sidebar-link" onclick="filterCategory('All')">Alle games</a>
+      <a class="sidebar-link" onclick="filterCategory('Driving')">Racen</a>
+      <a class="sidebar-link" onclick="filterCategory('Action')">Action</a>
+      <a class="sidebar-link" onclick="filterCategory('Puzzle')">Puzzle</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+    <h2>Games</h2>
+    <div class="grid" id="game-grid"></div>
+  </main>
+</div>
+
+<!-- LOGIN MODAL -->
+<div id="login-modal">
+  <div id="login-box">
+    <h3>Login</h3>
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Wachtwoord">
+    <button class="btn-primary" id="login-btn">Login</button>
+    <button class="btn" id="register-btn">Register</button>
+  </div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+  authDomain: "gameparadise-80490.firebaseapp.com",
+  projectId: "gameparadise-80490",
+  storageBucket: "gameparadise-80490.firebasestorage.app",
+  messagingSenderId: "335620903527",
+  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// ==================
+// UI ELEMENTS
+// ==================
+const modal = document.getElementById("login-modal");
+const loginOpen = document.getElementById("login-open");
+const logoutBtn = document.getElementById("logout-btn");
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const userEmail = document.getElementById("user-email");
+const grid = document.getElementById("game-grid");
+const search = document.getElementById("search");
+
+// ==================
+// GAMES
+// ==================
+const games = [
+  { title: "Drive Mad", category: "Driving", link: "drive_mad.html" },
+  { title: "Block Runner", category: "Action", link: "#" },
+  { title: "Puzzle Box", category: "Puzzle", link: "#" }
+];
+
+let activeCategory = "All";
+
+// ==================
+// RENDER
+// ==================
+function renderGames() {
+  const term = search.value.toLowerCase();
+  grid.innerHTML = "";
+
+  games
+    .filter(g =>
+      (activeCategory === "All" || g.category === activeCategory) &&
+      g.title.toLowerCase().includes(term)
+    )
+    .forEach(game => {
+      const card = document.createElement("div");
+      card.className = "game-card";
+      card.innerHTML = `
+        <div class="game-thumb">Preview</div>
+        <div class="game-title">${game.title}</div>
+        <div class="game-cat">${game.category}</div>
+      `;
+      card.onclick = () => {
+        if (!auth.currentUser) {
+          alert("Je moet eerst inloggen");
+          return;
+        }
+        window.location.href = game.link;
+      };
+      grid.appendChild(card);
+    });
+}
+
+renderGames();
+
+// ==================
+// FILTER / SEARCH
+// ==================
+function filterCategory(cat) {
+  activeCategory = cat;
+  renderGames();
+}
+
+search.oninput = renderGames;
+
+// ==================
+// AUTH
+// ==================
+loginOpen.onclick = () => modal.style.display = "flex";
+modal.onclick = e => {
+  if (e.target === modal) modal.style.display = "none";
+};
+
+document.getElementById("login-btn").onclick = () => {
+  auth.signInWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(e => alert(e.message));
+};
+
+document.getElementById("register-btn").onclick = () => {
+  auth.createUserWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(e => alert(e.message));
+};
+
+logoutBtn.onclick = () => auth.signOut();
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    userEmail.innerText = user.email;
+    modal.style.display = "none";
+  } else {
+    userEmail.innerText = "Niet ingelogd";
+  }
+});
+
+// ==================
+// MOBILE MENU
+// ==================
+document.getElementById("hamburger").onclick = () => {
+  document.body.classList.toggle("sidebar-open");
+};
+</script>
+
+</body>
+</html>
