@@ -63,66 +63,66 @@
   <pre id="output"></pre>
 </div>
 
-<!-- FIREBASE SCRIPTS -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- FIREBASE MODULE SCRIPT -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
 
-<script>
-  // 🔑 HIER JE FIREBASE CONFIG PLAKKEN
+  import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+
+  import {
+    getFirestore,
+    doc,
+    setDoc,
+    getDoc
+  } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+  // 🔑 JOUW FIREBASE CONFIG
   const firebaseConfig = {
-    apiKey: "HIER_JOUW_API_KEY",
-    authDomain: "HIER_JOUW_AUTH_DOMAIN",
-    projectId: "HIER_JOUW_PROJECT_ID",
-    storageBucket: "HIER_JOUW_STORAGE_BUCKET",
-    messagingSenderId: "HIER_JOUW_SENDER_ID",
-    appId: "HIER_JOUW_APP_ID"
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
   };
 
-  // Init Firebase
-  firebase.initializeApp(firebaseConfig);
+  // Init
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+  // Maak functies globaal voor de knoppen
+  window.register = async function () {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-  // Auto-check login status
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      document.getElementById("status").innerText =
-        "Ingelogd als: " + user.email;
-      loadProgress();
-    } else {
-      document.getElementById("status").innerText =
-        "Niet ingelogd";
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      document.getElementById("status").innerText = "Account gemaakt";
+    } catch (e) {
+      alert(e.message);
     }
-  });
+  };
 
-  // Account maken
-  function register() {
+  window.login = async function () {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
-    auth.createUserWithEmailAndPassword(email, password)
-      .then(() => {
-        document.getElementById("status").innerText = "Account gemaakt";
-      })
-      .catch(err => alert(err.message));
-  }
-
-  // Inloggen
-  function login() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    auth.signInWithEmailAndPassword(email, password)
-      .then(() => {
-        document.getElementById("status").innerText = "Ingelogd";
-      })
-      .catch(err => alert(err.message));
-  }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      document.getElementById("status").innerText = "Ingelogd";
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   // Progress opslaan
-  function saveProgress() {
+  window.saveProgress = async function () {
     const user = auth.currentUser;
     if (!user) {
       alert("Niet ingelogd");
@@ -135,30 +135,40 @@
       lastSave: new Date()
     };
 
-    db.collection("users").doc(user.uid).set({
+    await setDoc(doc(db, "users", user.uid), {
       game: gameData
-    }).then(() => {
-      document.getElementById("output").innerText =
-        "Opgeslagen:\n" + JSON.stringify(gameData, null, 2);
     });
-  }
+
+    document.getElementById("output").innerText =
+      "Opgeslagen:\n" + JSON.stringify(gameData, null, 2);
+  };
 
   // Progress laden
-  function loadProgress() {
+  window.loadProgress = async function () {
     const user = auth.currentUser;
     if (!user) return;
 
-    db.collection("users").doc(user.uid).get()
-      .then(doc => {
-        if (doc.exists) {
-          document.getElementById("output").innerText =
-            "Geladen:\n" + JSON.stringify(doc.data().game, null, 2);
-        } else {
-          document.getElementById("output").innerText =
-            "Nog geen save gevonden";
-        }
-      });
-  }
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      document.getElementById("output").innerText =
+        "Geladen:\n" + JSON.stringify(snap.data().game, null, 2);
+    } else {
+      document.getElementById("output").innerText =
+        "Nog geen save gevonden";
+    }
+  };
+
+  // Auto login check
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      document.getElementById("status").innerText =
+        "Ingelogd als: " + user.email;
+      window.loadProgress();
+    } else {
+      document.getElementById("status").innerText =
+        "Niet ingelogd";
+    }
+  });
 </script>
 
 </body>
