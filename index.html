@@ -2,68 +2,65 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Firebase Game Hub</title>
-
-<!-- CSS -->
-<link rel="stylesheet" href="css/variables.css">
-<link rel="stylesheet" href="css/layout.css">
-
+<title>Game Hub</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<style>
+body {
+  background:#111;
+  color:white;
+  font-family:Arial;
+  margin:0;
+}
+header {
+  background:#222;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+button {
+  padding:10px;
+  margin:5px;
+  cursor:pointer;
+}
+#game-list button {
+  display:block;
+  width:100%;
+  max-width:300px;
+}
+.hidden {
+  display:none;
+}
+</style>
 </head>
-<body data-theme="dark">
 
+<body>
 <header>
-  <div class="header-logo">
-    <button class="hamburger" id="hamburger">☰</button>
-    <h1><a href="#">Game Hub</a></h1>
-  </div>
-
+  <h2>🎮 Game Hub</h2>
   <div>
     <span id="user-email">Niet ingelogd</span>
-    <button class="btn" id="logout-btn">Logout</button>
+    <button id="logout-btn">Logout</button>
   </div>
 </header>
 
-<div id="wrapper">
+<main style="padding:20px">
 
-  <!-- SIDEBAR -->
-  <aside id="sidebar">
-    <div class="sidebar-category">
-      <h3>Account</h3>
-      <a href="#" class="sidebar-link" id="login-link">Login</a>
-      <a href="#" class="sidebar-link" id="play-link">Play Game</a>
-    </div>
-  </aside>
+<section id="login-section">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Wachtwoord"><br><br>
+  <button id="login-btn">Login</button>
+  <button id="register-btn">Register</button>
+  <p id="status"></p>
+</section>
 
-  <!-- MAIN CONTENT -->
-  <div id="main-content-area">
-    <main>
+<section id="games-section" class="hidden">
+  <h3>🎯 Games</h3>
+  <div id="game-list"></div>
+</section>
 
-      <!-- LOGIN -->
-      <section id="login-section">
-        <div class="game-detail">
-          <h2>Login</h2>
-          <input id="email" placeholder="Email"><br><br>
-          <input id="password" type="password" placeholder="Wachtwoord"><br><br>
-
-          <button class="btn-primary" id="login-btn">Login</button>
-          <button class="btn" id="register-btn">Register</button>
-
-          <p id="status"></p>
-        </div>
-      </section>
-
-      <!-- HERO -->
-      <section id="hero" class="hidden">
-        <h2>Welkom bij Game Hub</h2>
-        <p>Je bent ingelogd. Klik hieronder om te spelen.</p>
-        <button id="hero-play">Play Game</button>
-      </section>
-
-    </main>
-  </div>
-</div>
+</main>
 
 <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -71,84 +68,67 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
- // 🔑 JOUW FIREBASE CONFIG
-  const firebaseConfig = {
-    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-    authDomain: "gameparadise-80490.firebaseapp.com",
-    projectId: "gameparadise-80490",
-    storageBucket: "gameparadise-80490.firebasestorage.app",
-    messagingSenderId: "335620903527",
-    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-  };
-
-
+const firebaseConfig = {
+  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+  authDomain: "gameparadise-80490.firebaseapp.com",
+  projectId: "gameparadise-80490",
+  storageBucket: "gameparadise-80490.firebasestorage.app",
+  messagingSenderId: "335620903527",
+  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* ELEMENTEN */
-const emailInput = document.getElementById("email");
-const passwordInput = document.getElementById("password");
+const email = document.getElementById("email");
+const password = document.getElementById("password");
 const loginBtn = document.getElementById("login-btn");
 const registerBtn = document.getElementById("register-btn");
-const statusText = document.getElementById("status");
-const hero = document.getElementById("hero");
-const loginSection = document.getElementById("login-section");
-const userEmail = document.getElementById("user-email");
-const playLink = document.getElementById("play-link");
-const heroPlay = document.getElementById("hero-play");
 const logoutBtn = document.getElementById("logout-btn");
 
-/* LOGIN */
+const loginSection = document.getElementById("login-section");
+const gamesSection = document.getElementById("games-section");
+const userEmail = document.getElementById("user-email");
+const gameList = document.getElementById("game-list");
+
 loginBtn.onclick = () => {
-  auth.signInWithEmailAndPassword(
-    emailInput.value,
-    passwordInput.value
-  ).catch(err => alert(err.message));
+  auth.signInWithEmailAndPassword(email.value, password.value)
+  .catch(e => alert(e.message));
 };
 
-/* REGISTER */
 registerBtn.onclick = () => {
-  auth.createUserWithEmailAndPassword(
-    emailInput.value,
-    passwordInput.value
-  ).catch(err => alert(err.message));
+  auth.createUserWithEmailAndPassword(email.value, password.value)
+  .catch(e => alert(e.message));
 };
 
-/* LOGOUT */
-logoutBtn.onclick = () => {
-  auth.signOut();
-};
+logoutBtn.onclick = () => auth.signOut();
 
-/* AUTH STATUS */
 auth.onAuthStateChanged(user => {
   if (user) {
     userEmail.innerText = user.email;
     loginSection.classList.add("hidden");
-    hero.classList.remove("hidden");
+    gamesSection.classList.remove("hidden");
+    loadGames();
   } else {
     userEmail.innerText = "Niet ingelogd";
     loginSection.classList.remove("hidden");
-    hero.classList.add("hidden");
+    gamesSection.classList.add("hidden");
   }
 });
 
-/* PLAY GAME */
-function goToGame() {
-  window.location.href = "drive_mad.html";
+async function loadGames() {
+  gameList.innerHTML = "";
+  const snap = await db.collection("games").get();
+
+  snap.forEach(doc => {
+    const game = doc.data();
+    const btn = document.createElement("button");
+    btn.innerText = "🎮 " + game.name;
+    btn.onclick = () => window.location.href = game.url;
+    gameList.appendChild(btn);
+  });
 }
-
-playLink.onclick = goToGame;
-heroPlay.onclick = goToGame;
-
-/* MOBILE SIDEBAR */
-const hamburger = document.getElementById("hamburger");
-hamburger.onclick = () => {
-  document.body.classList.toggle("sidebar-open");
-};
 </script>
-
 </body>
 </html>
