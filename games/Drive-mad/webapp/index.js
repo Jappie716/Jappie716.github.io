@@ -1,4 +1,3 @@
-<script>
 let TARGET_LEVEL = 1;
 let CURRENT_LEVEL = 0;
 
@@ -46,7 +45,6 @@ window.poki_level_start = function(level) {
     originalPokiLevelStart(level);
   }
 };
-</script>
 var Module=typeof Module!="undefined"?Module:{};if(!Module.expectedDataFileDownloads){Module.expectedDataFileDownloads=0}
 Module.expectedDataFileDownloads++;(function(){if(Module["ENVIRONMENT_IS_PTHREAD"])return;var loadPackage=function(metadata){var PACKAGE_PATH="";if(typeof window==="object"){PACKAGE_PATH=window["encodeURIComponent"](window.location.pathname.toString().substring(0,window.location.pathname.toString().lastIndexOf("/"))+"/")}else if(typeof process==="undefined"&&typeof location!=="undefined"){PACKAGE_PATH=encodeURIComponent(location.pathname.toString().substring(0,location.pathname.toString().lastIndexOf("/"))+"/")}
 var PACKAGE_NAME="index.data";var REMOTE_PACKAGE_BASE="index.data";if(typeof Module["locateFilePackage"]==="function"&&!Module["locateFile"]){Module["locateFile"]=Module["locateFilePackage"];err("warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)")}
