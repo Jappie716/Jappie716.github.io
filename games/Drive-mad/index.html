@@ -99,42 +99,50 @@
   <!-- =========================
        🎮 EMSCRIPTEN MODULE
   ========================== -->
-  <script>
-    var Module = {
-      locateFile: function (path) {
-        return "webapp/" + path;
-      },
+ <script>
+  var Module = window.Module || {};
 
-      canvas: (function () {
-        return document.getElementById("canvas");
-      })(),
+  Module.locateFile = function (path) {
+    return "webapp/" + path;
+  };
 
-      setStatus: function (text) {
-        var el = document.getElementById("status");
-        if (el) el.textContent = text;
-      },
+  Module.canvas = document.getElementById("canvas");
 
-      preRun: [function () {
-        try { FS.mkdir("/persistent"); } catch (e) {}
-        try {
-          FS.mount(IDBFS, {}, "/persistent");
-          console.log("📁 IDBFS gemount");
-        } catch (e) {
-          console.warn("Mount waarschuwing:", e);
-        }
+  Module.setStatus = function (text) {
+    const el = document.getElementById("status");
+    if (el) el.textContent = text;
+  };
 
-        FS.syncfs(true, function (err) {
-          if (err) console.error("❌ FS sync fout:", err);
-          else console.log("💾 FS geladen");
-        });
-      }],
+  // Zorg dat preRun ALTIJD een array is
+  if (!Module.preRun) Module.preRun = [];
 
-      onRuntimeInitialized: function () {
-        Module.setStatus("Klaar!");
-        console.log("🎮 Drive Mad runtime gestart");
-      }
-    };
-  </script>
+  Module.preRun.push(function () {
+    try { FS.mkdir("/persistent"); } catch (e) {}
+    try {
+      FS.mount(IDBFS, {}, "/persistent");
+      console.log("📁 IDBFS gemount");
+    } catch (e) {
+      console.warn("Mount waarschuwing:", e);
+    }
+
+    FS.syncfs(true, function (err) {
+      if (err) console.error("❌ FS sync fout:", err);
+      else console.log("💾 FS geladen");
+    });
+  });
+
+  Module.onRuntimeInitialized = function () {
+    const el = document.getElementById("status");
+    if (el) el.style.display = "none";
+
+    console.log("🎮 Drive Mad runtime gestart");
+
+    // 🔥 laad opgeslagen level terug
+    if (window.loadLevel) {
+      window.loadLevel();
+    }
+  };
+</script>
 
   <!-- 🔹 BELANGRIJK: DEZE VOLGORDE -->
   <script src="webapp/source_min.js"></script>
