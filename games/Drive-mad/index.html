@@ -29,8 +29,12 @@
   </style>
 </head>
 
-<body id="body">
+<body id="body">  
   <div id="status">Laden…</div>
+<script>
+alert("JS werkt!");
+</script>
+
 
   <!-- 🔹 ORIGINELE DRIVE MAD STRUCTUUR -->
   <div id="canvas_border" class="emscripten_border">
@@ -118,7 +122,19 @@
 
     window.saveLevel = saveLevel;
     window.loadLevel = loadLevel;
-  </script>
+ 
+(async () => {
+  try {
+    await db.collection("test").doc("ping").set({
+      time: Date.now()
+    });
+    alert("🔥 Firebase werkt!");
+  } catch(e) {
+    alert("❌ Firebase fout: " + e.message);
+  }
+})();
+</script>
+
 
   <!-- =========================
        🎮 EMSCRIPTEN MODULE
