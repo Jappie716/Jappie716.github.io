@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <title>Drive Mad</title>
-
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="google" content="notranslate" />
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
@@ -11,7 +10,7 @@
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
-  <!-- 🔥 Firebase SDKs (compat zodat het simpel blijft) -->
+  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -25,25 +24,41 @@
       border-radius: 6px;
       font-size: 13px;
       color: #fff;
-      z-index: 10;
+      z-index: 9999;
     }
   </style>
 </head>
 
 <body id="body">
-
   <div id="status">Laden…</div>
 
+  <!-- 🔹 ORIGINELE DRIVE MAD STRUCTUUR -->
   <div id="canvas_border" class="emscripten_border">
+    <div id="play_content" class="middle center">
+      <div class="edge">
+        <div class="box">
+          <div class="black">
+            <img src="webapp/cover.jpg" class="cover" />
+            <p class="title">Drive Mad</p>
+            <p class="author">Martin Magni</p>
+          </div>
+        </div>
+      </div>
+      <div id="progress_or_play">
+        <progress id="progress" class="loading" value="0" max="100"></progress>
+      </div>
+      <p class="description"></p>
+    </div>
+
     <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
     <div id="gradient"></div>
     <div id="webview_content"></div>
   </div>
 
+  <!-- =========================
+       🔑 FIREBASE INIT
+  ========================== -->
   <script>
-    // =========================
-    // 🔑 FIREBASE INIT
-    // =========================
     const firebaseConfig = {
       apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
       authDomain: "gameparadise-80490.firebaseapp.com",
@@ -63,18 +78,14 @@
         return id;
       })();
 
-    // ✅ FUNCTIE DIE ÉCHT NAAR FIREBASE SCHRIJFT
     async function saveLevel(level) {
       try {
         await db.collection("drive_mad_saves")
           .doc(USER_ID)
-          .set(
-            {
-              lastLevel: Number(level),
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            },
-            { merge: true }
-          );
+          .set({
+            lastLevel: Number(level),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
 
         console.log("✅ Level opgeslagen:", level);
       } catch (err) {
@@ -82,16 +93,18 @@
       }
     }
 
-    // Globaal zichtbaar voor WASM / JS
     window.saveLevel = saveLevel;
   </script>
 
+  <!-- =========================
+       🎮 EMSCRIPTEN MODULE
+  ========================== -->
   <script>
-    // =========================
-    // 🎮 EMSCRIPTEN MODULE HOOK
-    // (afgeleid uit jouw webapp/index.js)
-    // =========================
     var Module = {
+      locateFile: function (path) {
+        return "webapp/" + path;
+      },
+
       canvas: (function () {
         return document.getElementById("canvas");
       })(),
@@ -101,6 +114,21 @@
         if (el) el.textContent = text;
       },
 
+      preRun: [function () {
+        try { FS.mkdir("/persistent"); } catch (e) {}
+        try {
+          FS.mount(IDBFS, {}, "/persistent");
+          console.log("📁 IDBFS gemount");
+        } catch (e) {
+          console.warn("Mount waarschuwing:", e);
+        }
+
+        FS.syncfs(true, function (err) {
+          if (err) console.error("❌ FS sync fout:", err);
+          else console.log("💾 FS geladen");
+        });
+      }],
+
       onRuntimeInitialized: function () {
         Module.setStatus("Klaar!");
         console.log("🎮 Drive Mad runtime gestart");
@@ -108,54 +136,9 @@
     };
   </script>
 
-  <!-- 🚀 JOUW GAME BUILD -->
-<script>
-  var Module = {
-    locateFile: function (path) {
-      return "webapp/" + path;
-    },
-
-    canvas: (function () {
-      return document.getElementById("canvas");
-    })(),
-
-    setStatus: function (text) {
-      var el = document.getElementById("status");
-      if (el) el.textContent = text;
-    },
-
-    preRun: [function () {
-      try {
-        FS.mkdir("/persistent");
-      } catch (e) {}
-
-      try {
-        FS.mount(IDBFS, {}, "/persistent");
-        console.log("📁 IDBFS gemount");
-      } catch (e) {
-        console.warn("Mount waarschuwing:", e);
-      }
-
-      // 🔁 Alleen data laden, NIET blokkeren
-      FS.syncfs(true, function (err) {
-        if (err) {
-          console.error("❌ FS sync fout:", err);
-        } else {
-          console.log("💾 FS geladen");
-        }
-      });
-    }],
-
-    onRuntimeInitialized: function () {
-      Module.setStatus("Klaar!");
-      console.log("🎮 Drive Mad runtime gestart");
-    }
-  };
-</script>
-
-<script src="webapp/index.js"></script>
-
-
+  <!-- 🔹 BELANGRIJK: DEZE VOLGORDE -->
+  <script src="webapp/source_min.js"></script>
+  <script src="webapp/index.js"></script>
 
 </body>
 </html>
