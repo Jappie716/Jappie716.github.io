@@ -109,24 +109,49 @@
   </script>
 
   <!-- 🚀 JOUW GAME BUILD -->
-  <script>
+ <script>
   var Module = {
     locateFile: function (path) {
       return "webapp/" + path;
     },
+
     canvas: (function () {
       return document.getElementById("canvas");
     })(),
+
     setStatus: function (text) {
       var el = document.getElementById("status");
       if (el) el.textContent = text;
     },
+
+    preRun: function () {
+      try {
+        // Maak persistente save-map
+        FS.mkdir("/persistent");
+        FS.mount(IDBFS, {}, "/persistent");
+      } catch (e) {
+        console.warn("FS mount waarschuwing:", e);
+      }
+    },
+
     onRuntimeInitialized: function () {
+      // Sync filesystem (nodig om ErrnoError te voorkomen)
+      FS.syncfs(true, function (err) {
+        if (err) {
+          console.error("❌ FS sync fout:", err);
+        } else {
+          console.log("💾 FS klaar");
+        }
+      });
+
       Module.setStatus("Klaar!");
       console.log("🎮 Drive Mad runtime gestart");
     }
   };
 </script>
+
+<script src="webapp/index.js"></script>
+
 
 <script src="webapp/index.js"></script>
 
