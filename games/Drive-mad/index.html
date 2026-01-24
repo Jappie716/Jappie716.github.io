@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <title>Drive Mad</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta name="google" content="notranslate" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="google" content="notranslate" />
 
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
   <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
@@ -29,178 +30,163 @@
   </style>
 </head>
 
-<body id="body">  
-  <div id="status">Laden…</div>
-<script>
-alert("JS werkt!");
-</script>
+<body id="body">
 
+<div id="status">Laden…</div>
 
-  <!-- 🔹 ORIGINELE DRIVE MAD STRUCTUUR -->
-  <div id="canvas_border" class="emscripten_border">
-    <div id="play_content" class="middle center">
-      <div class="edge">
-        <div class="box">
-          <div class="black">
-            <img src="webapp/cover.jpg" class="cover" />
-            <p class="title">Drive Mad</p>
-            <p class="author">Martin Magni</p>
-          </div>
+<!-- 🔹 ORIGINELE DRIVE MAD STRUCTUUR -->
+<div id="canvas_border" class="emscripten_border">
+  <div id="play_content" class="middle center">
+    <div class="edge">
+      <div class="box">
+        <div class="black">
+          <img src="webapp/cover.jpg" class="cover" />
+          <p class="title">Drive Mad</p>
+          <p class="author">Martin Magni</p>
         </div>
       </div>
-      <div id="progress_or_play">
-        <progress id="progress" class="loading" value="0" max="100"></progress>
-      </div>
-      <p class="description"></p>
     </div>
-
-    <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-    <div id="gradient"></div>
-    <div id="webview_content"></div>
+    <div id="progress_or_play">
+      <progress id="progress" class="loading" value="0" max="100"></progress>
+    </div>
+    <p class="description"></p>
   </div>
 
-  <!-- =========================
-       🔑 FIREBASE
-  ========================== -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-      authDomain: "gameparadise-80490.firebaseapp.com",
-      projectId: "gameparadise-80490",
-      storageBucket: "gameparadise-80490.firebasestorage.app",
-      messagingSenderId: "335620903527",
-      appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-    };
+  <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+  <div id="gradient"></div>
+  <div id="webview_content"></div>
+</div>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<!-- =========================
+     🔑 FIREBASE + LOGIN LINK
+========================== -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+  };
 
-    // Simpele user ID (later kunnen we dit met login maken)
-    const USER_ID = localStorage.getItem("driveMadUserId") || (() => {
-      const id = "user_" + Math.random().toString(36).slice(2);
-      localStorage.setItem("driveMadUserId", id);
-      return id;
-    })();
+  firebase.initializeApp(firebaseConfig);
 
-    // 💾 SAVE LEVEL
-    async function saveLevel(level) {
-      try {
-        await db.collection("drive_mad_saves")
-          .doc(USER_ID)
-          .set({
-            lastLevel: Number(level),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-        console.log("✅ Level opgeslagen:", level);
-      } catch (err) {
-        console.error("❌ Firebase save fout:", err);
-      }
-    }
+  let USER_ID = null;
 
-    // 📥 LOAD LEVEL (ECHT NAAR GAME STUREN)
-async function loadLevel() {
-  try {
-    const doc = await db.collection("drive_mad_saves")
-      .doc(USER_ID)
-      .get();
-
-    if (doc.exists) {
-      const lvl = Number(doc.data().lastLevel || 1);
-      console.log("📥 Level geladen:", lvl);
-
-      // Wacht tot de game klaar is
-      const waitForGame = setInterval(() => {
-        if (window.Module && Module.ccall) {
-          clearInterval(waitForGame);
-
-          try {
-            // Stuur level naar de WASM game
-            Module.ccall(
-              "SetLevel",   // interne functie
-              null,
-              ["number"],
-              [lvl]
-            );
-
-            console.log("🎮 Game naar level gezet:", lvl);
-          } catch (e) {
-            console.warn("⚠️ Kon level niet zetten:", e);
-          }
-        }
-      }, 500);
+  // 🔐 Check of gebruiker is ingelogd
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      USER_ID = user.uid;
+      console.log("🔐 Ingelogd als:", user.email);
     } else {
-      console.log("ℹ️ Geen save gevonden, start bij level 1");
+      alert("❌ Je bent niet ingelogd! Ga terug naar de homepage.");
+      window.location.href = "index.html";
     }
-  } catch (err) {
-    console.warn("❌ Level laden fout:", err);
-  }
-}
+  });
 
-    window.saveLevel = saveLevel;
-    window.loadLevel = loadLevel;
- 
-(async () => {
-  try {
-    await db.collection("test").doc("ping").set({
-      time: Date.now()
-    });
-    alert("🔥 Firebase werkt!");
-  } catch(e) {
-    alert("❌ Firebase fout: " + e.message);
+  // 💾 SAVE LEVEL
+  async function saveLevel(level) {
+    if (!USER_ID) return;
+
+    try {
+      await db.collection("drive_mad_saves")
+        .doc(USER_ID)
+        .set({
+          lastLevel: Number(level),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+      console.log("✅ Level opgeslagen:", level);
+    } catch (err) {
+      console.error("❌ Firebase save fout:", err);
+    }
   }
-})();
+
+  // 📥 LOAD LEVEL
+  async function loadLevel() {
+    if (!USER_ID) return;
+
+    try {
+      const doc = await db.collection("drive_mad_saves")
+        .doc(USER_ID)
+        .get();
+
+      if (doc.exists) {
+        const lvl = Number(doc.data().lastLevel || 1);
+        console.log("📥 Level geladen:", lvl);
+
+        const waitForGame = setInterval(() => {
+          if (window.Module && Module.ccall) {
+            clearInterval(waitForGame);
+            Module.ccall("SetLevel", null, ["number"], [lvl]);
+            console.log("🎮 Game naar level gezet:", lvl);
+          }
+        }, 500);
+      } else {
+        console.log("ℹ️ Geen save gevonden");
+      }
+    } catch (err) {
+      console.warn("❌ Level laden fout:", err);
+    }
+  }
+
+  window.saveLevel = saveLevel;
+  window.loadLevel = loadLevel;
 </script>
 
+<!-- =========================
+     🎮 EMSCRIPTEN MODULE
+========================== -->
+<script>
+  var Module = window.Module || {};
 
-  <!-- =========================
-       🎮 EMSCRIPTEN MODULE
-  ========================== -->
-  <script>
-    var Module = window.Module || {};
+  Module.locateFile = function (path) {
+    return "webapp/" + path;
+  };
 
-    Module.locateFile = function (path) {
-      return "webapp/" + path;
-    };
+  Module.canvas = document.getElementById("canvas");
 
-    Module.canvas = document.getElementById("canvas");
+  Module.setStatus = function (text) {
+    const el = document.getElementById("status");
+    if (el) el.textContent = text;
+  };
 
-    Module.setStatus = function (text) {
-      const el = document.getElementById("status");
-      if (el) el.textContent = text;
-    };
+  if (!Module.preRun) Module.preRun = [];
 
-    if (!Module.preRun) Module.preRun = [];
+  Module.preRun.push(function () {
+    try { FS.mkdir("/persistent"); } catch (e) {}
+    try {
+      FS.mount(IDBFS, {}, "/persistent");
+      console.log("📁 IDBFS gemount");
+    } catch (e) {
+      console.warn("Mount waarschuwing:", e);
+    }
 
-    Module.preRun.push(function () {
-      try { FS.mkdir("/persistent"); } catch (e) {}
-      try {
-        FS.mount(IDBFS, {}, "/persistent");
-        console.log("📁 IDBFS gemount");
-      } catch (e) {
-        console.warn("Mount waarschuwing:", e);
-      }
-
-      FS.syncfs(true, function (err) {
-        if (err) console.error("❌ FS sync fout:", err);
-        else console.log("💾 FS geladen");
-      });
+    FS.syncfs(true, function (err) {
+      if (err) console.error("❌ FS sync fout:", err);
+      else console.log("💾 FS geladen");
     });
+  });
 
-    Module.onRuntimeInitialized = function () {
-      const el = document.getElementById("status");
-      if (el) el.style.display = "none";
+  Module.onRuntimeInitialized = function () {
+    const el = document.getElementById("status");
+    if (el) el.style.display = "none";
 
-      console.log("🎮 Drive Mad runtime gestart");
+    console.log("🎮 Drive Mad runtime gestart");
 
-      if (window.loadLevel) {
-        window.loadLevel();
-      }
-    };
-  </script>
+    if (window.loadLevel) {
+      window.loadLevel();
+    }
+  };
+</script>
 
-  <!-- 🔹 BELANGRIJK: DEZE VOLGORDE -->
-  <script src="webapp/source_min.js"></script>
-  <script src="webapp/index.js"></script>
+<!-- 🔹 GAME FILES -->
+<script src="webapp/source_min.js"></script>
+<script src="webapp/index.js"></script>
+
 </body>
 </html>
