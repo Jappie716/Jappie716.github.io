@@ -124,10 +124,7 @@
       if (el) el.textContent = text;
     },
 
-    // ✅ preRun als array (belangrijk!)
-    preRun: [],
-
-    onRuntimeInitialized: function () {
+    preRun: [function () {
       try {
         FS.mkdir("/persistent");
       } catch (e) {}
@@ -139,22 +136,25 @@
         console.warn("Mount waarschuwing:", e);
       }
 
-      // 🔁 EERST laden, dan pas game laten starten
+      // 🔁 Alleen data laden, NIET blokkeren
       FS.syncfs(true, function (err) {
         if (err) {
           console.error("❌ FS sync fout:", err);
         } else {
           console.log("💾 FS geladen");
         }
-
-        Module.setStatus("Klaar!");
-        console.log("🎮 Drive Mad runtime gestart");
       });
+    }],
+
+    onRuntimeInitialized: function () {
+      Module.setStatus("Klaar!");
+      console.log("🎮 Drive Mad runtime gestart");
     }
   };
 </script>
 
 <script src="webapp/index.js"></script>
+
 
 
 </body>
