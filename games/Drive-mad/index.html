@@ -109,6 +109,27 @@
   </script>
 
   <!-- 🚀 JOUW GAME BUILD -->
+  <script>
+  var Module = {
+    locateFile: function (path) {
+      return "webapp/" + path;
+    },
+    canvas: (function () {
+      return document.getElementById("canvas");
+    })(),
+    setStatus: function (text) {
+      var el = document.getElementById("status");
+      if (el) el.textContent = text;
+    },
+    onRuntimeInitialized: function () {
+      Module.setStatus("Klaar!");
+      console.log("🎮 Drive Mad runtime gestart");
+    }
+  };
+</script>
+
+<script src="webapp/index.js"></script>
+
   <script src="webapp/index.js"></script>
 
 </body>
