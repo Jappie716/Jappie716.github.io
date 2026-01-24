@@ -109,7 +109,7 @@
   </script>
 
   <!-- 🚀 JOUW GAME BUILD -->
- <script>
+<script>
   var Module = {
     locateFile: function (path) {
       return "webapp/" + path;
@@ -124,18 +124,20 @@
       if (el) el.textContent = text;
     },
 
-    preRun: function () {
-      try {
-        // Maak persistente save-map
-        FS.mkdir("/persistent");
-        FS.mount(IDBFS, {}, "/persistent");
-      } catch (e) {
-        console.warn("FS mount waarschuwing:", e);
+    // ✅ preRun MOET een array zijn
+    preRun: [
+      function () {
+        try {
+          FS.mkdir("/persistent");
+          FS.mount(IDBFS, {}, "/persistent");
+          console.log("📁 Persistent FS gemount");
+        } catch (e) {
+          console.warn("FS mount waarschuwing:", e);
+        }
       }
-    },
+    ],
 
     onRuntimeInitialized: function () {
-      // Sync filesystem (nodig om ErrnoError te voorkomen)
       FS.syncfs(true, function (err) {
         if (err) {
           console.error("❌ FS sync fout:", err);
@@ -152,8 +154,6 @@
 
 <script src="webapp/index.js"></script>
 
-
-<script src="webapp/index.js"></script>
 
   <script src="webapp/index.js"></script>
 
