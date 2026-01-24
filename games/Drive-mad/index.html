@@ -94,6 +94,32 @@
     }
 
     window.saveLevel = saveLevel;
+    <script>
+  async function loadLevel() {
+    try {
+      const doc = await db.collection("drive_mad_saves")
+        .doc(USER_ID)
+        .get();
+
+      if (doc.exists) {
+        const lvl = doc.data().lastLevel;
+        console.log("📥 Level geladen:", lvl);
+
+        // Stuur level terug naar de game
+        if (window.poki_level_start) {
+          window.poki_level_start(lvl);
+        }
+      } else {
+        console.log("ℹ️ Geen save gevonden, start bij level 1");
+      }
+    } catch (err) {
+      console.warn("❌ Level laden fout:", err);
+    }
+  }
+
+  window.loadLevel = loadLevel;
+</script>
+
   </script>
 
   <!-- =========================
