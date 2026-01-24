@@ -3,10 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <title>Drive Mad</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="google" content="notranslate" />
-
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
@@ -31,10 +29,9 @@
 </head>
 
 <body id="body">
-
 <div id="status">Laden…</div>
 
-<!-- 🔹 ORIGINELE DRIVE MAD STRUCTUUR -->
+<!-- 🔹 GAME STRUCTUUR -->
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
     <div class="edge">
@@ -51,14 +48,13 @@
     </div>
     <p class="description"></p>
   </div>
-
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
   <div id="gradient"></div>
   <div id="webview_content"></div>
 </div>
 
 <!-- =========================
-     🔑 FIREBASE + LOGIN LINK
+     🔑 FIREBASE LOGIN + SAVE
 ========================== -->
 <script>
   const firebaseConfig = {
@@ -74,16 +70,21 @@
 
   const auth = firebase.auth();
   const db = firebase.firestore();
-
   let USER_ID = null;
+  let GAME_READY = false;
 
-  // 🔐 Check of gebruiker is ingelogd
+  // 🔐 LOGIN CHECK
   auth.onAuthStateChanged(user => {
     if (user) {
       USER_ID = user.uid;
       console.log("🔐 Ingelogd als:", user.email);
+
+      // Als game al klaar is → level meteen laden
+      if (GAME_READY) {
+        loadLevel();
+      }
     } else {
-      alert("❌ Je bent niet ingelogd! Ga terug naar de homepage.");
+      alert("❌ Niet ingelogd — terug naar homepagina");
       window.location.href = "index.html";
     }
   });
@@ -106,39 +107,35 @@
     }
   }
 
+  // 📥 LOAD LEVEL
   async function loadLevel() {
-  if (!USER_ID) return;
+    if (!USER_ID) return;
 
-  try {
-    const doc = await db.collection("drive_mad_saves")
-      .doc(USER_ID)
-      .get();
+    try {
+      const doc = await db.collection("drive_mad_saves")
+        .doc(USER_ID)
+        .get();
 
-    if (!doc.exists) {
-      console.log("ℹ️ Geen save gevonden");
-      return;
-    }
-
-    const lvl = Number(doc.data().lastLevel || 1);
-    console.log("📥 Level geladen:", lvl);
-
-    // Wacht tot poki_level_start bestaat
-    const waitForGame = setInterval(() => {
-      if (window.poki_level_start) {
-        clearInterval(waitForGame);
-
-        // 🔥 Zet level in de game
-        window.poki_level_start(lvl);
-
-        console.log("🎮 Game geskippt naar level:", lvl);
+      if (!doc.exists) {
+        console.log("ℹ️ Geen save gevonden");
+        return;
       }
-    }, 500);
 
-  } catch (err) {
-    console.warn("❌ Level laden fout:", err);
+      const lvl = Number(doc.data().lastLevel || 1);
+      console.log("📥 Level geladen:", lvl);
+
+      const waitForGame = setInterval(() => {
+        if (window.poki_level_start) {
+          clearInterval(waitForGame);
+          window.poki_level_start(lvl);
+          console.log("🎮 Game geskippt naar level:", lvl);
+        }
+      }, 500);
+
+    } catch (err) {
+      console.warn("❌ Level laden fout:", err);
+    }
   }
-}
-
 
   window.saveLevel = saveLevel;
   window.loadLevel = loadLevel;
@@ -183,9 +180,10 @@
     if (el) el.style.display = "none";
 
     console.log("🎮 Drive Mad runtime gestart");
+    GAME_READY = true;
 
-    if (window.loadLevel) {
-      window.loadLevel();
+    if (USER_ID) {
+      loadLevel();
     }
   };
 </script>
