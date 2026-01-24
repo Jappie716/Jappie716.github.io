@@ -1,45 +1,115 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Drive Mad</title>
-    <script type="text/javascript" src="Jump_Gamemonetize.js"></script>
-    <script src="/js/main.js"></script>
-    <meta name="description" content="" />
-    <meta name="google" content="notranslate" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <link rel="stylesheet" href="webapp/fancade.css" />
-    <link rel="icon" href="webapp/cover.jpg" />
-  </head>
-  <body id="body">
-    <div id="modal_parent">
-      <div id="modal_content">
-        <span id="modal_close_button">&times;</span>
-        <div id="store_link_modal_content" class="modal_inner"></div>
-        <div id="share_file_modal_content" class="modal_inner"></div>
-      </div>
-    </div>
-    <div id="canvas_border" class="emscripten_border">
-      <div id="play_content" class="middle center">
-        <div class="edge">
-          <div class="box">
-            <div class="black">
-              <img src="webapp/cover.jpg" class="cover" />
-              <p class="title">Drive Mad</p>
-              <p class="author">Martin Magni</p>
-            </div>
-          </div>
-        </div>
-        <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
-        <p class="description"></p>
-      </div>
-      <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-      <div id="gradient"></div>
-      <div id="webview_content"></div>
-    </div>
-    <script type="text/javascript" src="webapp/source_min.js"></script>
-    <script type="text/javascript" src="webapp/index.js"></script>
-  </body>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>Drive Mad</title>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="google" content="notranslate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+
+  <link rel="stylesheet" href="webapp/fancade.css" />
+  <link rel="icon" href="webapp/cover.jpg" />
+
+  <!-- 🔥 Firebase SDKs (compat zodat het simpel blijft) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    #status {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #fff;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body id="body">
+
+  <div id="status">Laden…</div>
+
+  <div id="canvas_border" class="emscripten_border">
+    <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+    <div id="gradient"></div>
+    <div id="webview_content"></div>
+  </div>
+
+  <script>
+    // =========================
+    // 🔑 FIREBASE INIT
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+      authDomain: "gameparadise-80490.firebaseapp.com",
+      projectId: "gameparadise-80490",
+      storageBucket: "gameparadise-80490.firebasestorage.app",
+      messagingSenderId: "335620903527",
+      appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const USER_ID = localStorage.getItem("driveMadUserId") ||
+      (() => {
+        const id = "user_" + Math.random().toString(36).slice(2);
+        localStorage.setItem("driveMadUserId", id);
+        return id;
+      })();
+
+    // ✅ FUNCTIE DIE ÉCHT NAAR FIREBASE SCHRIJFT
+    async function saveLevel(level) {
+      try {
+        await db.collection("drive_mad_saves")
+          .doc(USER_ID)
+          .set(
+            {
+              lastLevel: Number(level),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
+
+        console.log("✅ Level opgeslagen:", level);
+      } catch (err) {
+        console.error("❌ Firebase save fout:", err);
+      }
+    }
+
+    // Globaal zichtbaar voor WASM / JS
+    window.saveLevel = saveLevel;
+  </script>
+
+  <script>
+    // =========================
+    // 🎮 EMSCRIPTEN MODULE HOOK
+    // (afgeleid uit jouw webapp/index.js)
+    // =========================
+    var Module = {
+      canvas: (function () {
+        return document.getElementById("canvas");
+      })(),
+
+      setStatus: function (text) {
+        var el = document.getElementById("status");
+        if (el) el.textContent = text;
+      },
+
+      onRuntimeInitialized: function () {
+        Module.setStatus("Klaar!");
+        console.log("🎮 Drive Mad runtime gestart");
+      }
+    };
+  </script>
+
+  <!-- 🚀 JOUW GAME BUILD -->
+  <script src="webapp/index.js"></script>
+
+</body>
 </html>
-<!-- Thanks EvilMonke#0263! -->
