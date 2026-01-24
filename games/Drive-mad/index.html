@@ -98,27 +98,44 @@ alert("JS werkt!");
       }
     }
 
-    // 📥 LOAD LEVEL
-    async function loadLevel() {
-      try {
-        const doc = await db.collection("drive_mad_saves")
-          .doc(USER_ID)
-          .get();
+    // 📥 LOAD LEVEL (ECHT NAAR GAME STUREN)
+async function loadLevel() {
+  try {
+    const doc = await db.collection("drive_mad_saves")
+      .doc(USER_ID)
+      .get();
 
-        if (doc.exists) {
-          const lvl = doc.data().lastLevel;
-          console.log("📥 Level geladen:", lvl);
+    if (doc.exists) {
+      const lvl = Number(doc.data().lastLevel || 1);
+      console.log("📥 Level geladen:", lvl);
 
-          if (window.poki_level_start) {
-            window.poki_level_start(lvl);
+      // Wacht tot de game klaar is
+      const waitForGame = setInterval(() => {
+        if (window.Module && Module.ccall) {
+          clearInterval(waitForGame);
+
+          try {
+            // Stuur level naar de WASM game
+            Module.ccall(
+              "SetLevel",   // interne functie
+              null,
+              ["number"],
+              [lvl]
+            );
+
+            console.log("🎮 Game naar level gezet:", lvl);
+          } catch (e) {
+            console.warn("⚠️ Kon level niet zetten:", e);
           }
-        } else {
-          console.log("ℹ️ Geen save gevonden, start bij level 1");
         }
-      } catch (err) {
-        console.warn("❌ Level laden fout:", err);
-      }
+      }, 500);
+    } else {
+      console.log("ℹ️ Geen save gevonden, start bij level 1");
     }
+  } catch (err) {
+    console.warn("❌ Level laden fout:", err);
+  }
+}
 
     window.saveLevel = saveLevel;
     window.loadLevel = loadLevel;
