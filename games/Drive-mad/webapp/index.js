@@ -1,3 +1,52 @@
+<script>
+let TARGET_LEVEL = 1;
+let CURRENT_LEVEL = 0;
+
+// Firebase level ophalen
+async function loadLevel() {
+  try {
+    const doc = await db.collection("drive_mad_saves")
+      .doc(USER_ID)
+      .get();
+
+    if (doc.exists) {
+      TARGET_LEVEL = Number(doc.data().lastLevel || 1);
+      console.log("🎯 Target level:", TARGET_LEVEL);
+    }
+  } catch (e) {
+    console.warn("❌ Load level fout:", e);
+  }
+}
+
+window.loadLevel = loadLevel;
+
+// 🎮 Hook Drive Mad level systeem
+const originalPokiLevelStart = window.poki_level_start;
+
+window.poki_level_start = function(level) {
+  CURRENT_LEVEL = level;
+  console.log("➡️ Game start level:", level);
+
+  // Save elk level
+  if (window.saveLevel) {
+    window.saveLevel(level);
+  }
+
+  // 🔥 Skip levels tot we bij de save zijn
+  if (CURRENT_LEVEL < TARGET_LEVEL) {
+    setTimeout(() => {
+      console.log("⏩ Skip naar:", CURRENT_LEVEL + 1);
+      originalPokiLevelStart(CURRENT_LEVEL + 1);
+    }, 100);
+    return;
+  }
+
+  // Normaal level starten
+  if (originalPokiLevelStart) {
+    originalPokiLevelStart(level);
+  }
+};
+</script>
 var Module=typeof Module!="undefined"?Module:{};if(!Module.expectedDataFileDownloads){Module.expectedDataFileDownloads=0}
 Module.expectedDataFileDownloads++;(function(){if(Module["ENVIRONMENT_IS_PTHREAD"])return;var loadPackage=function(metadata){var PACKAGE_PATH="";if(typeof window==="object"){PACKAGE_PATH=window["encodeURIComponent"](window.location.pathname.toString().substring(0,window.location.pathname.toString().lastIndexOf("/"))+"/")}else if(typeof process==="undefined"&&typeof location!=="undefined"){PACKAGE_PATH=encodeURIComponent(location.pathname.toString().substring(0,location.pathname.toString().lastIndexOf("/"))+"/")}
 var PACKAGE_NAME="index.data";var REMOTE_PACKAGE_BASE="index.data";if(typeof Module["locateFilePackage"]==="function"&&!Module["locateFile"]){Module["locateFile"]=Module["locateFilePackage"];err("warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)")}
