@@ -93,7 +93,15 @@ function is_daily_reward_possible(){return dailyRewardPossible}
 function is_latest_browser_tab(){try{return localStorage["startup-time"]==startupTimeStr}catch(err){return true}}
 function poki_gameplay_start(){pokiEnsureStart()}
 function poki_gameplay_stop(){pokiEnsureStop()}
-function poki_level_start(li){try{}catch(err){}}
+function poki_level_start(li){
+  try{
+    if (window.saveLevel) window.saveLevel(li);
+    console.log("💾 Autosave level:", li);
+  }catch(err){
+    console.warn("saveLevel fout:", err);
+  }
+}
+
 function set_latest_browser_tab(){startupTimeStr=Date.now().toString();try{localStorage["startup-time"]=startupTimeStr}catch(err){}}
 function callRuntimeCallbacks(callbacks){while(callbacks.length>0){var callback=callbacks.shift();if(typeof callback=="function"){callback(Module);continue}
 var func=callback.func;if(typeof func=="number"){if(callback.arg===undefined){getWasmTableEntry(func)()}else{getWasmTableEntry(func)(callback.arg)}}else{func(callback.arg===undefined?null:callback.arg)}}}
