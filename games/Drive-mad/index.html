@@ -56,7 +56,7 @@
   </div>
 
   <!-- =========================
-       🔑 FIREBASE INIT
+       🔑 FIREBASE
   ========================== -->
   <script>
     const firebaseConfig = {
@@ -71,13 +71,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const USER_ID = localStorage.getItem("driveMadUserId") ||
-      (() => {
-        const id = "user_" + Math.random().toString(36).slice(2);
-        localStorage.setItem("driveMadUserId", id);
-        return id;
-      })();
+    // Simpele user ID (later kunnen we dit met login maken)
+    const USER_ID = localStorage.getItem("driveMadUserId") || (() => {
+      const id = "user_" + Math.random().toString(36).slice(2);
+      localStorage.setItem("driveMadUserId", id);
+      return id;
+    })();
 
+    // 💾 SAVE LEVEL
     async function saveLevel(level) {
       try {
         await db.collection("drive_mad_saves")
@@ -93,86 +94,80 @@
       }
     }
 
-    window.saveLevel = saveLevel;
-    <script>
-  async function loadLevel() {
-    try {
-      const doc = await db.collection("drive_mad_saves")
-        .doc(USER_ID)
-        .get();
+    // 📥 LOAD LEVEL
+    async function loadLevel() {
+      try {
+        const doc = await db.collection("drive_mad_saves")
+          .doc(USER_ID)
+          .get();
 
-      if (doc.exists) {
-        const lvl = doc.data().lastLevel;
-        console.log("📥 Level geladen:", lvl);
+        if (doc.exists) {
+          const lvl = doc.data().lastLevel;
+          console.log("📥 Level geladen:", lvl);
 
-        // Stuur level terug naar de game
-        if (window.poki_level_start) {
-          window.poki_level_start(lvl);
+          if (window.poki_level_start) {
+            window.poki_level_start(lvl);
+          }
+        } else {
+          console.log("ℹ️ Geen save gevonden, start bij level 1");
         }
-      } else {
-        console.log("ℹ️ Geen save gevonden, start bij level 1");
+      } catch (err) {
+        console.warn("❌ Level laden fout:", err);
       }
-    } catch (err) {
-      console.warn("❌ Level laden fout:", err);
     }
-  }
 
-  window.loadLevel = loadLevel;
-</script>
-
+    window.saveLevel = saveLevel;
+    window.loadLevel = loadLevel;
   </script>
 
   <!-- =========================
        🎮 EMSCRIPTEN MODULE
   ========================== -->
- <script>
-  var Module = window.Module || {};
+  <script>
+    var Module = window.Module || {};
 
-  Module.locateFile = function (path) {
-    return "webapp/" + path;
-  };
+    Module.locateFile = function (path) {
+      return "webapp/" + path;
+    };
 
-  Module.canvas = document.getElementById("canvas");
+    Module.canvas = document.getElementById("canvas");
 
-  Module.setStatus = function (text) {
-    const el = document.getElementById("status");
-    if (el) el.textContent = text;
-  };
+    Module.setStatus = function (text) {
+      const el = document.getElementById("status");
+      if (el) el.textContent = text;
+    };
 
-  // Zorg dat preRun ALTIJD een array is
-  if (!Module.preRun) Module.preRun = [];
+    if (!Module.preRun) Module.preRun = [];
 
-  Module.preRun.push(function () {
-    try { FS.mkdir("/persistent"); } catch (e) {}
-    try {
-      FS.mount(IDBFS, {}, "/persistent");
-      console.log("📁 IDBFS gemount");
-    } catch (e) {
-      console.warn("Mount waarschuwing:", e);
-    }
+    Module.preRun.push(function () {
+      try { FS.mkdir("/persistent"); } catch (e) {}
+      try {
+        FS.mount(IDBFS, {}, "/persistent");
+        console.log("📁 IDBFS gemount");
+      } catch (e) {
+        console.warn("Mount waarschuwing:", e);
+      }
 
-    FS.syncfs(true, function (err) {
-      if (err) console.error("❌ FS sync fout:", err);
-      else console.log("💾 FS geladen");
+      FS.syncfs(true, function (err) {
+        if (err) console.error("❌ FS sync fout:", err);
+        else console.log("💾 FS geladen");
+      });
     });
-  });
 
-  Module.onRuntimeInitialized = function () {
-    const el = document.getElementById("status");
-    if (el) el.style.display = "none";
+    Module.onRuntimeInitialized = function () {
+      const el = document.getElementById("status");
+      if (el) el.style.display = "none";
 
-    console.log("🎮 Drive Mad runtime gestart");
+      console.log("🎮 Drive Mad runtime gestart");
 
-    // 🔥 laad opgeslagen level terug
-    if (window.loadLevel) {
-      window.loadLevel();
-    }
-  };
-</script>
+      if (window.loadLevel) {
+        window.loadLevel();
+      }
+    };
+  </script>
 
   <!-- 🔹 BELANGRIJK: DEZE VOLGORDE -->
   <script src="webapp/source_min.js"></script>
   <script src="webapp/index.js"></script>
-
 </body>
 </html>
