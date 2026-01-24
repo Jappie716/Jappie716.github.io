@@ -1,3 +1,52 @@
+<script>
+let TARGET_LEVEL = 1;
+let CURRENT_LEVEL = 0;
+
+// Firebase level ophalen
+async function loadLevel() {
+  try {
+    const doc = await db.collection("drive_mad_saves")
+      .doc(USER_ID)
+      .get();
+
+    if (doc.exists) {
+      TARGET_LEVEL = Number(doc.data().lastLevel || 1);
+      console.log("🎯 Target level:", TARGET_LEVEL);
+    }
+  } catch (e) {
+    console.warn("❌ Load level fout:", e);
+  }
+}
+
+window.loadLevel = loadLevel;
+
+// 🎮 Hook Drive Mad level systeem
+const originalPokiLevelStart = window.poki_level_start;
+
+window.poki_level_start = function(level) {
+  CURRENT_LEVEL = level;
+  console.log("➡️ Game start level:", level);
+
+  // Save elk level
+  if (window.saveLevel) {
+    window.saveLevel(level);
+  }
+
+  // 🔥 Skip levels tot we bij de save zijn
+  if (CURRENT_LEVEL < TARGET_LEVEL) {
+    setTimeout(() => {
+      console.log("⏩ Skip naar:", CURRENT_LEVEL + 1);
+      originalPokiLevelStart(CURRENT_LEVEL + 1);
+    }, 100);
+    return;
+  }
+
+  // Normaal level starten
+  if (originalPokiLevelStart) {
+    originalPokiLevelStart(level);
+  }
+};
+</script>
 var pokiDebug=false;var postRunDone=false;var theDomLoaded=false;var pokiInited=false;var gameReadyToStart=false;var requestedCanvas=false;var adblocker=false;var gameStarted=false;var updatedScreenSize=false;var startupTimeStr="";var loadProgressFrac=0;var fakeProgressPercentStart=80+Math.random()*15;window.addEventListener('DOMContentLoaded',domContentLoaded);window.addEventListener('load',function(){console.log("Load event received");if(inIframe()){document.addEventListener('click',ev=>{let canvas=document.getElementById('canvas');if(canvas){canvas.focus();}});}});function inIframe(){try{return window.self!==window.top;}catch(e){return true;}}
 function updateLoadProgress(){let progressElement=document.getElementById('progress');if(progressElement){progressElement.value=Math.round(loadProgressFrac*fakeProgressPercentStart);progressElement.max=100;}
 if(loadProgressFrac>=1){console.log("Loading done");tryStartGame();}}
