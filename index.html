@@ -1,72 +1,173 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Game Hub</title>
+<title>Game Paradise</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body {
-  background:#111;
-  color:white;
-  font-family:Arial;
-  margin:0;
-}
-header {
-  background:#222;
-  padding:10px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-button {
-  padding:10px;
-  margin:5px;
-  cursor:pointer;
-}
-#game-list button {
-  display:block;
-  width:100%;
-  max-width:300px;
-}
-.hidden {
-  display:none;
-}
-</style>
-</head>
-
-<body>
-<header>
-  <h2>🎮 Game Hub</h2>
-  <div>
-    <span id="user-email">Niet ingelogd</span>
-    <button id="logout-btn">Logout</button>
-  </div>
-</header>
-
-<main style="padding:20px">
-
-<section id="login-section">
-  <h3>Login</h3>
-  <input id="email" placeholder="Email"><br><br>
-  <input id="password" type="password" placeholder="Wachtwoord"><br><br>
-  <button id="login-btn">Login</button>
-  <button id="register-btn">Register</button>
-  <p id="status"></p>
-</section>
-
-<section id="games-section" class="hidden">
-  <h3>🎯 Games</h3>
-  <div id="game-list"></div>
-</section>
-
-</main>
 
 <!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<style>
+body {
+  margin: 0;
+  background: #0e0e13;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.topbar {
+  height: 60px;
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 2px 10px black;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: bold;
+  color: #60a5fa;
+}
+
+.auth-btn {
+  background: #2563eb;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.library {
+  padding: 20px;
+}
+
+.category {
+  margin-bottom: 40px;
+}
+
+.category h2 {
+  margin-bottom: 10px;
+  color: #60a5fa;
+}
+
+.game-row {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.game-card {
+  width: 160px;
+  background: #1f2933;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.game-card:hover {
+  transform: scale(1.05);
+}
+
+.game-card img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+}
+
+.game-card h3 {
+  font-size: 14px;
+  padding: 6px;
+  margin: 0;
+  text-align: center;
+}
+
+.star {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  color: #555;
+  user-select: none;
+}
+
+.star.fav {
+  color: gold;
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">🎮 Game Paradise</div>
+  <button id="authBtn" class="auth-btn">Login</button>
+</div>
+
+<!-- LIBRARY -->
+<div class="library">
+
+<!-- FAVORITES -->
+<div class="category">
+  <h2>⭐ Favorites</h2>
+  <div id="favoritesRow" class="game-row"></div>
+</div>
+
+<!-- ALL GAMES -->
+<div class="category">
+  <h2>All Games</h2>
+  <div class="game-row" id="allGames">
+
+    <!-- COPY THIS BLOCK TO ADD GAMES -->
+    <div class="game-card" data-game-id="greedy-snakes" data-title="Greedy Snakes" data-link="greedy/index.html">
+      <div class="star">★</div>
+      <img src="https://raw.githubusercontent.com/ikhouvankaasq/greedy-snakes/main/logo.png">
+      <h3>Greedy Snakes</h3>
+    </div>
+
+    <div class="game-card" data-game-id="space-runner" data-title="Space Runner" data-link="#">
+      <div class="star">★</div>
+      <img src="https://picsum.photos/200/100?1">
+      <h3>Space Runner</h3>
+    </div>
+
+    <div class="game-card" data-game-id="tower-defense" data-title="Tower Defense" data-link="#">
+      <div class="star">★</div>
+      <img src="https://picsum.photos/200/100?2">
+      <h3>Tower Defense</h3>
+    </div>
+
+  </div>
+</div>
+
+<!-- EMPTY CATEGORIES -->
+<div class="category">
+  <h2>Action Games</h2>
+  <div class="game-row"></div>
+</div>
+
+<div class="category">
+  <h2>Idle Games</h2>
+  <div class="game-row"></div>
+</div>
+
+<div class="category">
+  <h2>Multiplayer</h2>
+  <div class="game-row"></div>
+</div>
+
+</div>
+
+<!-- FIREBASE + LOGIC -->
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
@@ -78,59 +179,122 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const email = document.getElementById("email");
-const password = document.getElementById("password");
-const loginBtn = document.getElementById("login-btn");
-const registerBtn = document.getElementById("register-btn");
-const logoutBtn = document.getElementById("logout-btn");
+const authBtn = document.getElementById("authBtn");
+const favRow = document.getElementById("favoritesRow");
 
-const loginSection = document.getElementById("login-section");
-const gamesSection = document.getElementById("games-section");
-const userEmail = document.getElementById("user-email");
-const gameList = document.getElementById("game-list");
+let currentUser = null;
+let favorites = {};
 
-loginBtn.onclick = () => {
-  auth.signInWithEmailAndPassword(email.value, password.value)
-  .catch(e => alert(e.message));
-};
-
-registerBtn.onclick = () => {
-  auth.createUserWithEmailAndPassword(email.value, password.value)
-  .catch(e => alert(e.message));
-};
-
-logoutBtn.onclick = () => auth.signOut();
-
-auth.onAuthStateChanged(user => {
-  if (user) {
-    userEmail.innerText = user.email;
-    loginSection.classList.add("hidden");
-    gamesSection.classList.remove("hidden");
-    loadGames();
+// LOGIN / LOGOUT
+authBtn.onclick = () => {
+  if (!currentUser) {
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
   } else {
-    userEmail.innerText = "Niet ingelogd";
-    loginSection.classList.remove("hidden");
-    gamesSection.classList.add("hidden");
+    auth.signOut();
+  }
+};
+
+// AUTH STATE
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  favorites = {};
+  favRow.innerHTML = "";
+
+  if (user) {
+    authBtn.textContent = "Logout";
+    loadFavorites();
+  } else {
+    authBtn.textContent = "Login";
+    updateStars();
   }
 });
 
-async function loadGames() {
-  gameList.innerHTML = "";
-  const snap = await db.collection("games").get();
+// LOAD FAVORITES
+function loadFavorites() {
+  db.collection("users")
+    .doc(currentUser.uid)
+    .collection("favorites")
+    .get()
+    .then(snapshot => {
+      snapshot.forEach(doc => {
+        favorites[doc.id] = doc.data();
+      });
+      updateStars();
+      renderFavorites();
+    });
+}
 
-  snap.forEach(doc => {
-    const game = doc.data();
-    const btn = document.createElement("button");
-    btn.innerText = "🎮 " + game.name;
-    btn.onclick = () => window.location.href = game.url;
-    gameList.appendChild(btn);
+// TOGGLE FAVORITE
+function toggleFavorite(card) {
+  if (!currentUser) return alert("Login to use favorites");
+
+  const id = card.dataset.gameId;
+  const data = {
+    title: card.dataset.title,
+    link: card.dataset.link,
+    image: card.querySelector("img").src
+  };
+
+  const ref = db.collection("users")
+    .doc(currentUser.uid)
+    .collection("favorites")
+    .doc(id);
+
+  if (favorites[id]) {
+    delete favorites[id];
+    ref.delete();
+  } else {
+    favorites[id] = data;
+    ref.set(data);
+  }
+
+  updateStars();
+  renderFavorites();
+}
+
+// UPDATE STAR ICONS
+function updateStars() {
+  document.querySelectorAll(".game-card").forEach(card => {
+    const star = card.querySelector(".star");
+    const id = card.dataset.gameId;
+    star.classList.toggle("fav", !!favorites[id]);
   });
 }
+
+// RENDER FAVORITES ROW
+function renderFavorites() {
+  favRow.innerHTML = "";
+
+  Object.values(favorites).forEach(g => {
+    const div = document.createElement("div");
+    div.className = "game-card";
+    div.innerHTML = `
+      <img src="${g.image}">
+      <h3>${g.title}</h3>
+    `;
+    div.onclick = () => location.href = g.link;
+    favRow.appendChild(div);
+  });
+}
+
+// GAME EVENTS
+document.querySelectorAll(".game-card").forEach(card => {
+  const star = card.querySelector(".star");
+
+  star.onclick = e => {
+    e.stopPropagation();
+    toggleFavorite(card);
+  };
+
+  card.onclick = () => {
+    location.href = card.dataset.link;
+  };
+});
 </script>
-  <button onclick="window.location.href='games/drive-mad/index.html'">Speel Drive Mad</button>
-  <button onclick="window.location.href='games/greedy-snakes/index.html'">Speel Greedy Snakes</button>
+
 </body>
 </html>
