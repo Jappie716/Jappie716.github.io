@@ -213,10 +213,10 @@ body {
 
     <!-- GREEDY SNAKES -->
     <div class="game-card"
-         data-game-id="greedy-snakes"
-         data-category="no-save"
-         data-title="Greedy Snakes"
-         data-link="games/greedy-snakes/index.html">
+      data-game-id="greedy-snakes"
+      data-category="no-save"
+      data-title="Greedy Snakes"
+      data-link="games/greedy-snakes/index.html">
       <div class="star">★</div>
       <img src="https://raw.githubusercontent.com/ikhouvankaasq/greedy-snakes/main/logo.png">
       <h3>Greedy Snakes</h3>
@@ -224,10 +224,10 @@ body {
 
     <!-- DRIVE MAD -->
     <div class="game-card"
-         data-game-id="drive-mad"
-         data-category="no-save"
-         data-title="Drive Mad"
-         data-link="games/drive-mad/index.html">
+      data-game-id="drive-mad"
+      data-category="no-save"
+      data-title="Drive Mad"
+      data-link="games/drive-mad/index.html">
       <div class="star">★</div>
       <img src="https://mellekoster.nl/storage/images/games/drivemad.png">
       <h3>Drive Mad</h3>
@@ -249,6 +249,9 @@ body {
 
 <!-- FIREBASE + LOGIC -->
 <script>
+/* ======================
+   FIREBASE CONFIG
+====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -262,38 +265,53 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+/* ======================
+   ELEMENTS
+====================== */
 const authBtn = document.getElementById("authBtn");
 const modal = document.getElementById("loginModal");
 const emailInput = document.getElementById("emailInput");
 const passwordInput = document.getElementById("passwordInput");
+const searchInput = document.getElementById("searchInput");
+const loginSubmit = document.getElementById("loginSubmit");
+const registerSubmit = document.getElementById("registerSubmit");
 
 let currentUser = null;
 let favorites = {};
 
-/* LOGIN UI */
+/* ======================
+   LOGIN UI
+====================== */
 authBtn.onclick = () => {
   if (!currentUser) modal.style.display = "flex";
   else auth.signOut();
 };
 
 loginSubmit.onclick = () => {
-  auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
-    .catch(err => alert(err.message));
+  auth.signInWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(err => alert(err.message));
 };
 
 registerSubmit.onclick = () => {
-  auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
-    .catch(err => alert(err.message));
+  auth.createUserWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(err => alert(err.message));
 };
 
 modal.onclick = e => {
   if (e.target === modal) modal.style.display = "none";
 };
 
-/* AUTH STATE */
+/* ======================
+   AUTH STATE
+====================== */
 auth.onAuthStateChanged(user => {
   currentUser = user;
   favorites = {};
+
   if (user) {
     authBtn.textContent = "Uitloggen";
     modal.style.display = "none";
@@ -304,12 +322,18 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-/* FAVORITES */
+/* ======================
+   FAVORITES SYSTEM
+====================== */
 function loadFavorites() {
-  db.collection("users").doc(currentUser.uid)
-    .collection("favorites").get()
+  db.collection("users")
+    .doc(currentUser.uid)
+    .collection("favorites")
+    .get()
     .then(snapshot => {
-      snapshot.forEach(doc => favorites[doc.id] = doc.data());
+      snapshot.forEach(doc => {
+        favorites[doc.id] = doc.data();
+      });
       updateStars();
     });
 }
@@ -335,6 +359,7 @@ function toggleFavorite(card) {
     favorites[id] = data;
     ref.set(data);
   }
+
   updateStars();
 }
 
@@ -346,10 +371,14 @@ function updateStars() {
   });
 }
 
-/* FILTERS */
+/* ======================
+   CATEGORY FILTERS
+====================== */
 document.querySelectorAll(".category-btn").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".category-btn")
+      .forEach(b => b.classList.remove("active"));
+
     btn.classList.add("active");
 
     const cat = btn.dataset.category;
@@ -357,13 +386,17 @@ document.querySelectorAll(".category-btn").forEach(btn => {
 
     document.querySelectorAll(".game-card").forEach(card => {
       if (cat === "all") card.style.display = "block";
-      else if (cat === "favorites") card.style.display = favorites[card.dataset.gameId] ? "block" : "none";
-      else card.style.display = card.dataset.category === cat ? "block" : "none";
+      else if (cat === "favorites")
+        card.style.display = favorites[card.dataset.gameId] ? "block" : "none";
+      else
+        card.style.display = card.dataset.category === cat ? "block" : "none";
     });
   };
 });
 
-/* SEARCH */
+/* ======================
+   SEARCH
+====================== */
 searchInput.oninput = () => {
   const val = searchInput.value.toLowerCase();
   document.querySelectorAll(".game-card").forEach(card => {
@@ -372,12 +405,15 @@ searchInput.oninput = () => {
   });
 };
 
-/* GAME EVENTS */
+/* ======================
+   GAME CLICK EVENTS
+====================== */
 document.querySelectorAll(".game-card").forEach(card => {
   card.querySelector(".star").onclick = e => {
     e.stopPropagation();
     toggleFavorite(card);
   };
+
   card.onclick = () => {
     location.href = card.dataset.link;
   };
