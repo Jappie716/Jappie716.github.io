@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Game Paradise — Admin</title>
+<title>Game Paradise - Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12,61 +12,42 @@
 <style>
 body {
   margin: 0;
-  background: #0b0f19;
   font-family: Arial, sans-serif;
+  background: #0b0f19;
   color: white;
-}
-
-.header {
-  background: #0f172a;
-  padding: 15px 25px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 10px black;
-}
-
-.header h1 {
-  margin: 0;
-  color: #60a5fa;
-  font-size: 20px;
-}
-
-.logout-btn {
-  background: #dc2626;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-}
-
-.layout {
-  display: flex;
-  height: calc(100vh - 60px);
+  height: 100vh;
 }
 
 .sidebar {
-  width: 220px;
+  width: 230px;
   background: #0f172a;
   padding: 15px;
-  box-shadow: 3px 0 10px black;
+  display: flex;
+  flex-direction: column;
 }
 
-.sidebar-btn {
-  padding: 10px;
-  border-radius: 6px;
+.logo {
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: #60a5fa;
+  margin-bottom: 20px;
+}
+
+.nav-btn {
   background: #1e293b;
-  cursor: pointer;
+  padding: 10px;
+  border-radius: 5px;
   margin-bottom: 8px;
-  transition: background 0.2s;
+  cursor: pointer;
 }
 
-.sidebar-btn:hover {
+.nav-btn:hover {
   background: #334155;
 }
 
-.sidebar-btn.active {
+.nav-btn.active {
   background: #2563eb;
 }
 
@@ -76,155 +57,119 @@ body {
   overflow-y: auto;
 }
 
-.panel {
-  max-width: 700px;
-  background: #111827;
-  padding: 20px;
-  border-radius: 10px;
-}
-
-.panel h2 {
-  margin-top: 0;
-  color: #60a5fa;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 10px;
-}
-
-.input-group label {
-  font-size: 13px;
-  margin-bottom: 4px;
-  color: #94a3b8;
-}
-
-.input-group input,
-.input-group select {
-  padding: 8px;
-  border-radius: 6px;
-  border: none;
-}
-
-.action-btn {
-  background: #2563eb;
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
-  color: white;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.action-btn:hover {
-  background: #1d4ed8;
-}
-
-.list {
-  margin-top: 20px;
-}
-
-.list-item {
-  background: #1f2933;
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+.topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.list-item span {
-  font-size: 14px;
-}
-
-.small-btn {
-  background: #dc2626;
+.btn {
+  background: #2563eb;
   border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 5px;
   color: white;
   cursor: pointer;
 }
 
-.small-btn:hover {
+.section {
+  margin-top: 20px;
+}
+
+.card {
+  background: #1f2933;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+.card h3 {
+  margin-top: 0;
+  color: #60a5fa;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 5px;
+  border: none;
+}
+
+.list-item {
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-btn {
+  background: #dc2626;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
   background: #b91c1c;
 }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Game Paradise — Admin Panel</h1>
-  <button class="logout-btn" id="logoutBtn">Uitloggen</button>
+<div class="sidebar">
+  <div class="logo">🛠️ Admin Panel</div>
+  <div class="nav-btn active" id="gamesTab">Games beheren</div>
+  <div class="nav-btn" id="categoriesTab">Categorieën beheren</div>
+  <button class="btn" style="margin-top:auto" onclick="location.href='index.html'">← Terug</button>
 </div>
 
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-btn active" data-tab="games">Games beheren</div>
-    <div class="sidebar-btn" data-tab="categories">Categorieën beheren</div>
+<div class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">Games beheren</h2>
+    <button class="btn" onclick="logout()">Uitloggen</button>
   </div>
 
-  <div class="main">
-    <!-- GAMES PANEL -->
-    <div id="gamesPanel" class="panel">
-      <h2>Game toevoegen</h2>
-
-      <div class="input-group">
-        <label>Titel</label>
-        <input id="titleInput" placeholder="Bijv: Greedy Snakes">
-      </div>
-
-      <div class="input-group">
-        <label>Afbeelding URL</label>
-        <input id="imageInput" placeholder="https://...">
-      </div>
-
-      <div class="input-group">
-        <label>Game link</label>
-        <input id="linkInput" placeholder="games/greedy-snakes/index.html">
-      </div>
-
-      <div class="input-group">
-        <label>Categorie</label>
-        <select id="categorySelect"></select>
-      </div>
-
-      <button class="action-btn" id="addGameBtn">Game toevoegen</button>
-
-      <h2 style="margin-top:25px">Bestaande games</h2>
-      <div id="gameList" class="list"></div>
+  <!-- GAMES SECTION -->
+  <div id="gamesSection" class="section">
+    <div class="card">
+      <h3>Game toevoegen</h3>
+      <input id="gameId" placeholder="Game ID (bijv: greedy-snakes)">
+      <input id="gameTitle" placeholder="Titel">
+      <input id="gameImage" placeholder="Afbeelding URL">
+      <input id="gameLink" placeholder="Game link (bijv: games/greedy-snakes/index.html)">
+      <select id="gameCategory"></select>
+      <button class="btn" onclick="addGame()">Game opslaan</button>
     </div>
 
-    <!-- CATEGORY PANEL -->
-    <div id="categoryPanel" class="panel" style="display:none">
-      <h2>Categorie toevoegen</h2>
+    <div class="card">
+      <h3>Bestaande games</h3>
+      <div id="gamesList"></div>
+    </div>
+  </div>
 
-      <div class="input-group">
-        <label>Naam categorie</label>
-        <input id="categoryInput" placeholder="Bijv: Multiplayer">
-      </div>
+  <!-- CATEGORIES SECTION -->
+  <div id="categoriesSection" class="section" style="display:none">
+    <div class="card">
+      <h3>Categorie toevoegen</h3>
+      <input id="catId" placeholder="Categorie ID (bijv: no-save)">
+      <input id="catName" placeholder="Categorie naam">
+      <button class="btn" onclick="addCategory()">Categorie opslaan</button>
+    </div>
 
-      <button class="action-btn" id="addCategoryBtn">Categorie toevoegen</button>
-
-      <h2 style="margin-top:25px">Bestaande categorieën</h2>
-      <div id="categoryList" class="list"></div>
+    <div class="card">
+      <h3>Bestaande categorieën</h3>
+      <div id="categoriesList"></div>
     </div>
   </div>
 </div>
 
 <script>
-/* ======================
-   ADMIN EMAILS
-====================== */
-const ADMIN_EMAILS = [
-  "someoeneheilig@gmail.com"
-];
-
-/* ======================
-   FIREBASE
-====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -238,11 +183,34 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* ======================
-   SECURITY
-====================== */
+const ADMIN_EMAIL = "someoeneheilig@gmail.com";
+
+// Tabs
+const gamesTab = document.getElementById("gamesTab");
+const categoriesTab = document.getElementById("categoriesTab");
+const gamesSection = document.getElementById("gamesSection");
+const categoriesSection = document.getElementById("categoriesSection");
+const pageTitle = document.getElementById("pageTitle");
+
+gamesTab.onclick = () => {
+  gamesTab.classList.add("active");
+  categoriesTab.classList.remove("active");
+  gamesSection.style.display = "block";
+  categoriesSection.style.display = "none";
+  pageTitle.textContent = "Games beheren";
+};
+
+categoriesTab.onclick = () => {
+  categoriesTab.classList.add("active");
+  gamesTab.classList.remove("active");
+  gamesSection.style.display = "none";
+  categoriesSection.style.display = "block";
+  pageTitle.textContent = "Categorieën beheren";
+};
+
+// AUTH CHECK
 auth.onAuthStateChanged(user => {
-  if (!user || !ADMIN_EMAILS.includes(user.email)) {
+  if (!user || user.email !== ADMIN_EMAIL) {
     alert("Geen toegang");
     location.href = "index.html";
   } else {
@@ -251,116 +219,98 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-/* ======================
-   LOGOUT
-====================== */
-logoutBtn.onclick = () => auth.signOut();
+function logout() {
+  auth.signOut().then(() => location.href = "index.html");
+}
 
-/* ======================
-   TABS
-====================== */
-document.querySelectorAll(".sidebar-btn").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".sidebar-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+// CATEGORIES
+function addCategory() {
+  const id = catId.value.trim();
+  const name = catName.value.trim();
+  if (!id || !name) return alert("Vul alles in");
 
-    const tab = btn.dataset.tab;
-    document.getElementById("gamesPanel").style.display = tab === "games" ? "block" : "none";
-    document.getElementById("categoryPanel").style.display = tab === "categories" ? "block" : "none";
-  };
-});
+  db.collection("categories").doc(id).set({ name }).then(() => {
+    catId.value = "";
+    catName.value = "";
+    loadCategories();
+  });
+}
 
-/* ======================
-   CATEGORIES
-====================== */
 function loadCategories() {
-  categorySelect.innerHTML = "";
-  categoryList.innerHTML = "";
+  const list = document.getElementById("categoriesList");
+  const select = document.getElementById("gameCategory");
 
-  db.collection("categories").get().then(snapshot => {
-    snapshot.forEach(doc => {
-      const name = doc.data().name;
+  list.innerHTML = "";
+  select.innerHTML = "";
 
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name;
-      categorySelect.appendChild(opt);
+  db.collection("categories").get().then(snap => {
+    snap.forEach(doc => {
+      const data = doc.data();
 
       const div = document.createElement("div");
       div.className = "list-item";
       div.innerHTML = `
-        <span>${name}</span>
-        <button class="small-btn">Verwijder</button>
+        <span>${data.name} (${doc.id})</span>
+        <button class="delete-btn">Verwijderen</button>
       `;
 
       div.querySelector("button").onclick = () => {
-        if (confirm("Categorie verwijderen?")) {
-          db.collection("categories").doc(doc.id).delete().then(loadCategories);
-        }
+        db.collection("categories").doc(doc.id).delete().then(loadCategories);
       };
 
-      categoryList.appendChild(div);
+      list.appendChild(div);
+
+      const opt = document.createElement("option");
+      opt.value = doc.id;
+      opt.textContent = data.name;
+      select.appendChild(opt);
     });
   });
 }
 
-addCategoryBtn.onclick = () => {
-  const name = categoryInput.value.trim();
-  if (!name) return alert("Vul een naam in");
+// GAMES
+function addGame() {
+  const id = gameId.value.trim();
+  if (!id) return alert("Game ID nodig");
 
-  db.collection("categories").add({ name }).then(() => {
-    categoryInput.value = "";
-    loadCategories();
+  const data = {
+    title: gameTitle.value,
+    image: gameImage.value,
+    link: gameLink.value,
+    category: gameCategory.value
+  };
+
+  db.collection("games").doc(id).set(data).then(() => {
+    gameId.value = "";
+    gameTitle.value = "";
+    gameImage.value = "";
+    gameLink.value = "";
+    loadGames();
   });
-};
+}
 
-/* ======================
-   GAMES
-====================== */
 function loadGames() {
-  gameList.innerHTML = "";
+  const list = document.getElementById("gamesList");
+  list.innerHTML = "";
 
-  db.collection("games").get().then(snapshot => {
-    snapshot.forEach(doc => {
+  db.collection("games").get().then(snap => {
+    snap.forEach(doc => {
       const g = doc.data();
       const div = document.createElement("div");
       div.className = "list-item";
       div.innerHTML = `
-        <span>${g.title} <small style="color:#94a3b8">(${g.category})</small></span>
-        <button class="small-btn">Verwijder</button>
+        <span>${g.title} (${doc.id})</span>
+        <button class="delete-btn">Verwijderen</button>
       `;
 
       div.querySelector("button").onclick = () => {
-        if (confirm("Game verwijderen?")) {
-          db.collection("games").doc(doc.id).delete().then(loadGames);
-        }
+        db.collection("games").doc(doc.id).delete().then(loadGames);
       };
 
-      gameList.appendChild(div);
+      list.appendChild(div);
     });
   });
 }
-
-addGameBtn.onclick = () => {
-  const title = titleInput.value.trim();
-  const image = imageInput.value.trim();
-  const link = linkInput.value.trim();
-  const category = categorySelect.value;
-
-  if (!title || !image || !link) return alert("Vul alles in");
-
-  db.collection("games").add({
-    title,
-    image,
-    link,
-    category
-  }).then(() => {
-    titleInput.value = "";
-    imageInput.value = "";
-    linkInput.value = "";
-    loadGames();
-  });
-};
 </script>
 
 </body>
