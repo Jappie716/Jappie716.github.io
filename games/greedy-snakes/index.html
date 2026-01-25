@@ -281,35 +281,39 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// SAVE
+// SAVE naar de juiste sub-collectie
 function saveGreedyState(state) {
   if (!currentUser) return;
 
+  // Dit matcht nu met je rule: match /users/{userId}/games/{gameId}
   db.collection("users")
     .doc(currentUser.uid)
+    .collection("games")
+    .doc("greedySnakes") // Dit is de {gameId}
     .set({
-      games: {
-        greedySnakes: {
-          ...state,
-          updatedAt: new Date()
-        }
-      }
-    }, { merge: true });
+      ...state,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(() => console.log("Cloud save succesvol!"))
+    .catch(e => console.error("Save error:", e));
 }
 
-// LOAD
+// LOAD vanuit de juiste sub-collectie
 function loadGreedySave() {
   if (!currentUser) return;
 
   db.collection("users")
     .doc(currentUser.uid)
+    .collection("games")
+    .doc("greedySnakes")
     .get()
     .then(doc => {
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        console.log("Geen save gevonden in de cloud.");
+        return;
+      }
 
-      const data = doc.data()?.games?.greedySnakes;
-      if (!data) return;
-
+      const data = doc.data();
       console.log("Save geladen:", data);
 
       if (window.applyLoadedState) {
