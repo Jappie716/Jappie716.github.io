@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Admin Panel</title>
+<title>Game Paradise - Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12,23 +12,83 @@
 <style>
 body {
   margin: 0;
+  font-family: Arial, sans-serif;
   background: #0b0f19;
   color: white;
-  font-family: Arial, sans-serif;
-  padding: 20px;
+  display: flex;
+  height: 100vh;
 }
 
-.panel {
-  max-width: 800px;
-  margin: auto;
-  background: #111827;
+.sidebar {
+  width: 230px;
+  background: #0f172a;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  text-align: center;
+  font-size: 20px;
+  font-weight: bold;
+  color: #60a5fa;
+  margin-bottom: 20px;
+}
+
+.nav-btn {
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  background: #334155;
+}
+
+.nav-btn.active {
+  background: #2563eb;
+}
+
+.main {
+  flex: 1;
   padding: 20px;
+  overflow-y: auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn {
+  background: #2563eb;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+}
+
+.section {
+  margin-top: 20px;
+}
+
+.card {
+  background: #1f2933;
+  padding: 15px;
   border-radius: 10px;
+  margin-bottom: 15px;
 }
 
-h2 { color: #60a5fa; }
+.card h3 {
+  margin-top: 0;
+  color: #60a5fa;
+}
 
-input, select, button {
+input, select {
   width: 100%;
   padding: 8px;
   margin-top: 8px;
@@ -36,142 +96,222 @@ input, select, button {
   border: none;
 }
 
-button {
-  background: #2563eb;
+.list-item {
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delete-btn {
+  background: #dc2626;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
   color: white;
   cursor: pointer;
 }
 
-.list {
-  margin-top: 15px;
-  background: #1e293b;
-  padding: 10px;
-  border-radius: 5px;
-}
-.item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
+.delete-btn:hover {
+  background: #b91c1c;
 }
 </style>
 </head>
 <body>
 
-<div class="panel">
-  <h2>Categorie toevoegen</h2>
-  <input id="catId" placeholder="Categorie ID (bv no-save)">
-  <input id="catName" placeholder="Naam">
-  <button onclick="saveCategory()">Opslaan</button>
+<div class="sidebar">
+  <div class="logo">🛠️ Admin Panel</div>
+  <div class="nav-btn active" id="gamesTab">Games beheren</div>
+  <div class="nav-btn" id="categoriesTab">Categorieën beheren</div>
+  <button class="btn" style="margin-top:auto" onclick="location.href='index.html'">← Terug</button>
+</div>
 
-  <div id="catList" class="list"></div>
+<div class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">Games beheren</h2>
+    <button class="btn" onclick="logout()">Uitloggen</button>
+  </div>
 
-  <h2>Game toevoegen</h2>
-  <input id="gameId" placeholder="Game ID">
-  <input id="gameTitle" placeholder="Titel">
-  <input id="gameImage" placeholder="Afbeelding URL">
-  <input id="gameLink" placeholder="Link">
-  <select id="gameCategory"></select>
-  <button onclick="saveGame()">Opslaan</button>
+  <!-- GAMES SECTION -->
+  <div id="gamesSection" class="section">
+    <div class="card">
+      <h3>Game toevoegen</h3>
+      <input id="gameId" placeholder="Game ID (bijv: greedy-snakes)">
+      <input id="gameTitle" placeholder="Titel">
+      <input id="gameImage" placeholder="Afbeelding URL">
+      <input id="gameLink" placeholder="Game link (bijv: games/greedy-snakes/index.html)">
+      <select id="gameCategory"></select>
+      <button class="btn" onclick="addGame()">Game opslaan</button>
+    </div>
 
-  <div id="gameList" class="list"></div>
+    <div class="card">
+      <h3>Bestaande games</h3>
+      <div id="gamesList"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES SECTION -->
+  <div id="categoriesSection" class="section" style="display:none">
+    <div class="card">
+      <h3>Categorie toevoegen</h3>
+      <input id="catId" placeholder="Categorie ID (bijv: no-save)">
+      <input id="catName" placeholder="Categorie naam">
+      <button class="btn" onclick="addCategory()">Categorie opslaan</button>
+    </div>
+
+    <div class="card">
+      <h3>Bestaande categorieën</h3>
+      <div id="categoriesList"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-const ADMIN_EMAIL = "someoeneheilig@gmail.com";
-
-firebase.initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490"
-});
+  projectId: "gameparadise-80490",
+  storageBucket: "gameparadise-80490.firebasestorage.app",
+  messagingSenderId: "335620903527",
+  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
 
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const catId = document.getElementById("catId");
-const catName = document.getElementById("catName");
-const gameId = document.getElementById("gameId");
-const gameTitle = document.getElementById("gameTitle");
-const gameImage = document.getElementById("gameImage");
-const gameLink = document.getElementById("gameLink");
-const gameCategory = document.getElementById("gameCategory");
+const ADMIN_EMAIL = "someoeneheilig@gmail.com";
 
+// Tabs
+const gamesTab = document.getElementById("gamesTab");
+const categoriesTab = document.getElementById("categoriesTab");
+const gamesSection = document.getElementById("gamesSection");
+const categoriesSection = document.getElementById("categoriesSection");
+const pageTitle = document.getElementById("pageTitle");
+
+gamesTab.onclick = () => {
+  gamesTab.classList.add("active");
+  categoriesTab.classList.remove("active");
+  gamesSection.style.display = "block";
+  categoriesSection.style.display = "none";
+  pageTitle.textContent = "Games beheren";
+};
+
+categoriesTab.onclick = () => {
+  categoriesTab.classList.add("active");
+  gamesTab.classList.remove("active");
+  gamesSection.style.display = "none";
+  categoriesSection.style.display = "block";
+  pageTitle.textContent = "Categorieën beheren";
+};
+
+// AUTH CHECK
 auth.onAuthStateChanged(user => {
   if (!user || user.email !== ADMIN_EMAIL) {
     alert("Geen toegang");
     location.href = "index.html";
+  } else {
+    loadCategories();
+    loadGames();
   }
 });
 
-function saveCategory() {
-  db.collection("categories").doc(catId.value).set({
-    name: catName.value
-  });
-  loadCategories();
+function logout() {
+  auth.signOut().then(() => location.href = "index.html");
 }
 
-function saveGame() {
-  db.collection("games").doc(gameId.value).set({
+// CATEGORIES
+function addCategory() {
+  const id = catId.value.trim();
+  const name = catName.value.trim();
+  if (!id || !name) return alert("Vul alles in");
+
+  db.collection("categories").doc(id).set({ name }).then(() => {
+    catId.value = "";
+    catName.value = "";
+    loadCategories();
+  });
+}
+
+function loadCategories() {
+  const list = document.getElementById("categoriesList");
+  const select = document.getElementById("gameCategory");
+
+  list.innerHTML = "";
+  select.innerHTML = "";
+
+  db.collection("categories").get().then(snap => {
+    snap.forEach(doc => {
+      const data = doc.data();
+
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <span>${data.name} (${doc.id})</span>
+        <button class="delete-btn">Verwijderen</button>
+      `;
+
+      div.querySelector("button").onclick = () => {
+        db.collection("categories").doc(doc.id).delete().then(loadCategories);
+      };
+
+      list.appendChild(div);
+
+      const opt = document.createElement("option");
+      opt.value = doc.id;
+      opt.textContent = data.name;
+      select.appendChild(opt);
+    });
+  });
+}
+
+// GAMES
+function addGame() {
+  const id = gameId.value.trim();
+  if (!id) return alert("Game ID nodig");
+
+  const data = {
     title: gameTitle.value,
     image: gameImage.value,
     link: gameLink.value,
     category: gameCategory.value
-  });
-  loadGames();
-}
+  };
 
-function loadCategories() {
-  const list = document.getElementById("catList");
-  list.innerHTML = "";
-  gameCategory.innerHTML = "";
-
-  db.collection("categories").get().then(snap => {
-    snap.forEach(doc => {
-      const d = document.createElement("div");
-      d.className = "item";
-      d.innerHTML = `
-        ${doc.data().name}
-        <button onclick="deleteCategory('${doc.id}')">X</button>
-      `;
-      list.appendChild(d);
-
-      const opt = document.createElement("option");
-      opt.value = doc.id;
-      opt.textContent = doc.data().name;
-      gameCategory.appendChild(opt);
-    });
+  db.collection("games").doc(id).set(data).then(() => {
+    gameId.value = "";
+    gameTitle.value = "";
+    gameImage.value = "";
+    gameLink.value = "";
+    loadGames();
   });
 }
 
 function loadGames() {
-  const list = document.getElementById("gameList");
+  const list = document.getElementById("gamesList");
   list.innerHTML = "";
 
   db.collection("games").get().then(snap => {
     snap.forEach(doc => {
-      const d = document.createElement("div");
-      d.className = "item";
-      d.innerHTML = `
-        ${doc.data().title}
-        <button onclick="deleteGame('${doc.id}')">X</button>
+      const g = doc.data();
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <span>${g.title} (${doc.id})</span>
+        <button class="delete-btn">Verwijderen</button>
       `;
-      list.appendChild(d);
+
+      div.querySelector("button").onclick = () => {
+        db.collection("games").doc(doc.id).delete().then(loadGames);
+      };
+
+      list.appendChild(div);
     });
   });
 }
-
-function deleteCategory(id) {
-  db.collection("categories").doc(id).delete();
-  loadCategories();
-}
-
-function deleteGame(id) {
-  db.collection("games").doc(id).delete();
-  loadGames();
-}
-
-loadCategories();
-loadGames();
 </script>
+
 </body>
 </html>
