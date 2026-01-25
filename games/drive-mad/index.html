@@ -2,7 +2,9 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title>Drive Mad - Cloud Sync</title>
+
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="google" content="notranslate" />
 
@@ -16,7 +18,7 @@
 
   <style>
     #status {
-      position: absolute;
+      position: fixed;
       top: 10px;
       left: 10px;
       background: rgba(0,0,0,0.7);
@@ -46,10 +48,11 @@
         </div>
       </div>
     </div>
+
     <div id="progress_or_play">
       <progress id="progress" class="loading" value="0" max="100"></progress>
+      <p class="description"></p>
     </div>
-    <p class="description"></p>
   </div>
 
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
@@ -58,150 +61,151 @@
 </div>
 
 <!-- =========================
-     🔥 FIREBASE + CLOUD SAVE
+     🔥 FIREBASE CLOUD SYSTEM
 ========================== -->
 <script>
-/* ------------------
-   FIREBASE CONFIG
------------------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-  authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490",
-  storageBucket: "gameparadise-80490.firebasestorage.app",
-  messagingSenderId: "335620903527",
-  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-};
+  const statusBox = document.getElementById("status");
 
-firebase.initializeApp(firebaseConfig);
+  // 🔥 Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+  };
 
-const auth = firebase.auth();
-const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
 
-const statusBox = document.getElementById("status");
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-window.USER_ID = null;
-window.TARGET_LEVEL = 1;
-let GAME_READY = false;
+  let USER_ID = null;
+  let GAME_READY = false;
+  let LAST_SAVED_LEVEL = 1;
 
-/* ------------------
-   LOGIN CHECK
------------------- */
-auth.onAuthStateChanged(async user => {
-  if (!user) {
-    alert("❌ Je bent niet ingelogd!");
-    window.location.href = "index.html";
-    return;
-  }
-
-  window.USER_ID = user.uid;
-  console.log("🔐 Ingelogd als:", user.email);
-  statusBox.textContent = "Cloud data laden...";
-
-  await loadFromCloud();
-  tryStartLevel();
-});
-
-/* ------------------
-   CLOUD LOAD
------------------- */
-async function loadFromCloud() {
-  try {
-    const doc = await db
-      .collection("drive_mad_saves")
-      .doc(window.USER_ID)
-      .get();
-
-    if (doc.exists) {
-      window.TARGET_LEVEL = Number(doc.data().lastLevel || 1);
-      console.log("☁️ Level uit cloud:", window.TARGET_LEVEL);
-    } else {
-      console.log("ℹ️ Geen save gevonden");
+  // =====================
+  // 🔐 LOGIN CHECK
+  // =====================
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      alert("❌ Niet ingelogd!");
+      window.location.href = "index.html";
+      return;
     }
-  } catch (e) {
-    console.warn("❌ Cloud load fout:", e.message);
+
+    USER_ID = user.uid;
+    console.log("🔐 Ingelogd als:", user.email);
+    statusBox.textContent = "Cloud laden...";
+
+    await loadFromCloud();
+    tryStartSkip();
+  });
+
+  // =====================
+  // ☁️ LOAD FROM CLOUD
+  // =====================
+  async function loadFromCloud() {
+    try {
+      const doc = await db
+        .collection("drive_mad_saves")
+        .doc(USER_ID)
+        .get();
+
+      if (!doc.exists) {
+        console.log("ℹ️ Geen save gevonden");
+        LAST_SAVED_LEVEL = 1;
+        return;
+      }
+
+      LAST_SAVED_LEVEL = Number(doc.data().lastLevel || 1);
+      console.log("☁️ Cloud level:", LAST_SAVED_LEVEL);
+    } catch (e) {
+      console.warn("❌ Cloud load fout:", e.message);
+    }
   }
-}
 
-/* ------------------
-   CLOUD SAVE
------------------- */
-async function saveToCloud(level) {
-  if (!window.USER_ID) return;
+  // =====================
+  // 💾 SAVE TO CLOUD
+  // =====================
+  async function saveToCloud(level) {
+    if (!USER_ID || !level) return;
 
-  try {
-    await db
-      .collection("drive_mad_saves")
-      .doc(window.USER_ID)
-      .set({
-        lastLevel: Number(level),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+    try {
+      await db
+        .collection("drive_mad_saves")
+        .doc(USER_ID)
+        .set({
+          lastLevel: Number(level),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
 
-    console.log("💾 Level opgeslagen:", level);
-  } catch (e) {
-    console.warn("❌ Save fout:", e.message);
+      console.log("💾 Level opgeslagen:", level);
+    } catch (e) {
+      console.warn("❌ Save fout:", e.message);
+    }
   }
-}
 
-/* ------------------
-   START OP CLOUD LEVEL
------------------- */
-function tryStartLevel() {
-  if (!GAME_READY) return;
+  // =====================
+  // ⏩ SKIP NAAR CLOUD LEVEL
+  // =====================
+  function tryStartSkip() {
+    if (!GAME_READY || !LAST_SAVED_LEVEL) return;
 
-  const wait = setInterval(() => {
-    if (Module && Module._poki_level_start) {
-      clearInterval(wait);
+    const wait = setInterval(() => {
+      if (window.poki_level_start) {
+        clearInterval(wait);
 
-      console.log("🎮 Starten op level:", window.TARGET_LEVEL);
-      Module._poki_level_start(window.TARGET_LEVEL);
+        console.log("🎮 Starten op level:", LAST_SAVED_LEVEL + 1);
+        window.poki_level_start(LAST_SAVED_LEVEL + 1);
+      }
+    }, 500);
+  }
+
+  // =====================
+  // 🎮 LEVEL HOOK SYSTEM
+  // =====================
+  function hookLevelSystem() {
+    const hook = setInterval(() => {
+      if (window.poki_level_start) {
+        clearInterval(hook);
+
+        const originalStart = window.poki_level_start;
+
+        window.poki_level_start = function(level) {
+          const lvl = Number(level || 1);
+
+          console.log("🎮 Level gestart:", lvl);
+
+          // Save previous level
+          if (lvl > 1) {
+            saveToCloud(lvl - 1);
+          }
+
+          return originalStart.apply(this, arguments);
+        };
+
+        console.log("✅ Level hook actief");
+      }
+    }, 500);
+  }
+
+  // =====================
+  // ⚙️ EMSCRIPTEN MODULE
+  // =====================
+  var Module = {
+    canvas: document.getElementById("canvas"),
+    locateFile: (path) => "webapp/" + path,
+    onRuntimeInitialized: function() {
+      console.log("⚙️ Game engine klaar");
+      GAME_READY = true;
       statusBox.style.display = "none";
+
+      hookLevelSystem();
+      tryStartSkip();
     }
-  }, 500);
-}
-
-/* ------------------
-   LEVEL SAVE HOOK
------------------- */
-function hookLevelSystem() {
-  const hook = setInterval(() => {
-    if (Module && Module._poki_level_end) {
-      clearInterval(hook);
-
-      const originalEnd = Module._poki_level_end;
-
-      Module._poki_level_end = function(level) {
-        let lvl = Number(level || window.TARGET_LEVEL || 1);
-
-        console.log("🏁 Level voltooid:", lvl);
-        saveToCloud(lvl);
-
-        return originalEnd.apply(this, arguments);
-      };
-
-      console.log("✅ Level save hook actief");
-    }
-  }, 500);
-}
-</script>
-
-<!-- =========================
-     ⚙️ EMSCRIPTEN MODULE
-========================== -->
-<script>
-var Module = {
-  canvas: document.getElementById("canvas"),
-  locateFile: function(path) {
-    return "webapp/" + path;
-  },
-  onRuntimeInitialized: function() {
-    console.log("⚙️ Engine klaar");
-    GAME_READY = true;
-    hookLevelSystem();
-    tryStartLevel();
-  }
-};
+  };
 </script>
 
 <!-- 🎮 GAME FILES -->
