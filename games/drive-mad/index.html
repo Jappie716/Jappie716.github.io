@@ -16,29 +16,22 @@
     <style>
       #cloud-status {
         position: fixed;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.7);
+        top: 15px;
+        right: 15px;
+        background: rgba(0, 0, 0, 0.85);
         color: #00ff00;
-        padding: 5px 15px;
-        border-radius: 20px;
+        padding: 8px 18px;
+        border-radius: 25px;
         font-family: sans-serif;
-        font-size: 12px;
+        font-size: 13px;
         z-index: 10000;
-        border: 1px solid #00ff00;
+        border: 2px solid #00ff00;
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
       }
     </style>
   </head>
   <body id="body">
-    <div id="cloud-status">☁️ Account check...</div>
-
-    <div id="modal_parent">
-      <div id="modal_content">
-        <span id="modal_close_button">&times;</span>
-        <div id="store_link_modal_content" class="modal_inner"></div>
-        <div id="share_file_modal_content" class="modal_inner"></div>
-      </div>
-    </div>
+    <div id="cloud-status">🔐 Wachten op login...</div>
 
     <div id="canvas_border" class="emscripten_border">
       <div id="play_content" class="middle center">
@@ -58,6 +51,8 @@
     </div>
 
     <script>
+      const statusBox = document.getElementById("cloud-status");
+
       // 1. Firebase Configuratie
       const firebaseConfig = {
         apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
@@ -77,74 +72,92 @@
       let CURRENT_GAME_LEVEL = 1;
       let SYNC_COMPLETE = false;
 
-      // 2. Cloud Functies
+      // 2. Agressieve Save Functie
       async function saveProgress(lvl) {
-        if (!USER_ID || lvl <= CLOUD_LEVEL) return;
-        CLOUD_LEVEL = lvl;
-        await db.collection("drive_mad_saves").doc(USER_ID).set({
-          lastLevel: lvl,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        document.getElementById("cloud-status").textContent = "💾 Opgeslagen: Lvl " + lvl;
+        if (!USER_ID) return;
+        
+        // Alleen opslaan als het level hoger is dan wat we al hebben
+        if (lvl > CLOUD_LEVEL) {
+          try {
+            await db.collection("drive_mad_saves").doc(USER_ID).set({
+              lastLevel: Number(lvl),
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            CLOUD_LEVEL = lvl;
+            statusBox.textContent = "💾 Cloud Bijgewerkt: Lvl " + lvl;
+            console.log("🔥 Firestore Update Succes: Lvl", lvl);
+          } catch (e) {
+            console.error("❌ Firestore Save Error:", e);
+            statusBox.textContent = "⚠️ Save Fout: Geen permissie";
+          }
+        }
       }
 
-      // 3. De Game Engine Hook & Skipper
-      // We overschrijven de poki-functie die de game aanroept bij elk nieuw level
-      window.poki_level_start = function(data) {
-        const lvl = typeof data === "object" ? (data.level || 1) : Number(data);
-        CURRENT_GAME_LEVEL = lvl;
-        console.log("🕹️ Game start level:", lvl);
-        
-        // Sla voortgang op
-        saveProgress(lvl);
-      };
-
-      function startSkipper() {
-        const skipInterval = setInterval(() => {
-          if (SYNC_COMPLETE) {
-            clearInterval(skipInterval);
-            return;
-          }
-
-          if (window.Module && typeof Module._poki_level_start === "function") {
+      // 3. De Skipper Loop (Teleport)
+      function startTeleportLoop() {
+        const skipChecker = setInterval(() => {
+          if (window.Module && typeof Module._poki_level_start === "function" && CLOUD_LEVEL > 1) {
+            
             if (CURRENT_GAME_LEVEL < CLOUD_LEVEL) {
-              console.log("🚀 Skipper: Naar level", CLOUD_LEVEL);
-              document.getElementById("cloud-status").textContent = "🚀 Cloud laden: Lvl " + CLOUD_LEVEL;
+              console.log("🚀 Skipper: Forceer naar level", CLOUD_LEVEL);
+              statusBox.textContent = "🚀 Cloud Sync: Naar Lvl " + CLOUD_LEVEL;
               Module._poki_level_start(CLOUD_LEVEL);
             } else {
-              SYNC_COMPLETE = true;
-              document.getElementById("cloud-status").textContent = "✅ Cloud: Lvl " + CLOUD_LEVEL;
-              clearInterval(skipInterval);
+              // We zijn op het juiste level of hoger
+              statusBox.textContent = "✅ Cloud Actief: Lvl " + CLOUD_LEVEL;
+              clearInterval(skipChecker);
             }
           }
-        }, 1000); // Check elke seconde of we al op het cloud-level zijn
+        }, 1500); // Elke 1.5 seconde proberen tot het lukt
+
+        setTimeout(() => clearInterval(skipChecker), 20000); // Stop na 20 sec
       }
 
-      // 4. Inloggen en data ophalen
+      // 4. Hook de Game Meldingen (Voor opslaan)
+      window.poki_level_start = function(data) {
+        const lvl = (typeof data === "object") ? (data.level || 1) : Number(data);
+        CURRENT_GAME_LEVEL = lvl;
+        console.log("🕹️ Level gedetecteerd:", lvl);
+        
+        if (USER_ID) {
+          saveProgress(lvl);
+        }
+      };
+
+      // 5. Auth Check (Wachten op login van index.html)
       auth.onAuthStateChanged(async (user) => {
         if (user) {
           USER_ID = user.uid;
-          const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
-          if (doc.exists) {
-            CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
-            document.getElementById("cloud-status").textContent = "☁️ Cloud save gevonden: Lvl " + CLOUD_LEVEL;
-          } else {
-            document.getElementById("cloud-status").textContent = "☁️ Nieuw profiel";
+          statusBox.textContent = "🔍 Cloud data ophalen...";
+          
+          try {
+            const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
+            if (doc.exists) {
+              CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
+              statusBox.textContent = "☁️ Cloud gevonden: Lvl " + CLOUD_LEVEL;
+              console.log("✅ Cloud Data geladen: Lvl", CLOUD_LEVEL);
+            } else {
+              statusBox.textContent = "🆕 Welkom! Geen save gevonden.";
+              CLOUD_LEVEL = 1;
+            }
+            startTeleportLoop();
+          } catch (e) {
+            console.error("❌ Cloud Load Error:", e);
+            statusBox.textContent = "❌ Database Toegang Geweigerd";
           }
-          startSkipper();
         } else {
-          // Als niet ingelogd, stuur terug naar index of login anoniem
-          auth.signInAnonymously();
+          // Als er geen user is, stuur ze terug naar de login pagina
+          statusBox.textContent = "🚫 Niet ingelogd!";
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 2000);
         }
       });
 
-      // 5. Emscripten Module (De brug naar de game)
       var Module = {
         canvas: document.getElementById("canvas"),
         locateFile: (path) => "webapp/" + path,
-        onRuntimeInitialized: () => {
-          console.log("⚙️ Engine klaar.");
-        }
+        onRuntimeInitialized: () => { console.log("⚙️ Engine geladen."); }
       };
     </script>
 
