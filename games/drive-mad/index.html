@@ -90,178 +90,181 @@
   <script type="text/javascript" src="webapp/index.js"></script>
 
   <script>
-    // 🔑 FIREBASE CONFIG
-    const firebaseConfig = {
-      apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-      authDomain: "gameparadise-80490.firebaseapp.com",
-      projectId: "gameparadise-80490",
-      storageBucket: "gameparadise-80490.firebasestorage.app",
-      messagingSenderId: "335620903527",
-      appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-    };
+  // 🔑 FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+  };
 
-    firebase.initializeApp(firebaseConfig);
+  firebase.initializeApp(firebaseConfig);
 
-    const auth = firebase.auth();
-    const db = firebase.firestore();
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-    const statusBox = document.getElementById("cloudStatus");
-    const loginBtn = document.getElementById("loginBtn");
+  const statusBox = document.getElementById("cloudStatus");
+  const loginBtn = document.getElementById("loginBtn");
 
-    let user = null;
-    let cloudLevel = 1;
-    let teleported = false;
-    let engineReady = false;
+  let user = null;
+  let cloudLevel = 1;
+  let teleported = false;
+  let engineReady = false;
 
-    let detectedLevelFunc = null; // 👈 echte engine functie naam
+  let detectedLevelFunc = null;
+  const callHistory = {};
+  let lastSeenLevel = 0;
 
-    function setStatus(text) {
-      statusBox.innerHTML = text;
-    }
+  function setStatus(text) {
+    statusBox.innerHTML = text;
+  }
 
-    function appendStatus(text) {
-      statusBox.innerHTML += "<br>" + text;
-    }
+  function appendStatus(text) {
+    statusBox.innerHTML += "<br>" + text;
+  }
 
-    // 🔐 LOGIN
-    loginBtn.onclick = () => {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(err => {
-        setStatus("❌ Login fout<br>" + err.message);
-      });
-    };
-
-    // 🔁 AUTH LISTENER
-    auth.onAuthStateChanged(async (u) => {
-      if (!u) {
-        user = null;
-        setStatus("⚠️ Niet ingelogd");
-        return;
-      }
-
-      user = u;
-      loginBtn.style.display = "none";
-      setStatus("🔐 Ingelogd:<br>" + user.email + "<br>☁️ Cloud laden...");
-
-      await loadCloudLevel();
+  // 🔐 LOGIN
+  loginBtn.onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => {
+      setStatus("❌ Login fout<br>" + err.message);
     });
+  };
 
-    // ☁️ CLOUD LOAD
-    async function loadCloudLevel() {
-      try {
-        const ref = db.collection("drive_mad_saves").doc(user.uid);
-        const snap = await ref.get();
-
-        if (snap.exists) {
-          cloudLevel = snap.data().lastLevel || 1;
-        } else {
-          cloudLevel = 1;
-          await ref.set({
-            lastLevel: 1,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        appendStatus("☁️ Cloud level: " + cloudLevel);
-      } catch (e) {
-        appendStatus("❌ Cloud fout");
-        console.error(e);
-      }
+  // 🔁 AUTH LISTENER
+  auth.onAuthStateChanged(async (u) => {
+    if (!u) {
+      user = null;
+      setStatus("⚠️ Niet ingelogd");
+      return;
     }
 
-    // 🕹️ ENGINE READY CHECK
-    const engineCheck = setInterval(() => {
-      if (typeof Module !== "undefined" && Module.ccall) {
-        engineReady = true;
-        clearInterval(engineCheck);
-        hookEngine();
-      }
-    }, 500);
+    user = u;
+    loginBtn.style.display = "none";
+    setStatus("🔐 Ingelogd:<br>" + user.email + "<br>☁️ Cloud laden...");
 
-    // 🪝 ENGINE HOOK MET AUTO-DETECT
-    function hookEngine() {
-      const originalCall = Module.ccall;
+    await loadCloudLevel();
+  });
 
-      Module.ccall = function (func, returnType, argTypes, args) {
-        try {
-          // Log alles 1x in console zodat jij kan meekijken
-          console.log("CCALL:", func, args);
+  // ☁️ CLOUD LOAD
+  async function loadCloudLevel() {
+    try {
+      const ref = db.collection("drive_mad_saves").doc(user.uid);
+      const snap = await ref.get();
 
-          // Detecteer level-functie automatisch
-          if (!detectedLevelFunc && Array.isArray(args) && args.length === 1) {
-            const maybeLevel = parseInt(args[0]);
-            if (!isNaN(maybeLevel) && maybeLevel > 0 && maybeLevel < 5000) {
-              detectedLevelFunc = func;
-              appendStatus("🧠 Level-functie: " + func);
-            }
-          }
-
-          // Als we hem gevonden hebben → luister naar level changes
-          if (func === detectedLevelFunc) {
-            const newLevel = parseInt(args[0]);
-            if (!isNaN(newLevel)) {
-              onLevelChange(newLevel);
-            }
-          }
-        } catch (e) {
-          console.warn("Cloud hook error:", e);
-        }
-
-        return originalCall.apply(this, arguments);
-      };
-
-      appendStatus("📡 Engine gekoppeld");
-      waitAndTeleport();
-    }
-
-    // ⏳ Wacht tot functie bekend is, dan teleport
-    function waitAndTeleport() {
-      const check = setInterval(() => {
-        if (detectedLevelFunc) {
-          clearInterval(check);
-          autoTeleport();
-        }
-      }, 500);
-    }
-
-    // 🚀 TELEPORT
-    function autoTeleport() {
-      if (!user) return;
-      if (teleported) return;
-      if (!engineReady) return;
-      if (!detectedLevelFunc) return;
-      if (cloudLevel <= 1) return;
-
-      teleported = true;
-
-      appendStatus("🚀 Spring naar level " + cloudLevel);
-
-      try {
-        Module.ccall(detectedLevelFunc, null, ["number"], [cloudLevel]);
-      } catch (e) {
-        console.warn("Teleport failed:", e);
-      }
-    }
-
-    // 💾 SAVE LOGIC
-    async function onLevelChange(newLevel) {
-      if (!user) return;
-      if (newLevel <= cloudLevel) return;
-
-      cloudLevel = newLevel;
-      appendStatus("💾 Opslaan: Level " + newLevel);
-
-      try {
-        await db.collection("drive_mad_saves").doc(user.uid).set({
-          lastLevel: newLevel,
+      if (snap.exists) {
+        cloudLevel = snap.data().lastLevel || 1;
+      } else {
+        cloudLevel = 1;
+        await ref.set({
+          lastLevel: 1,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-      } catch (e) {
-        appendStatus("❌ Opslaan mislukt");
-        console.error(e);
       }
+
+      appendStatus("☁️ Cloud level: " + cloudLevel);
+    } catch (e) {
+      appendStatus("❌ Cloud fout");
+      console.error(e);
     }
-  </script>
+  }
+
+  // 🕹️ ENGINE READY CHECK
+  const engineCheck = setInterval(() => {
+    if (typeof Module !== "undefined" && Module.ccall) {
+      engineReady = true;
+      clearInterval(engineCheck);
+      hookEngine();
+    }
+  }, 500);
+
+  // 🪝 ENGINE HOOK MET SLIMME DETECTIE
+  function hookEngine() {
+    const originalCall = Module.ccall;
+
+    Module.ccall = function (func, returnType, argTypes, args) {
+      try {
+        console.log("CCALL:", func, args);
+
+        if (Array.isArray(args) && args.length === 1) {
+          const maybeLevel = parseInt(args[0]);
+
+          if (!isNaN(maybeLevel) && maybeLevel > 0 && maybeLevel < 5000) {
+
+            if (!callHistory[func]) {
+              callHistory[func] = { count: 0, last: 0 };
+            }
+
+            callHistory[func].count++;
+            callHistory[func].last = maybeLevel;
+
+            // Echte level-functie:
+            // - Meerdere calls
+            // - Oplopende levels
+            if (
+              callHistory[func].count >= 3 &&
+              maybeLevel > lastSeenLevel
+            ) {
+              if (!detectedLevelFunc) {
+                detectedLevelFunc = func;
+                appendStatus("🧠 Level-functie: " + func);
+                autoTeleport();
+              }
+
+              lastSeenLevel = maybeLevel;
+              onLevelChange(maybeLevel);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Cloud hook error:", e);
+      }
+
+      return originalCall.apply(this, arguments);
+    };
+
+    appendStatus("📡 Engine gekoppeld");
+  }
+
+  // 🚀 TELEPORT
+  function autoTeleport() {
+    if (!user) return;
+    if (teleported) return;
+    if (!engineReady) return;
+    if (!detectedLevelFunc) return;
+    if (cloudLevel <= 1) return;
+
+    teleported = true;
+    appendStatus("🚀 Spring naar level " + cloudLevel);
+
+    try {
+      Module.ccall(detectedLevelFunc, null, ["number"], [cloudLevel]);
+    } catch (e) {
+      console.warn("Teleport failed:", e);
+    }
+  }
+
+  // 💾 SAVE LOGIC
+  async function onLevelChange(newLevel) {
+    if (!user) return;
+    if (newLevel <= cloudLevel) return;
+
+    cloudLevel = newLevel;
+    appendStatus("💾 Opslaan: Level " + newLevel);
+
+    try {
+      await db.collection("drive_mad_saves").doc(user.uid).set({
+        lastLevel: newLevel,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {
+      appendStatus("❌ Opslaan mislukt");
+      console.error(e);
+    }
+  }
+</script>
 
 </body>
 </html>
