@@ -1,160 +1,45 @@
 <!DOCTYPE html>
 <html lang="en-us">
-<head>
+  <head>
     <meta charset="utf-8" />
-    <title>Drive Mad - Cloud Sync Fixed</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Drive Mad</title>
+    <script type="text/javascript" src="Jump_Gamemonetize.js"></script>
+    <script src="/js/main.js"></script>
+    <meta name="description" content="" />
+    <meta name="google" content="notranslate" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" href="webapp/fancade.css" />
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <style>
-        #cloudStatus {
-            position: fixed; top: 10px; right: 10px;
-            background: rgba(0, 0, 0, 0.9); color: #0f0;
-            font-family: monospace; font-size: 11px;
-            padding: 12px; border-radius: 8px;
-            z-index: 9999; border: 2px solid #0f0;
-        }
-        #syncBtn {
-            margin-top: 8px; padding: 5px; background: #0f0; color: #000;
-            border: none; cursor: pointer; width: 100%; font-weight: bold;
-        }
-        #loginBtn {
-            position: fixed; top: 10px; left: 10px;
-            z-index: 9999; padding: 10px 15px;
-            background: #4285F4; color: white; border: none; cursor: pointer;
-            border-radius: 4px; font-weight: bold;
-        }
-    </style>
-</head>
-<body id="body">
-
-<button id="loginBtn">🔐 Inloggen met Google</button>
-
-<div id="cloudStatus">
-    <div id="stats">Wachten op login...</div>
-    <button id="syncBtn" style="display:none">NU SYNCHRONISEREN</button>
-</div>
-
-<div id="modal_parent"><div id="modal_content"><span id="modal_close_button">&times;</span><div id="store_link_modal_content" class="modal_inner"></div><div id="share_file_modal_content" class="modal_inner"></div></div></div>
-
-<div id="canvas_border" class="emscripten_border">
-    <div id="play_content" class="middle center">
-        <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
+    <link rel="icon" href="webapp/cover.jpg" />
+  </head>
+  <body id="body">
+    <div id="modal_parent">
+      <div id="modal_content">
+        <span id="modal_close_button">&times;</span>
+        <div id="store_link_modal_content" class="modal_inner"></div>
+        <div id="share_file_modal_content" class="modal_inner"></div>
+      </div>
     </div>
-    <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-    <div id="gradient"></div>
-    <div id="webview_content"></div>
-</div>
-
-<script>
-/* ==========================
-   🔥 FIREBASE LOGIC
-========================== */
-const firebaseConfig = {
-    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-    authDomain: "gameparadise-80490.firebaseapp.com",
-    projectId: "gameparadise-80490",
-    storageBucket: "gameparadise-80490.firebasestorage.app",
-    messagingSenderId: "335620903527",
-    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let USER_ID = null;
-let CLOUD_LEVEL = 1;
-let CURRENT_GAME_LEVEL = 1;
-
-const stats = document.getElementById("stats");
-const syncBtn = document.getElementById("syncBtn");
-
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        USER_ID = user.uid;
-        document.getElementById("loginBtn").style.display = "none";
-        syncBtn.style.display = "block";
-        
-        db.collection("drive_mad_saves").doc(USER_ID).onSnapshot(doc => {
-            if (doc.exists) {
-                CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
-                updateUI();
-            }
-        });
-    }
-});
-
-document.getElementById("loginBtn").onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-
-function updateUI() {
-    stats.innerHTML = `👤 Ingelogd<br>☁️ Cloud: Lvl ${CLOUD_LEVEL}<br>🕹️ Game: Lvl ${CURRENT_GAME_LEVEL}`;
-}
-
-/* ==========================
-   🪝 ENGINE HIJACK (De Fix)
-========================== */
-const hijackInterval = setInterval(() => {
-    if (typeof startGame === 'function') {
-        const originalStartGame = startGame;
-        window.startGame = function() {
-            console.log("🚀 Hijack: Engine start gedetecteerd.");
-            originalStartGame(); // Start de motor
-            
-            // Forceer teleport na een ultrakorte delay (zodat de engine klaar is)
-            if (USER_ID && CLOUD_LEVEL > 1) {
-                setTimeout(() => {
-                    console.log("⚡ Forceer cloud level: " + CLOUD_LEVEL);
-                    if(window.Module && Module._poki_level_start) {
-                        Module._poki_level_start(CLOUD_LEVEL);
-                    }
-                }, 250);
-            }
-        };
-        console.log("✅ Engine succesvol gekaapt.");
-        clearInterval(hijackInterval);
-    }
-}, 50);
-
-// De "Hamer" voor als de hijack te vroeg kwam
-setInterval(() => {
-    if (USER_ID && CLOUD_LEVEL > CURRENT_GAME_LEVEL) {
-        if (window.Module && typeof Module._poki_level_start === "function") {
-            Module._poki_level_start(CLOUD_LEVEL);
-        }
-    }
-}, 3000);
-
-syncBtn.onclick = () => {
-    if(window.Module && Module._poki_level_start) Module._poki_level_start(CLOUD_LEVEL);
-};
-
-/* ==========================
-   💾 AUTO-SAVE HOOK
-========================== */
-window.poki_level_start = function(data) {
-    let lvl = (typeof data === "object") ? (data.level || 1) : Number(data);
-    CURRENT_GAME_LEVEL = lvl;
-    updateUI();
-
-    if (USER_ID && lvl > CLOUD_LEVEL) {
-        db.collection("drive_mad_saves").doc(USER_ID).set({
-            lastLevel: lvl,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        CLOUD_LEVEL = lvl; // Update lokale cache om loop te voorkomen
-    }
-};
-
-var Module = {
-    canvas: document.getElementById("canvas"),
-    locateFile: (p) => "webapp/" + p
-};
-</script>
-
-<script src="webapp/source_min.js"></script>
-<script src="webapp/index.js"></script>
-
-</body>
+    <div id="canvas_border" class="emscripten_border">
+      <div id="play_content" class="middle center">
+        <div class="edge">
+          <div class="box">
+            <div class="black">
+              <img src="webapp/cover.jpg" class="cover" />
+              <p class="title">Drive Mad</p>
+              <p class="author">Martin Magni</p>
+            </div>
+          </div>
+        </div>
+        <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
+        <p class="description"></p>
+      </div>
+      <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+      <div id="gradient"></div>
+      <div id="webview_content"></div>
+    </div>
+    <script type="text/javascript" src="webapp/source_min.js"></script>
+    <script type="text/javascript" src="webapp/index.js"></script>
+  </body>
 </html>
+<!-- Thanks EvilMonke#0263! -->
