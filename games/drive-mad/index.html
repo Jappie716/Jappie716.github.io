@@ -33,84 +33,83 @@
     </div>
 
     <script>
-      // 1. Firebase Configuratie
-      const firebaseConfig = {
-        apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-        authDomain: "gameparadise-80490.firebaseapp.com",
-        projectId: "gameparadise-80490",
-        storageBucket: "gameparadise-80490.firebasestorage.app",
-        messagingSenderId: "335620903527",
-        appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-      };
+  // 1. Firebase Config (Houd je eigen config hier)
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+  };
 
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      const db = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-      window.TARGET_LEVEL = 1;
-      window.CURRENT_LEVEL = 0;
-      window.USER_ID = null;
+  window.TARGET_LEVEL = 1;
+  window.USER_ID = null;
 
-      // 2. Cloud Functies
-      async function loadFromCloud() {
-        if (!window.USER_ID) return;
-        try {
-          const doc = await db.collection("drive_mad_saves").doc(window.USER_ID).get();
-          if (doc.exists) {
-            window.TARGET_LEVEL = Number(doc.data().lastLevel || 1);
-            console.log("☁️ Cloud level gevonden:", window.TARGET_LEVEL);
-          }
-        } catch (e) { console.error("Fout bij laden:", e); }
+  // 2. Cloud Functies
+  async function loadFromCloud() {
+    if (!window.USER_ID) return;
+    try {
+      const doc = await db.collection("drive_mad_saves").doc(window.USER_ID).get();
+      if (doc.exists) {
+        window.TARGET_LEVEL = Number(doc.data().lastLevel || 1);
+        console.log("☁️ Cloud data ontvangen: Level", window.TARGET_LEVEL);
       }
+    } catch (e) { console.error("Firestore Read Error:", e); }
+  }
 
-      async function saveToCloud(level) {
-        if (!window.USER_ID) return;
-        try {
-          await db.collection("drive_mad_saves").doc(window.USER_ID).set({
-            lastLevel: level,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
-          console.log("💾 Opgeslagen in cloud: Level", level);
-        } catch (e) { console.warn("Opslaan mislukt:", e); }
-      }
+  async function saveToCloud(level) {
+    if (!window.USER_ID || !level) return;
+    try {
+      await db.collection("drive_mad_saves").doc(window.USER_ID).set({
+        lastLevel: Number(level),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log("💾 Firestore Save Success: Level", level);
+    } catch (e) { console.error("Firestore Write Error:", e); }
+  }
 
-      // 3. De Game Hooks (Poki emulatie voor opslaan)
-      window.poki_level_start = function(level) {
-        window.CURRENT_LEVEL = level;
-        saveToCloud(level);
+  // 3. De Game Hooks - We vangen ELKE mogelijke level start op
+  function onLevelDetected(level) {
+    console.log("🕹️ Level gedetecteerd:", level);
+    saveToCloud(level);
 
-        // Als het huidige level lager is dan wat in de cloud staat, skip!
-        if (window.CURRENT_LEVEL < window.TARGET_LEVEL) {
-          console.log("⏩ Overslaan naar volgend level...");
-          setTimeout(() => {
-            // De interne engine functie aanroepen om te skippen
-            if (typeof Module._poki_level_start === "function") {
-               Module._poki_level_start(window.CURRENT_LEVEL + 1);
-            }
-          }, 100);
+    if (level < window.TARGET_LEVEL) {
+      console.log("⏩ Skipping naar:", level + 1);
+      setTimeout(() => {
+        if (typeof Module._poki_level_start === "function") {
+          Module._poki_level_start(level + 1);
         }
-      };
+      }, 100);
+    }
+  }
 
-      // 4. Login status controleren
-      auth.onAuthStateChanged(async (user) => {
-        if (user) {
-          window.USER_ID = user.uid;
-          document.getElementById('status_text').innerText = "Account verbonden...";
-          await loadFromCloud();
-        } else {
-          console.log("⚠️ Gastmodus: Voortgang wordt niet opgeslagen.");
-          document.getElementById('status_text').innerText = "Gastmodus (geen opslag)";
-        }
-      });
+  // Verschillende manieren waarop de engine level-starts doorgeeft
+  window.poki_level_start = onLevelDetected; 
+  window.poki_level_next = onLevelDetected;
 
-      // Emscripten Module Setup
-      var Module = {
-        canvas: document.getElementById("canvas"),
-        locateFile: (path) => "webapp/" + path,
-        setStatus: (t) => { if(t) console.log("Engine status:", t); }
-      };
-    </script>
+  // 4. Login status
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      window.USER_ID = user.uid;
+      console.log("🔑 Ingelogd als:", user.uid);
+      await loadFromCloud();
+    }
+  });
 
+  var Module = {
+    canvas: document.getElementById("canvas"),
+    locateFile: (path) => "webapp/" + path,
+    onRuntimeInitialized: function() {
+        console.log("⚙️ Engine klaar!");
+    }
+  };
+</script>
+    
     <script src="webapp/source_min.js"></script>
     <script src="webapp/index.js"></script>
   </body>
