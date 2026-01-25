@@ -199,9 +199,7 @@ body {
 
   <div class="category-btn active" data-category="all">Alle games</div>
   <div class="category-btn" data-category="favorites">⭐ Favorieten</div>
-  <div class="category-btn" data-category="action">Actie</div>
-  <div class="category-btn" data-category="idle">Idle</div>
-  <div class="category-btn" data-category="multiplayer">Multiplayer</div>
+  <div class="category-btn" data-category="no-save">Niet-opslagbare games</div>
 </div>
 
 <!-- MAIN -->
@@ -213,23 +211,26 @@ body {
 
   <div id="gameGrid" class="game-grid">
 
-    <!-- GAME TEMPLATE -->
-    <div class="game-card" data-game-id="greedy-snakes" data-category="action" data-title="Greedy Snakes" data-link="greedy/index.html">
+    <!-- GREEDY SNAKES -->
+    <div class="game-card"
+         data-game-id="greedy-snakes"
+         data-category="no-save"
+         data-title="Greedy Snakes"
+         data-link="games/greedy-snakes/index.html">
       <div class="star">★</div>
       <img src="https://raw.githubusercontent.com/ikhouvankaasq/greedy-snakes/main/logo.png">
       <h3>Greedy Snakes</h3>
     </div>
 
-    <div class="game-card" data-game-id="space-runner" data-category="idle" data-title="Space Runner" data-link="#">
+    <!-- DRIVE MAD -->
+    <div class="game-card"
+         data-game-id="drive-mad"
+         data-category="no-save"
+         data-title="Drive Mad"
+         data-link="games/drive-mad/index.html">
       <div class="star">★</div>
-      <img src="https://picsum.photos/200/100?1">
-      <h3>Space Runner</h3>
-    </div>
-
-    <div class="game-card" data-game-id="tower-defense" data-category="multiplayer" data-title="Tower Defense" data-link="#">
-      <div class="star">★</div>
-      <img src="https://picsum.photos/200/100?2">
-      <h3>Tower Defense</h3>
+      <img src="https://mellekoster.nl/storage/images/games/drivemad.png">
+      <h3>Drive Mad</h3>
     </div>
 
   </div>
