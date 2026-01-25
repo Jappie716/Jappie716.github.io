@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Drive Mad</title>
+    <title>Drive Mad - Cloud Sync</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" href="webapp/fancade.css" />
     
@@ -25,7 +25,7 @@
       <div id="play_content" class="middle center">
         <div id="progress_or_play">
           <progress id="progress" class="loading" value="0" max="100"></progress>
-          <p id="status_text" style="color:white; font-family:sans-serif;">Laden...</p>
+          <p id="status_text" style="color:white; font-family:sans-serif; margin-top:10px;">Laden...</p>
         </div>
       </div>
       <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
@@ -33,7 +33,7 @@
     </div>
 
     <script>
-      // 1. Firebase Config
+      // 1. Firebase Configuratie
       const firebaseConfig = {
         apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
         authDomain: "gameparadise-80490.firebaseapp.com",
@@ -58,9 +58,9 @@
           const doc = await db.collection("drive_mad_saves").doc(window.USER_ID).get();
           if (doc.exists) {
             window.TARGET_LEVEL = Number(doc.data().lastLevel || 1);
-            console.log("☁️ Cloud level geladen:", window.TARGET_LEVEL);
+            console.log("☁️ Cloud level gevonden:", window.TARGET_LEVEL);
           }
-        } catch (e) { console.error("Cloud error:", e); }
+        } catch (e) { console.error("Fout bij laden:", e); }
       }
 
       async function saveToCloud(level) {
@@ -70,19 +70,20 @@
             lastLevel: level,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
+          console.log("💾 Opgeslagen in cloud: Level", level);
         } catch (e) { console.warn("Opslaan mislukt:", e); }
       }
 
-      // 3. De Game Hooks
+      // 3. De Game Hooks (Poki emulatie voor opslaan)
       window.poki_level_start = function(level) {
         window.CURRENT_LEVEL = level;
         saveToCloud(level);
 
-        // Overslaan naar cloud level indien nodig
+        // Als het huidige level lager is dan wat in de cloud staat, skip!
         if (window.CURRENT_LEVEL < window.TARGET_LEVEL) {
-          console.log("⏩ Overslaan naar:", window.CURRENT_LEVEL + 1);
+          console.log("⏩ Overslaan naar volgend level...");
           setTimeout(() => {
-            // Roep de interne functie van de engine aan om volgend level te laden
+            // De interne engine functie aanroepen om te skippen
             if (typeof Module._poki_level_start === "function") {
                Module._poki_level_start(window.CURRENT_LEVEL + 1);
             }
@@ -90,23 +91,23 @@
         }
       };
 
-      // 4. Inlog check
+      // 4. Login status controleren
       auth.onAuthStateChanged(async (user) => {
         if (user) {
           window.USER_ID = user.uid;
-          document.getElementById('status_text').innerText = "Account verbonden - Cloud sync...";
+          document.getElementById('status_text').innerText = "Account verbonden...";
           await loadFromCloud();
         } else {
-          console.log("⚠️ Niet ingelogd - Voortgang wordt niet opgeslagen");
+          console.log("⚠️ Gastmodus: Voortgang wordt niet opgeslagen.");
           document.getElementById('status_text').innerText = "Gastmodus (geen opslag)";
         }
       });
 
-      // Emscripten Setup
+      // Emscripten Module Setup
       var Module = {
         canvas: document.getElementById("canvas"),
         locateFile: (path) => "webapp/" + path,
-        setStatus: (t) => { if(t) console.log("Engine:", t); }
+        setStatus: (t) => { if(t) console.log("Engine status:", t); }
       };
     </script>
 
