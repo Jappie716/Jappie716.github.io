@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Drive Mad - Cloud Save</title>
+    <title>Drive Mad - Cloud Sync</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -28,10 +28,20 @@
         border: 2px solid #00ff00;
         box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
       }
+      /* Verbergt de webview content die soms in de weg zit */
+      #webview_content { pointer-events: none; }
     </style>
   </head>
   <body id="body">
-    <div id="cloud-status">🔐 Wachten op login...</div>
+    <div id="cloud-status">📡 Initialiseren...</div>
+
+    <div id="modal_parent">
+      <div id="modal_content">
+        <span id="modal_close_button">&times;</span>
+        <div id="store_link_modal_content" class="modal_inner"></div>
+        <div id="share_file_modal_content" class="modal_inner"></div>
+      </div>
+    </div>
 
     <div id="canvas_border" class="emscripten_border">
       <div id="play_content" class="middle center">
@@ -48,6 +58,7 @@
       </div>
       <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
       <div id="gradient"></div>
+      <div id="webview_content"></div>
     </div>
 
     <script>
@@ -70,94 +81,81 @@
       let USER_ID = null;
       let CLOUD_LEVEL = 1;
       let CURRENT_GAME_LEVEL = 1;
-      let SYNC_COMPLETE = false;
 
-      // 2. Agressieve Save Functie
-      async function saveProgress(lvl) {
-        if (!USER_ID) return;
-        
-        // Alleen opslaan als het level hoger is dan wat we al hebben
-        if (lvl > CLOUD_LEVEL) {
+      // 2. De Save Functie (Wordt elke 15 seconden aangeroepen)
+      async function saveProgress() {
+        if (USER_ID && CURRENT_GAME_LEVEL > CLOUD_LEVEL) {
           try {
             await db.collection("drive_mad_saves").doc(USER_ID).set({
-              lastLevel: Number(lvl),
+              lastLevel: Number(CURRENT_GAME_LEVEL),
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
-            CLOUD_LEVEL = lvl;
-            statusBox.textContent = "💾 Cloud Bijgewerkt: Lvl " + lvl;
-            console.log("🔥 Firestore Update Succes: Lvl", lvl);
+            
+            CLOUD_LEVEL = CURRENT_GAME_LEVEL;
+            statusBox.textContent = "💾 Cloud Bijgewerkt: Lvl " + CLOUD_LEVEL;
+            console.log("☁️ Auto-save succes naar Firestore op level:", CLOUD_LEVEL);
           } catch (e) {
             console.error("❌ Firestore Save Error:", e);
-            statusBox.textContent = "⚠️ Save Fout: Geen permissie";
           }
         }
       }
 
-      // 3. De Skipper Loop (Teleport)
+      // 3. Start de 15-seconden interval
+      setInterval(saveProgress, 15000);
+
+      // 4. De Skipper Loop (Teleport bij opstarten)
       function startTeleportLoop() {
         const skipChecker = setInterval(() => {
           if (window.Module && typeof Module._poki_level_start === "function" && CLOUD_LEVEL > 1) {
-            
             if (CURRENT_GAME_LEVEL < CLOUD_LEVEL) {
               console.log("🚀 Skipper: Forceer naar level", CLOUD_LEVEL);
-              statusBox.textContent = "🚀 Cloud Sync: Naar Lvl " + CLOUD_LEVEL;
+              statusBox.textContent = "🚀 Cloud Sync: Laden Lvl " + CLOUD_LEVEL;
               Module._poki_level_start(CLOUD_LEVEL);
             } else {
-              // We zijn op het juiste level of hoger
               statusBox.textContent = "✅ Cloud Actief: Lvl " + CLOUD_LEVEL;
               clearInterval(skipChecker);
             }
           }
-        }, 1500); // Elke 1.5 seconde proberen tot het lukt
-
-        setTimeout(() => clearInterval(skipChecker), 20000); // Stop na 20 sec
+        }, 1500);
+        // Na 30 seconden stoppen we met proberen te skippen (veiligheid)
+        setTimeout(() => clearInterval(skipChecker), 30000); 
       }
 
-      // 4. Hook de Game Meldingen (Voor opslaan)
+      // 5. Game Hooks
       window.poki_level_start = function(data) {
         const lvl = (typeof data === "object") ? (data.level || 1) : Number(data);
         CURRENT_GAME_LEVEL = lvl;
-        console.log("🕹️ Level gedetecteerd:", lvl);
-        
-        if (USER_ID) {
-          saveProgress(lvl);
-        }
+        console.log("🕹️ Game level gedetecteerd:", lvl);
       };
 
-      // 5. Auth Check (Wachten op login van index.html)
+      // 6. Authenticatie Status
       auth.onAuthStateChanged(async (user) => {
         if (user) {
           USER_ID = user.uid;
-          statusBox.textContent = "🔍 Cloud data ophalen...";
-          
+          statusBox.textContent = "🔍 Cloud data laden...";
           try {
             const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
             if (doc.exists) {
               CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
               statusBox.textContent = "☁️ Cloud gevonden: Lvl " + CLOUD_LEVEL;
-              console.log("✅ Cloud Data geladen: Lvl", CLOUD_LEVEL);
+              console.log("✅ Firestore data ontvangen: Lvl", CLOUD_LEVEL);
             } else {
-              statusBox.textContent = "🆕 Welkom! Geen save gevonden.";
-              CLOUD_LEVEL = 1;
+              statusBox.textContent = "🆕 Geen save: Start Lvl 1";
             }
             startTeleportLoop();
           } catch (e) {
-            console.error("❌ Cloud Load Error:", e);
-            statusBox.textContent = "❌ Database Toegang Geweigerd";
+            statusBox.textContent = "⚠️ Cloud fout (permissie?)";
+            console.error("Fout bij ophalen document:", e);
           }
         } else {
-          // Als er geen user is, stuur ze terug naar de login pagina
-          statusBox.textContent = "🚫 Niet ingelogd!";
-          setTimeout(() => {
-            window.location.href = "index.html";
-          }, 2000);
+          statusBox.textContent = "⚠️ Niet ingelogd (geen sync)";
         }
       });
 
       var Module = {
         canvas: document.getElementById("canvas"),
         locateFile: (path) => "webapp/" + path,
-        onRuntimeInitialized: () => { console.log("⚙️ Engine geladen."); }
+        onRuntimeInitialized: () => { console.log("⚙️ Engine klaar."); }
       };
     </script>
 
