@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
-  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -32,7 +31,6 @@
 
 <div id="status">Laden…</div>
 
-<!-- 🎮 GAME STRUCTUUR -->
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
     <div class="edge">
@@ -55,10 +53,8 @@
   <div id="webview_content"></div>
 </div>
 
-<!-- =========================
-     🔥 FIREBASE SYSTEM
-========================== -->
 <script>
+  // 1. FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -69,156 +65,107 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-
   const auth = firebase.auth();
   const db = firebase.firestore();
 
   let USER_ID = null;
   let GAME_READY = false;
+  let LOADED_LEVEL = 1;
 
   const statusBox = document.getElementById("status");
 
-  // 🔐 LOGIN CHECK
-  auth.onAuthStateChanged(user => {
+  // 2. LOGIN CHECK
+  auth.onAuthStateChanged(async (user) => {
     if (!user) {
-      alert("❌ Je bent niet ingelogd!");
-      window.location.href = "index.html";
+      alert("❌ Je bent niet ingelogd op de homepage!");
+      window.location.href = "index.html"; 
       return;
     }
 
     USER_ID = user.uid;
-    console.log("🔐 Ingelogd als:", user.email);
-    statusBox.textContent = "Account geladen...";
-    async function tryLoadLevel() {
-    if (!USER_ID || !GAME_READY) return;
-
+    console.log("🔐 Firebase verbonden:", user.email);
+    statusBox.textContent = "Data ophalen...";
+    
+    // Haal level direct op zodra we weten wie de gebruiker is
     try {
       const doc = await db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").get();
-      const lvl = doc.exists ? Number(doc.data().level || 1) : 1;
-      
-      console.log("🛠 DEBUG: Proberen level " + lvl + " te starten...");
-      console.log("🛠 DEBUG: Bestaat poki_level_start?", !!window.poki_level_start);
-      console.log("🛠 DEBUG: Bestaat Module?", !!window.Module);
-
-      // We proberen verschillende manieren die Drive Mad vaak gebruikt
-      if (window.poki_level_start) {
-          window.poki_level_start(lvl);
-          console.log("✅ Gestart via poki_level_start");
-      } else if (window.fancade_level_start) {
-          window.fancade_level_start(lvl);
-          console.log("✅ Gestart via fancade_level_start");
-      } else {
-          console.warn("⚠️ Geen start-functie gevonden! De game weet niet hoe hij moet beginnen.");
+      if (doc.exists) {
+        LOADED_LEVEL = Number(doc.data().level || 1);
+        console.log("📥 Level uit cloud:", LOADED_LEVEL);
       }
-
+      checkStartGame();
     } catch (e) {
-      console.error("❌ Fout tijdens laden:", e);
+      console.error("Fout bij laden:", e);
     }
-  }
   });
 
-  // 💾 SAVE LEVEL (WORDT DOOR GAME AANGEROEPEN)
+  // 3. START LOGICA
+  function checkStartGame() {
+    if (USER_ID && GAME_READY) {
+      console.log("🎮 Game & User klaar. Start level:", LOADED_LEVEL);
+      if (window.poki_level_start) {
+        window.poki_level_start(LOADED_LEVEL);
+      }
+      statusBox.style.display = "none";
+    }
+  }
+
+  // 4. SAVE FUNCTIE
   async function saveLevel(level) {
     if (!USER_ID) return;
-
     try {
-      await db
-        .collection("users")
-        .doc(USER_ID)
-        .collection("games")
-        .doc("drive_mad")
-        .set({
-          level: Number(level),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-
-      console.log("✅ Level opgeslagen:", level);
+      await db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").set({
+        level: Number(level),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log("✅ Vooruitgang opgeslagen: Level", level);
     } catch (e) {
-      console.warn("❌ Save fout:", e.message);
+      console.warn("❌ Opslaan mislukt:", e.message);
     }
   }
-// 👂 LUISTEREN NAAR DE GAME
-window.addEventListener("message", (event) => {
-    // Check of de game een bericht stuurt over het level
+
+  // Luister naar de game voor level-updates
+  window.addEventListener("message", (event) => {
     if (event.data && event.data.type === "level_complete") {
-        const gehaaldLevel = event.data.level;
-        saveLevel(gehaaldLevel);
+        saveLevel(event.data.level);
     }
-});
+  });
 
-// Soms gebruiken deze games een specifieke Poki of Fancade functie
-// We overschrijven deze om de save-functie te triggeren
-const originelePokiStart = window.poki_level_start;
-window.poki_level_start = function(lvl) {
-    console.log("🎮 Level gestart:", lvl);
-    saveLevel(lvl); // Sla het huidige level op zodra je eraan begint
+  // Overschrijf Poki start voor automatische saves
+  const originelePokiStart = window.poki_level_start;
+  window.poki_level_start = function(lvl) {
+    saveLevel(lvl);
     if (originelePokiStart) originelePokiStart(lvl);
-};
-  // 📥 LOAD LEVEL
-  async function tryLoadLevel() {
-    if (!USER_ID || !GAME_READY) return;
-
-    try {
-      const doc = await db
-        .collection("users")
-        .doc(USER_ID)
-        .collection("games")
-        .doc("drive_mad")
-        .get();
-
-      if (!doc.exists) {
-        console.log("ℹ️ Geen save gevonden");
-        return;
-      }
-
-      const lvl = Number(doc.data().level || 1);
-      console.log("📥 Level geladen:", lvl);
-
-      const wait = setInterval(() => {
-        if (window.poki_level_start) {
-          clearInterval(wait);
-          window.poki_level_start(lvl);
-          console.log("🎮 Geskippt naar level:", lvl);
-        }
-      }, 500);
-
-    } catch (e) {
-      console.warn("❌ Load fout:", e.message);
-    }
-  }
-
-  // Expose voor game
-  window.saveLevel = saveLevel;
+  };
 </script>
 
-<!-- =========================
-     ⚙️ EMSCRIPTEN MODULE
-========================== -->
 <script>
+  // 5. EMSCRIPTEN (DE ENGINE)
   var Module = window.Module || {};
-
-  Module.locateFile = function (path) {
-    return "webapp/" + path;
-  };
-
+  Module.locateFile = function (path) { return "webapp/" + path; };
   Module.canvas = document.getElementById("canvas");
-
-  Module.setStatus = function (text) {
-    const el = document.getElementById("status");
-    if (el) el.textContent = text;
+  Module.setStatus = function (text) { 
+    if (statusBox) statusBox.textContent = text; 
   };
 
   Module.onRuntimeInitialized = function () {
-    console.log("🎮 Game gestart");
+    console.log("⚙️ Engine geladen");
     GAME_READY = true;
-    statusBox.style.display = "none";
-    tryLoadLevel();
+    checkStartGame();
   };
 </script>
 
-<!-- 🔥 GAME ENGINE (DEZE MOETEN ER BEIDE IN) -->
 <script src="webapp/source_min.js"></script>
-<script src="webapp/index.js"></script>
+
+<script>
+  if (typeof TARGET_LEVEL === 'undefined') {
+    var script = document.createElement('script');
+    script.src = 'webapp/index.js';
+    document.head.appendChild(script);
+  } else {
+    console.log("TARGET_LEVEL was al gedefinieerd, overslaan van dubbele load.");
+  }
+</script>
 
 </body>
 </html>
