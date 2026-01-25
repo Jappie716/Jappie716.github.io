@@ -73,21 +73,37 @@
     } catch (e) { console.error("Firestore Write Error:", e); }
   }
 
-  // 3. De Game Hooks - We vangen ELKE mogelijke level start op
+  // 3. De Game Hooks - We vangen ELKE mogelijke naam op
   function onLevelDetected(level) {
-    console.log("🕹️ Level gedetecteerd:", level);
-    saveToCloud(level);
+    // Soms geeft de engine een object door i.p.v. een nummer, dit vangt dat op:
+    let lvl = (typeof level === 'object' && level !== null) ? (level.level || 1) : level;
+    
+    console.log("🕹️ Event gedetecteerd voor level:", lvl);
+    saveToCloud(lvl);
 
-    if (level < window.TARGET_LEVEL) {
-      console.log("⏩ Skipping naar:", level + 1);
+    if (lvl < window.TARGET_LEVEL) {
+      console.log("⏩ Skipping naar:", lvl + 1);
       setTimeout(() => {
         if (typeof Module._poki_level_start === "function") {
-          Module._poki_level_start(level + 1);
+          Module._poki_level_start(lvl + 1);
         }
       }, 100);
     }
   }
 
+  // We registreren alle bekende namen die Fancade/Poki engines gebruiken
+  window.poki_level_start = onLevelDetected;
+  window.poki_level_next = onLevelDetected;
+  window.poki_level_end = onLevelDetected;
+  
+  // Extra check: forceer een save als de engine opstart
+  setTimeout(() => {
+      if (window.USER_ID) {
+          console.log("🚀 Force check bij opstarten...");
+          // We doen nog geen save hier om je database niet te vervuilen, 
+          // maar de verbinding is er!
+      }
+  }, 3000);
   // Verschillende manieren waarop de engine level-starts doorgeeft
   window.poki_level_start = onLevelDetected; 
   window.poki_level_next = onLevelDetected;
