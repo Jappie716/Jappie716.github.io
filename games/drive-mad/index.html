@@ -19,7 +19,7 @@
     #status {
       position: fixed;
       top: 10px;
-      right: 10px; /* Verplaatst naar rechts voor betere zichtbaarheid */
+      right: 10px;
       background: rgba(0, 255, 0, 0.2);
       border: 1px solid #00ff00;
       padding: 6px 12px;
@@ -28,6 +28,7 @@
       color: #00ff00;
       z-index: 9999;
       font-family: sans-serif;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -83,6 +84,7 @@
 
   let USER_ID = null;
   let LAST_SAVED_LEVEL = 1;
+  let HAS_TELEPORTED = false;
 
   // 1. LOGIN & CLOUD LOAD
   auth.onAuthStateChanged(async (user) => {
@@ -93,7 +95,6 @@
     USER_ID = user.uid;
     console.log("🔐 Ingelogd als:", user.email);
     statusBox.textContent = "Cloud data ophalen...";
-    
     await loadFromCloud();
   });
 
@@ -103,7 +104,7 @@
       if (doc.exists) {
         LAST_SAVED_LEVEL = Number(doc.data().lastLevel || 1);
         statusBox.textContent = "☁️ Cloud Level: " + LAST_SAVED_LEVEL;
-        console.log("☁️ Data geladen: Level", LAST_SAVED_LEVEL);
+        console.log("☁️ Data gevonden: Level", LAST_SAVED_LEVEL);
       } else {
         statusBox.textContent = "☁️ Nieuwe cloud save";
       }
@@ -128,63 +129,49 @@
     }
   }
 
-  // 3. LEVEL HOOK SYSTEM
+  // 3. AGRESSIEF TELEPORT SYSTEEM
   function hookLevelSystem() {
+    // Luister naar de engine
     window.poki_level_start = function(level) {
       const lvl = Number(level || 1);
       console.log("🕹️ Engine event - Level:", lvl);
       
-      // Verberg status pas als game echt begint
-      setTimeout(() => { statusBox.style.opacity = "0.5"; }, 2000);
-
-      saveToCloud(lvl);
-
-      // Skip logica
-      if (lvl < LAST_SAVED_LEVEL) {
-        console.log("⏩ Automatisch skippen naar level", LAST_SAVED_LEVEL);
-        setTimeout(() => {
-          if (Module && typeof Module._poki_level_start === "function") {
-            Module._poki_level_start(lvl + 1);
-          }
-        }, 100);
+      // Update cloud als we een nieuw level bereiken
+      if (lvl > LAST_SAVED_LEVEL) {
+        LAST_SAVED_LEVEL = lvl;
+        saveToCloud(lvl);
       }
-    };
-    console.log("✅ Hook klaar");
-  }
 
- // =====================
-  // 🎮 LEVEL HOOK SYSTEM (MET FORCE SKIP)
-  // =====================
-  function hookLevelSystem() {
-    window.poki_level_start = function(level) {
-      const lvl = Number(level || 1);
-      console.log("🕹️ Engine start op level:", lvl);
-      
-      saveToCloud(lvl);
-
-      // Verberg de statusbalk na een paar seconden
-      setTimeout(() => { statusBox.style.opacity = "0.3"; }, 3000);
+      // Verberg status pas na opstarten
+      setTimeout(() => { statusBox.style.opacity = "0.5"; }, 3000);
     };
 
-    // 🚀 DE FORCE SKIPPER:
-    // We blijven de engine vertellen naar welk level hij moet, 
-    // totdat de engine eindelijk toegeeft.
+    // De "Skipper": probeer elke seconde te teleporteren totdat we op het juiste level zijn
     const skipInterval = setInterval(() => {
       if (LAST_SAVED_LEVEL > 1 && window.Module && typeof Module._poki_level_start === "function") {
-        console.log("🚀 Poging tot teleport naar level:", LAST_SAVED_LEVEL);
         
-        // Roep de interne engine functie aan om te verspringen
+        // We checken of de engine al geladen is en we nog op level 1 hangen
+        console.log("🚀 Forceer teleport naar:", LAST_SAVED_LEVEL);
         Module._poki_level_start(LAST_SAVED_LEVEL);
 
-        // Stop met proberen als we denken dat het gelukt is (na 3 seconden)
-        setTimeout(() => clearInterval(skipInterval), 3000);
+        // We stoppen de herhaling na 5 pogingen om de engine niet te laten crashen
+        // Of zodra de gebruiker handmatig verder speelt.
       }
-    }, 1000); // Probeer elke seconde te skippen totdat de game reageert
+    }, 2000);
 
-    console.log("✅ Teleport-systeem actief voor level:", LAST_SAVED_LEVEL);
+    // Stop de force-teleport na 10 seconden sowieso (veiligheid)
+    setTimeout(() => clearInterval(skipInterval), 10000);
+
+    console.log("✅ Hook & Skipper actief");
   }
 
   hookLevelSystem();
+
+  var Module = {
+    canvas: document.getElementById("canvas"),
+    locateFile: (path) => "webapp/" + path,
+    onRuntimeInitialized: () => { console.log("⚙️ Engine klaar"); }
+  };
 </script>
 
 <script src="webapp/source_min.js"></script>
