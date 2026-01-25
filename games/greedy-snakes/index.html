@@ -48,23 +48,10 @@
 }
 </style>
 </head>
-
-<body>
-
-<div id="cloudStatus">☁️ Cloud: idle</div>
-
-<div class="auth-bar">
-  <span id="userDisplay"></span>
-  <button id="loginBtn">Login with Google</button>
-</div>
-
-<!-- GAME HTML BLIJFT ONGEWIJZIGD -->
-<!-- (alles wat je stuurde hierboven blijft exact hetzelfde) -->
-
 <script>
-/* =============================
-   FIREBASE CONFIG
-============================= */
+/* =========================
+   FIREBASE
+========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -79,147 +66,156 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let currentUser = null;
-const cloudStatus = document.getElementById("cloudStatus");
+let lastSaveHash = null;
 
-/* =============================
+/* =========================
    LOGIN
-============================= */
-document.getElementById("loginBtn").onclick = () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
-};
-
+========================= */
 auth.onAuthStateChanged(async (user) => {
   currentUser = user;
+  if (!user) return;
 
-  if (!user) {
-    cloudStatus.textContent = "⚠️ Niet ingelogd";
-    return;
-  }
-
-  document.getElementById("loginBtn").style.display = "none";
-  document.getElementById("userDisplay").innerText =
-    "Player: " + user.displayName.split(" ")[0];
-
-  cloudStatus.textContent = "☁️ Cloud laden...";
-  await loadUserData();
+  console.log("☁️ Cloud login:", user.email);
+  await loadGreedyState();
 });
 
-/* =============================
-   PROFILE SAVE
-============================= */
-function saveUsername(name) {
-  if (!currentUser) return;
-
-  return db
-    .collection("users")
-    .doc(currentUser.uid)
-    .collection("profile")
-    .doc("main")
-    .set(
-      {
-        username: name,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    );
+/* =========================
+   GAME STATE READER
+========================= */
+function getGameState() {
+  return {
+    playerName: document.getElementById("playerName")?.value || "",
+    yellowMoney: window.yellowMoney || 0,
+    greenMoney: window.greenMoney || 0,
+    sizeLevel: window.sizeLevel || 1,
+    speedLevel: window.speedLevel || 1,
+    multiplierLevel: window.multiplierLevel || 1,
+    selectedSkin: window.selectedSkin || 0
+  };
 }
 
-/* =============================
-   GAME SAVE
-============================= */
-function saveGreedyState(state) {
-  if (!currentUser) return;
-
-  cloudStatus.textContent = "💾 Cloud opslaan...";
-
-  return db
-    .collection("users")
-    .doc(currentUser.uid)
-    .collection("games")
-    .doc("greedySnakes")
-    .set(
-      {
-        ...state,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      },
-      { merge: true }
-    )
-    .then(() => {
-      cloudStatus.textContent = "✅ Cloud gesynct";
-    })
-    .catch(() => {
-      cloudStatus.textContent = "❌ Cloud fout";
-    });
+function hashState(state) {
+  return JSON.stringify(state);
 }
 
-/* =============================
-   LOAD USER DATA
-============================= */
-async function loadUserData() {
+/* =========================
+   SAVE
+========================= */
+async function saveGreedyState() {
   if (!currentUser) return;
+
+  const state = getGameState();
+  const hash = hashState(state);
+
+  // Niet opnieuw saven als er niks veranderd is
+  if (hash === lastSaveHash) return;
+  lastSaveHash = hash;
 
   try {
-    // PROFILE
-    const profileDoc = await db
+    await db
       .collection("users")
       .doc(currentUser.uid)
-      .collection("profile")
-      .doc("main")
-      .get();
+      .collection("games")
+      .doc("greedySnakes")
+      .set(
+        {
+          ...state,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
 
-    if (profileDoc.exists) {
-      const name = profileDoc.data().username;
-      if (name && document.getElementById("playerName")) {
-        document.getElementById("playerName").value = name;
-      }
-    }
+    console.log("💾 Cloud saved");
+  } catch (e) {
+    console.error("Cloud save error:", e);
+  }
+}
 
-    // GAME SAVE
-    const gameDoc = await db
+/* =========================
+   LOAD
+========================= */
+async function loadGreedyState() {
+  try {
+    const doc = await db
       .collection("users")
       .doc(currentUser.uid)
       .collection("games")
       .doc("greedySnakes")
       .get();
 
-    if (gameDoc.exists && window.applyLoadedState) {
-      window.applyLoadedState(gameDoc.data());
-      cloudStatus.textContent = "☁️ Cloud geladen";
-    } else {
-      cloudStatus.textContent = "🆕 Nieuwe save";
+    if (!doc.exists) return;
+
+    const data = doc.data();
+    console.log("☁️ Cloud loaded:", data);
+
+    // Inject in globals (werkt ook als game.js ze later overschrijft)
+    window.yellowMoney = data.yellowMoney || 0;
+    window.greenMoney = data.greenMoney || 0;
+    window.sizeLevel = data.sizeLevel || 1;
+    window.speedLevel = data.speedLevel || 1;
+    window.multiplierLevel = data.multiplierLevel || 1;
+    window.selectedSkin = data.selectedSkin || 0;
+
+    if (data.playerName && document.getElementById("playerName")) {
+      document.getElementById("playerName").value = data.playerName;
+    }
+
+    // UI refresh proberen
+    if (typeof window.refreshUI === "function") {
+      window.refreshUI();
     }
   } catch (e) {
-    cloudStatus.textContent = "❌ Cloud fout";
-    console.error(e);
+    console.error("Cloud load error:", e);
   }
 }
 
-/* =============================
-   AUTO SAVE SYSTEM
-============================= */
-function autoSave() {
-  if (!currentUser || !window.getCurrentState) return;
+/* =========================
+   AUTO DETECT CHANGES
+========================= */
+function hookVar(name) {
+  let value = window[name];
 
-  const state = window.getCurrentState();
-
-  saveUsername(state.playerName);
-  saveGreedyState(state);
+  Object.defineProperty(window, name, {
+    get() {
+      return value;
+    },
+    set(v) {
+      value = v;
+      saveGreedyState();
+    },
+    configurable: true
+  });
 }
 
-// Elke 20 seconden opslaan
-setInterval(autoSave, 20000);
+/* =========================
+   WAIT FOR GAME GLOBALS
+========================= */
+const hookTimer = setInterval(() => {
+  if (
+    "yellowMoney" in window &&
+    "greenMoney" in window &&
+    "sizeLevel" in window
+  ) {
+    console.log("🪝 Cloud hooks actief");
+    hookVar("yellowMoney");
+    hookVar("greenMoney");
+    hookVar("sizeLevel");
+    hookVar("speedLevel");
+    hookVar("multiplierLevel");
+    hookVar("selectedSkin");
+    clearInterval(hookTimer);
+  }
+}, 500);
 
-// Save bij sluiten / refresh
-window.addEventListener("beforeunload", autoSave);
-
-// Save bij game start
-const _startGameHook = window.startGame;
-window.startGame = function () {
-  autoSave();
-  return _startGameHook();
-};
+/* =========================
+   BACKUP AUTOSAVE
+========================= */
+setInterval(saveGreedyState, 15000);
+window.addEventListener("beforeunload", saveGreedyState);
+document.addEventListener("click", saveGreedyState);
 </script>
+
+<body>
 
 <script src="game.js"></script>
 </body>
