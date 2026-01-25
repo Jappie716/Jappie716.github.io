@@ -112,7 +112,23 @@
       console.warn("❌ Save fout:", e.message);
     }
   }
+// 👂 LUISTEREN NAAR DE GAME
+window.addEventListener("message", (event) => {
+    // Check of de game een bericht stuurt over het level
+    if (event.data && event.data.type === "level_complete") {
+        const gehaaldLevel = event.data.level;
+        saveLevel(gehaaldLevel);
+    }
+});
 
+// Soms gebruiken deze games een specifieke Poki of Fancade functie
+// We overschrijven deze om de save-functie te triggeren
+const originelePokiStart = window.poki_level_start;
+window.poki_level_start = function(lvl) {
+    console.log("🎮 Level gestart:", lvl);
+    saveLevel(lvl); // Sla het huidige level op zodra je eraan begint
+    if (originelePokiStart) originelePokiStart(lvl);
+};
   // 📥 LOAD LEVEL
   async function tryLoadLevel() {
     if (!USER_ID || !GAME_READY) return;
