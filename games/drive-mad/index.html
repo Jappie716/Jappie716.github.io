@@ -110,6 +110,42 @@ var Module = {
     locateFile: (path) => "webapp/" + path,
     onRuntimeInitialized: () => { console.log("⚙️ Engine Ready"); }
 };
+
+function hookPoki() {
+  if (typeof window.poki_level_start === "function") {
+    const original = window.poki_level_start;
+
+    window.poki_level_start = function(level) {
+      original(level); // laat de game normaal werken
+
+      let lvl = (typeof level === "object") ? (level.level || 1) : level;
+      lvl = Number(lvl);
+
+      CURRENT_GAME_LEVEL = lvl;
+      console.log("🕹️ Level hook:", lvl);
+
+      if (USER_ID && lvl > CLOUD_LEVEL) {
+        CLOUD_LEVEL = lvl;
+
+        db.collection("drive_mad_saves").doc(USER_ID).set({
+          lastLevel: lvl,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        statusBox.textContent = "💾 Cloud: Level " + lvl;
+      }
+    };
+
+    console.log("✅ Poki hook gepatched");
+    return true;
+  }
+  return false;
+}
+
+// blijf proberen tot engine geladen is
+const hookInterval = setInterval(() => {
+  if (hookPoki()) clearInterval(hookInterval);
+}, 500);
 </script>
 
 <script src="webapp/source_min.js"></script>
