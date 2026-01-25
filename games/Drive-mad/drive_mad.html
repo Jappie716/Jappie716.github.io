@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <title>Drive Mad - Game</title>
+  <title>Drive Mad</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
@@ -13,45 +13,25 @@
 
   <style>
     #status {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.8);
-      padding: 8px 15px;
-      border-radius: 8px;
-      font-family: sans-serif;
-      font-size: 13px;
-      color: #fff;
-      z-index: 9999;
-      border: 1px solid #444;
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(0,0,0,0.8); padding: 8px;
+      border-radius: 5px; color: #fff; z-index: 9999; font-family: sans-serif;
     }
   </style>
 </head>
 <body id="body">
 
-<div id="status">Systeem opstarten...</div>
+<div id="status">Laden...</div>
 
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
-    <div class="edge">
-      <div class="box">
-        <div class="black">
-          <img src="webapp/cover.jpg" class="cover" />
-          <p class="title">Drive Mad</p>
-          <p class="author">Martin Magni</p>
-        </div>
-      </div>
-    </div>
-    <div id="progress_or_play">
-      <progress id="progress" class="loading" value="0" max="100"></progress>
-    </div>
+    <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
   </div>
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-  <div id="gradient"></div>
 </div>
 
 <script>
-  // --- CONFIGURATIE ---
+  // 1. FIREBASE INITIALISATIE
   const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -65,112 +45,66 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  let USER_ID = null;
-  let ENGINE_READY = false;
-  let DATA_LOADED = false;
-  let TARGET_START_LEVEL = 1;
+  // Maak variabelen globaal beschikbaar voor index.js
+  window.db = db;
+  window.USER_ID = null;
 
-  const statusBox = document.getElementById("status");
+  // 2. OPSLAAN FUNCTIE (Aangeroepen door index.js)
+  window.saveLevel = async function(level) {
+    if (!window.USER_ID) return;
+    try {
+      await db.collection("drive_mad_saves").doc(window.USER_ID).set({
+        lastLevel: Number(level),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      console.log("💾 Cloud Save: Level", level);
+    } catch (e) {
+      console.warn("Save mislukt (Adblocker?):", e.message);
+    }
+  };
 
-  // --- STAP 1: FIREBASE DATA ---
-  auth.onAuthStateChanged(async (user) => {
+  // 3. AUTH CHECK
+  auth.onAuthStateChanged(user => {
     if (!user) {
-      alert("Je bent niet ingelogd!");
       window.location.href = "index.html";
       return;
     }
-
-    USER_ID = user.uid;
-    statusBox.textContent = "Data ophalen...";
-
-    try {
-      // We zetten een timeout op het ophalen van data voor het geval een adblocker roet in het eten gooit
-      const dataPromise = db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").get();
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
-
-      const doc = await Promise.race([dataPromise, timeoutPromise]);
-
-      if (doc && doc.exists) {
-        TARGET_START_LEVEL = Number(doc.data().level || 1);
-        console.log("📥 Level geladen uit Cloud:", TARGET_START_LEVEL);
-      }
-    } catch (e) {
-      console.warn("⚠️ Kon geen data ophalen (Adblocker?), we starten op level 1.");
-    }
-
-    DATA_LOADED = true;
-    tryToStartGame();
+    window.USER_ID = user.uid;
+    console.log("🔐 Ingelogd:", user.email);
+    document.getElementById("status").textContent = "Account klaar...";
   });
 
-  // --- STAP 2: ENGINE SETUP ---
+  // 4. ENGINE SETUP
   var Module = window.Module || {};
   Module.canvas = document.getElementById("canvas");
   Module.locateFile = function(path) { return "webapp/" + path; };
-  
-  Module.setStatus = function(text) {
-    if (text) statusBox.textContent = text;
-    if (text === "" || text === "Running...") {
-       ENGINE_READY = true;
-       tryToStartGame();
-    }
+  Module.setStatus = function(text) { 
+    if (text) document.getElementById("status").textContent = text; 
   };
 
-  Module.onRuntimeInitialized = function() {
-    ENGINE_READY = true;
-    tryToStartGame();
-  };
-
-  // --- STAP 3: START CONTROLE ---
-  function tryToStartGame() {
-    if (DATA_LOADED && ENGINE_READY) {
-      statusBox.style.display = "none";
-      console.log("🚀 Alles klaar! Starten op level:", TARGET_START_LEVEL);
-      
-      if (window.poki_level_start) {
-        window.poki_level_start(TARGET_START_LEVEL);
+  Module.onRuntimeInitialized = async function() {
+    console.log("⚙️ Engine klaar.");
+    
+    // Wacht tot USER_ID bekend is, roep dan de loadLevel uit jouw index.js aan
+    const checkID = setInterval(async () => {
+      if (window.USER_ID && typeof window.loadLevel === "function") {
+        clearInterval(checkID);
+        
+        console.log("📥 Data laden...");
+        await window.loadLevel(); 
+        
+        console.log("🚀 Game starten...");
+        document.getElementById("status").style.display = "none";
+        
+        // Start de kettingreactie in index.js
+        if (window.poki_level_start) window.poki_level_start(1);
       }
-    }
-  }
-
-  // --- STAP 4: OPSLAAN ---
-  async function saveLevel(level) {
-    if (!USER_ID) return;
-    try {
-      await db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").set({
-        level: Number(level),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-      console.log("💾 Level opgeslagen:", level);
-    } catch (e) {
-      console.error("❌ Save error:", e);
-    }
-  }
-
-  // Luister naar de game
-  window.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "level_complete") {
-      saveLevel(event.data.level);
-    }
-  });
-
-  // Poki wrapper voor saves
-  const oldPokiStart = window.poki_level_start;
-  window.poki_level_start = function(lvl) {
-    saveLevel(lvl);
-    if (oldPokiStart) oldPokiStart(lvl);
+    }, 500);
   };
 </script>
 
 <script src="webapp/source_min.js"></script>
-
-<script>
-  // Alleen index.js laden als hij er nog niet is
-  if (typeof TARGET_LEVEL === 'undefined') {
-    const s = document.createElement('script');
-    s.src = 'webapp/index.js';
-    document.body.appendChild(s);
-  }
-</script>
+<script src="webapp/index.js"></script>
 
 </body>
 </html>
