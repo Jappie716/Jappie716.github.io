@@ -3,41 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <title>Drive Mad - Cloud Sync</title>
+  <title>Drive Mad - Cloud Save</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script type="text/javascript" src="Jump_Gamemonetize.js"></script>
+  <script src="/js/main.js"></script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
   <style>
-    #cloud-status {
+    #cloudStatus {
       position: fixed;
-      top: 15px;
-      right: 15px;
-      background: rgba(0, 0, 0, 0.85);
-      color: #00ff00;
-      padding: 8px 18px;
-      border-radius: 25px;
-      font-family: sans-serif;
-      font-size: 13px;
-      z-index: 10000;
-      border: 2px solid #00ff00;
-      box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
-      pointer-events: none;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      z-index: 9999;
+      min-width: 220px;
     }
-    #webview_content {
-      pointer-events: none;
+
+    #loginBtn {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 9999;
+      padding: 8px 12px;
+      background: #222;
+      color: white;
+      border: 1px solid #555;
+      cursor: pointer;
+      border-radius: 4px;
+      font-family: monospace;
     }
   </style>
 </head>
 
 <body id="body">
-  <div id="cloud-status">📡 Initialiseren...</div>
+
+  <!-- LOGIN BUTTON -->
+  <button id="loginBtn">🔐 Login met Google</button>
+
+  <!-- STATUS BOX -->
+  <div id="cloudStatus">
+    📡 Initialiseren...
+  </div>
 
   <div id="modal_parent">
     <div id="modal_content">
@@ -61,6 +80,7 @@
       <div id="progress_or_play">
         <progress id="progress" class="loading" value="0" max="100"></progress>
       </div>
+      <p class="description"></p>
     </div>
 
     <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
@@ -68,158 +88,164 @@
     <div id="webview_content"></div>
   </div>
 
-  <!-- ============================
-       CLOUD + ENGINE LOGIC
-  ============================ -->
+  <script type="text/javascript" src="webapp/source_min.js"></script>
+  <script type="text/javascript" src="webapp/index.js"></script>
+
   <script>
-const statusBox = document.getElementById("cloud-status");
-
-/* ============================
-   FIREBASE
-============================ */
-const firebaseConfig = {
-  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-  authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490",
-  storageBucket: "gameparadise-80490.firebasestorage.app",
-  messagingSenderId: "335620903527",
-  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let USER_ID = null;
-let CLOUD_LEVEL = 1;
-let CURRENT_GAME_LEVEL = 1;
-let TELEPORTED = false;
-
-/* ============================
-   CLOUD SAVE
-============================ */
-async function saveToCloud(level) {
-  if (!USER_ID || level <= CLOUD_LEVEL) return;
-
-  try {
-    CLOUD_LEVEL = level;
-
-    await db.collection("drive_mad_saves").doc(USER_ID).set({
-      lastLevel: level,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    statusBox.textContent = "💾 Opgeslagen: Level " + level;
-    console.log("💾 Cloud save:", level);
-  } catch (e) {
-    console.error("Cloud save error:", e);
-  }
-}
-
-/* ============================
-   ENGINE PATCH (ECHTE FIX)
-============================ */
-function hookEngine() {
-  if (typeof window.poki_level_start === "function" && !window._poki_patched) {
-    const engineFunc = window.poki_level_start;
-
-    window._ENGINE_LEVEL_START = engineFunc;
-    window._poki_patched = true;
-
-    window.poki_level_start = function(level) {
-      // Laat de engine ECHT werken
-      engineFunc(level);
-
-      let lvl = (typeof level === "object") ? (level.level || 1) : level;
-      lvl = Number(lvl || 1);
-
-      CURRENT_GAME_LEVEL = lvl;
-      console.log("🕹️ Level:", lvl);
-
-      saveToCloud(lvl);
+    // 🔑 FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+      authDomain: "gameparadise-80490.firebaseapp.com",
+      projectId: "gameparadise-80490",
+      storageBucket: "gameparadise-80490.firebasestorage.app",
+      messagingSenderId: "335620903527",
+      appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
     };
 
-    console.log("✅ Engine gepatched");
-    return true;
-  }
-  return false;
-}
+    firebase.initializeApp(firebaseConfig);
 
-// blijf proberen tot engine er is
-const hookTimer = setInterval(() => {
-  if (hookEngine()) clearInterval(hookTimer);
-}, 500);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-/* ============================
-   TELEPORT (ECHTE ENGINE CALL)
-============================ */
-function teleportOnce() {
-  if (TELEPORTED) return;
+    const statusBox = document.getElementById("cloudStatus");
+    const loginBtn = document.getElementById("loginBtn");
 
-  const jumpTimer = setInterval(() => {
-    if (typeof window._ENGINE_LEVEL_START === "function") {
-      TELEPORTED = true;
-      clearInterval(jumpTimer);
+    let user = null;
+    let cloudLevel = 1;
+    let teleported = false;
+    let engineReady = false;
+    let lastKnownLevel = 1;
 
-      if (CLOUD_LEVEL > 1) {
-        console.log("🚀 Teleport →", CLOUD_LEVEL);
-        statusBox.textContent = "🚀 Spring naar level " + CLOUD_LEVEL;
+    function setStatus(text) {
+      statusBox.innerHTML = text;
+    }
 
-        // Gebruik ECHTE engine functie
-        window._ENGINE_LEVEL_START(CLOUD_LEVEL);
-      } else {
-        statusBox.textContent = "☁️ Level 1";
+    // 🔐 LOGIN
+    loginBtn.onclick = () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).catch(err => {
+        setStatus("❌ Login fout<br>" + err.message);
+      });
+    };
+
+    // 🔁 AUTH LISTENER
+    auth.onAuthStateChanged(async (u) => {
+      if (!u) {
+        user = null;
+        setStatus("⚠️ Niet ingelogd");
+        return;
+      }
+
+      user = u;
+      loginBtn.style.display = "none";
+      setStatus("🔐 Ingelogd:<br>" + user.email + "<br>☁️ Cloud laden...");
+
+      await loadCloudLevel();
+    });
+
+    // ☁️ CLOUD LOAD
+    async function loadCloudLevel() {
+      try {
+        const ref = db.collection("drive_mad_saves").doc(user.uid);
+        const snap = await ref.get();
+
+        if (snap.exists) {
+          cloudLevel = snap.data().lastLevel || 1;
+        } else {
+          cloudLevel = 1;
+          await ref.set({
+            lastLevel: 1,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+
+        setStatus(
+          "🔐 Ingelogd:<br>" + user.email +
+          "<br>☁️ Cloud level: " + cloudLevel
+        );
+      } catch (e) {
+        setStatus("❌ Cloud fout<br>" + e.message);
       }
     }
-  }, 1000);
 
-  setTimeout(() => clearInterval(jumpTimer), 20000);
-}
+    // 🕹️ ENGINE READY CHECK
+    const engineCheck = setInterval(() => {
+      if (typeof Module !== "undefined" && Module.ccall) {
+        engineReady = true;
+        clearInterval(engineCheck);
+        hookEngine();
+      }
+    }, 500);
 
-/* ============================
-   AUTH
-============================ */
-auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    statusBox.textContent = "⚠️ Niet ingelogd";
-    return;
-  }
+    // 🪝 ENGINE HOOK
+    function hookEngine() {
+      if (!Module.ccall) return;
 
-  USER_ID = user.uid;
-  console.log("🔐 Ingelogd:", user.email);
-  statusBox.textContent = "☁️ Cloud laden...";
+      const originalCall = Module.ccall;
 
-  try {
-    const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
+      Module.ccall = function (func, returnType, argTypes, args) {
+        try {
+          if (func === "poki_level_start") {
+            const newLevel = parseInt(args[0]);
 
-    if (doc.exists) {
-      CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
-      statusBox.textContent = "☁️ Cloud level: " + CLOUD_LEVEL;
-      console.log("☁️ Cloud gevonden:", CLOUD_LEVEL);
-    } else {
-      statusBox.textContent = "🆕 Nieuw profiel";
+            if (!isNaN(newLevel)) {
+              onLevelChange(newLevel);
+            }
+          }
+        } catch (e) {
+          console.warn("Cloud hook error:", e);
+        }
+
+        return originalCall.apply(this, arguments);
+      };
+
+      setStatus(prevStatus() + "<br>📡 Engine gekoppeld");
+      autoTeleport();
     }
 
-    teleportOnce();
-  } catch (e) {
-    console.error("Cloud load error:", e);
-    statusBox.textContent = "❌ Cloud fout";
-  }
-});
+    function prevStatus() {
+      return statusBox.innerHTML;
+    }
 
-/* ============================
-   EMSCRIPTEN
-============================ */
-var Module = {
-  canvas: document.getElementById("canvas"),
-  locateFile: (path) => "webapp/" + path,
-  onRuntimeInitialized: () => {
-    console.log("⚙️ Engine ready");
-  }
-};
+    // 🚀 TELEPORT
+    function autoTeleport() {
+      if (!user) return;
+      if (teleported) return;
+      if (!engineReady) return;
+      if (cloudLevel <= 1) return;
+
+      teleported = true;
+
+      setStatus(prevStatus() + "<br>🚀 Spring naar level " + cloudLevel);
+
+      try {
+        Module.ccall("poki_level_start", null, ["number"], [cloudLevel]);
+      } catch (e) {
+        console.warn("Teleport failed:", e);
+      }
+    }
+
+    // 💾 SAVE LOGIC
+    async function onLevelChange(newLevel) {
+      lastKnownLevel = newLevel;
+
+      if (!user) return;
+      if (newLevel <= cloudLevel) return;
+
+      cloudLevel = newLevel;
+
+      setStatus(prevStatus() + "<br>💾 Opslaan: Level " + newLevel);
+
+      try {
+        await db.collection("drive_mad_saves").doc(user.uid).set({
+          lastLevel: newLevel,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (e) {
+        setStatus(prevStatus() + "<br>❌ Opslaan mislukt");
+      }
+    }
   </script>
 
-  <script src="webapp/source_min.js"></script>
-  <script src="webapp/index.js"></script>
 </body>
 </html>
