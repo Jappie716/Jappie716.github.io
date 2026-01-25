@@ -13,64 +13,95 @@
 <style>
 body {
   margin: 0;
-  background: #0e0e13;
+  background: #0b0e14;
   color: white;
   font-family: Arial, sans-serif;
+  display: flex;
+  height: 100vh;
 }
 
-.topbar {
-  height: 60px;
+/* SIDEBAR */
+.sidebar {
+  width: 240px;
   background: #111827;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  box-shadow: 0 2px 10px black;
+  flex-direction: column;
+  padding: 15px;
+  box-shadow: 3px 0 10px black;
 }
 
 .logo {
   font-size: 20px;
   font-weight: bold;
   color: #60a5fa;
+  margin-bottom: 15px;
 }
 
+/* SEARCH */
+.search-box input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  border: none;
+  margin-bottom: 15px;
+}
+
+/* CATEGORIES */
+.category-list {
+  flex-grow: 1;
+}
+
+.category-btn {
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  color: #cbd5f5;
+}
+
+.category-btn:hover,
+.category-btn.active {
+  background: #1f2933;
+}
+
+/* LOGIN BUTTON */
 .auth-btn {
   background: #2563eb;
   border: none;
   color: white;
-  padding: 8px 14px;
+  padding: 10px;
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
 }
 
-.library {
+/* MAIN AREA */
+.main {
+  flex-grow: 1;
   padding: 20px;
+  overflow-y: auto;
 }
 
-.category {
-  margin-bottom: 40px;
-}
-
-.category h2 {
-  margin-bottom: 10px;
+.section-title {
   color: #60a5fa;
+  margin-bottom: 15px;
 }
 
-.game-row {
+/* GAMES GRID */
+.game-grid {
   display: flex;
-  gap: 15px;
   flex-wrap: wrap;
+  gap: 15px;
 }
 
 .game-card {
-  width: 160px;
+  width: 180px;
   background: #1f2933;
   border-radius: 10px;
   overflow: hidden;
   position: relative;
-  transition: transform 0.2s;
   cursor: pointer;
+  transition: transform 0.2s;
 }
 
 .game-card:hover {
@@ -79,14 +110,14 @@ body {
 
 .game-card img {
   width: 100%;
-  height: 100px;
+  height: 110px;
   object-fit: cover;
 }
 
 .game-card h3 {
   font-size: 14px;
-  padding: 6px;
   margin: 0;
+  padding: 8px;
   text-align: center;
 }
 
@@ -97,50 +128,95 @@ body {
   font-size: 18px;
   cursor: pointer;
   color: #555;
-  user-select: none;
 }
 
 .star.fav {
   color: gold;
 }
+
+/* LOGIN MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-box {
+  background: #111827;
+  padding: 20px;
+  border-radius: 10px;
+  width: 300px;
+}
+
+.modal-box h2 {
+  margin-top: 0;
+  text-align: center;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: none;
+}
+
+.modal-box button {
+  width: 100%;
+  padding: 8px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
+<!-- SIDEBAR -->
+<div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
+
+  <div class="search-box">
+    <input id="searchInput" type="text" placeholder="Search games...">
+  </div>
+
+  <div class="category-list">
+    <div class="category-btn active" data-category="all">All Games</div>
+    <div class="category-btn" data-category="favorites">⭐ Favorites</div>
+    <div class="category-btn" data-category="action">Action</div>
+    <div class="category-btn" data-category="idle">Idle</div>
+    <div class="category-btn" data-category="multiplayer">Multiplayer</div>
+  </div>
+
   <button id="authBtn" class="auth-btn">Login</button>
 </div>
 
-<!-- LIBRARY -->
-<div class="library">
+<!-- MAIN -->
+<div class="main">
+  <h2 id="sectionTitle" class="section-title">All Games</h2>
+  <div id="gameGrid" class="game-grid">
 
-<!-- FAVORITES -->
-<div class="category">
-  <h2>⭐ Favorites</h2>
-  <div id="favoritesRow" class="game-row"></div>
-</div>
-
-<!-- ALL GAMES -->
-<div class="category">
-  <h2>All Games</h2>
-  <div class="game-row" id="allGames">
-
-    <!-- COPY THIS BLOCK TO ADD GAMES -->
-    <div class="game-card" data-game-id="greedy-snakes" data-title="Greedy Snakes" data-link="greedy/index.html">
+    <!-- GAME TEMPLATE -->
+    <div class="game-card" data-id="greedy" data-title="Greedy Snakes" data-category="action" data-link="greedy/index.html">
       <div class="star">★</div>
       <img src="https://raw.githubusercontent.com/ikhouvankaasq/greedy-snakes/main/logo.png">
       <h3>Greedy Snakes</h3>
     </div>
 
-    <div class="game-card" data-game-id="space-runner" data-title="Space Runner" data-link="#">
+    <div class="game-card" data-id="space" data-title="Space Runner" data-category="idle" data-link="#">
       <div class="star">★</div>
       <img src="https://picsum.photos/200/100?1">
       <h3>Space Runner</h3>
     </div>
 
-    <div class="game-card" data-game-id="tower-defense" data-title="Tower Defense" data-link="#">
+    <div class="game-card" data-id="tower" data-title="Tower Defense" data-category="multiplayer" data-link="#">
       <div class="star">★</div>
       <img src="https://picsum.photos/200/100?2">
       <h3>Tower Defense</h3>
@@ -149,25 +225,18 @@ body {
   </div>
 </div>
 
-<!-- EMPTY CATEGORIES -->
-<div class="category">
-  <h2>Action Games</h2>
-  <div class="game-row"></div>
+<!-- LOGIN MODAL -->
+<div id="loginModal" class="modal">
+  <div class="modal-box">
+    <h2>Login</h2>
+    <input id="emailInput" type="email" placeholder="Email">
+    <input id="passwordInput" type="password" placeholder="Password">
+    <button id="loginSubmit">Login</button>
+    <button id="registerSubmit" style="margin-top:8px;background:#16a34a;">Register</button>
+  </div>
 </div>
 
-<div class="category">
-  <h2>Idle Games</h2>
-  <div class="game-row"></div>
-</div>
-
-<div class="category">
-  <h2>Multiplayer</h2>
-  <div class="game-row"></div>
-</div>
-
-</div>
-
-<!-- FIREBASE + LOGIC -->
+<!-- FIREBASE -->
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
@@ -179,30 +248,43 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.firestore();
-
-const authBtn = document.getElementById("authBtn");
-const favRow = document.getElementById("favoritesRow");
 
 let currentUser = null;
 let favorites = {};
 
-// LOGIN / LOGOUT
+const authBtn = document.getElementById("authBtn");
+const modal = document.getElementById("loginModal");
+
+/* AUTH UI */
 authBtn.onclick = () => {
   if (!currentUser) {
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    modal.style.display = "flex";
   } else {
     auth.signOut();
   }
 };
 
-// AUTH STATE
+document.getElementById("loginSubmit").onclick = () => {
+  auth.signInWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).then(() => modal.style.display = "none")
+   .catch(e => alert(e.message));
+};
+
+document.getElementById("registerSubmit").onclick = () => {
+  auth.createUserWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).then(() => modal.style.display = "none")
+   .catch(e => alert(e.message));
+};
+
 auth.onAuthStateChanged(user => {
   currentUser = user;
   favorites = {};
-  favRow.innerHTML = "";
 
   if (user) {
     authBtn.textContent = "Logout";
@@ -213,32 +295,22 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// LOAD FAVORITES
+/* FAVORITES */
 function loadFavorites() {
   db.collection("users")
     .doc(currentUser.uid)
     .collection("favorites")
     .get()
-    .then(snapshot => {
-      snapshot.forEach(doc => {
-        favorites[doc.id] = doc.data();
-      });
+    .then(snap => {
+      snap.forEach(doc => favorites[doc.id] = doc.data());
       updateStars();
-      renderFavorites();
     });
 }
 
-// TOGGLE FAVORITE
 function toggleFavorite(card) {
-  if (!currentUser) return alert("Login to use favorites");
+  if (!currentUser) return alert("Login first");
 
-  const id = card.dataset.gameId;
-  const data = {
-    title: card.dataset.title,
-    link: card.dataset.link,
-    image: card.querySelector("img").src
-  };
-
+  const id = card.dataset.id;
   const ref = db.collection("users")
     .doc(currentUser.uid)
     .collection("favorites")
@@ -248,40 +320,47 @@ function toggleFavorite(card) {
     delete favorites[id];
     ref.delete();
   } else {
-    favorites[id] = data;
-    ref.set(data);
+    favorites[id] = { title: card.dataset.title };
+    ref.set(favorites[id]);
   }
 
   updateStars();
-  renderFavorites();
 }
 
-// UPDATE STAR ICONS
+/* STARS */
 function updateStars() {
   document.querySelectorAll(".game-card").forEach(card => {
     const star = card.querySelector(".star");
-    const id = card.dataset.gameId;
-    star.classList.toggle("fav", !!favorites[id]);
+    star.classList.toggle("fav", !!favorites[card.dataset.id]);
   });
 }
 
-// RENDER FAVORITES ROW
-function renderFavorites() {
-  favRow.innerHTML = "";
+/* FILTERING */
+document.querySelectorAll(".category-btn").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
 
-  Object.values(favorites).forEach(g => {
-    const div = document.createElement("div");
-    div.className = "game-card";
-    div.innerHTML = `
-      <img src="${g.image}">
-      <h3>${g.title}</h3>
-    `;
-    div.onclick = () => location.href = g.link;
-    favRow.appendChild(div);
+    const cat = btn.dataset.category;
+    document.getElementById("sectionTitle").textContent = btn.textContent;
+
+    document.querySelectorAll(".game-card").forEach(card => {
+      if (cat === "all") card.style.display = "block";
+      else if (cat === "favorites") card.style.display = favorites[card.dataset.id] ? "block" : "none";
+      else card.style.display = card.dataset.category === cat ? "block" : "none";
+    });
+  };
+});
+
+/* SEARCH */
+document.getElementById("searchInput").oninput = e => {
+  const val = e.target.value.toLowerCase();
+  document.querySelectorAll(".game-card").forEach(card => {
+    card.style.display = card.dataset.title.toLowerCase().includes(val) ? "block" : "none";
   });
-}
+};
 
-// GAME EVENTS
+/* GAME EVENTS */
 document.querySelectorAll(".game-card").forEach(card => {
   const star = card.querySelector(".star");
 
