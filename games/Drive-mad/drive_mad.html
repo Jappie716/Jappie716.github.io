@@ -89,7 +89,32 @@
     USER_ID = user.uid;
     console.log("🔐 Ingelogd als:", user.email);
     statusBox.textContent = "Account geladen...";
-    tryLoadLevel();
+    async function tryLoadLevel() {
+    if (!USER_ID || !GAME_READY) return;
+
+    try {
+      const doc = await db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").get();
+      const lvl = doc.exists ? Number(doc.data().level || 1) : 1;
+      
+      console.log("🛠 DEBUG: Proberen level " + lvl + " te starten...");
+      console.log("🛠 DEBUG: Bestaat poki_level_start?", !!window.poki_level_start);
+      console.log("🛠 DEBUG: Bestaat Module?", !!window.Module);
+
+      // We proberen verschillende manieren die Drive Mad vaak gebruikt
+      if (window.poki_level_start) {
+          window.poki_level_start(lvl);
+          console.log("✅ Gestart via poki_level_start");
+      } else if (window.fancade_level_start) {
+          window.fancade_level_start(lvl);
+          console.log("✅ Gestart via fancade_level_start");
+      } else {
+          console.warn("⚠️ Geen start-functie gevonden! De game weet niet hoe hij moet beginnen.");
+      }
+
+    } catch (e) {
+      console.error("❌ Fout tijdens laden:", e);
+    }
+  }
   });
 
   // 💾 SAVE LEVEL (WORDT DOOR GAME AANGEROEPEN)
