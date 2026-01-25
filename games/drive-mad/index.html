@@ -2,8 +2,7 @@
 <html lang="en-us">
 <head>
   <meta charset="utf-8" />
-  <title>Drive Mad - Cloud Save Fixed</title>
-
+  <title>Drive Mad - Cloud Sync Fixed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
@@ -19,15 +18,12 @@
       font-family: monospace; font-size: 12px;
       padding: 12px; border-radius: 8px;
       z-index: 9999; border: 1px solid #0f0;
-      box-shadow: 0 0 10px rgba(0,255,0,0.2);
-      pointer-events: none;
     }
     #loginBtn {
       position: fixed; top: 10px; left: 10px;
       z-index: 9999; padding: 10px 15px;
       background: #4285F4; color: white;
-      border: none; cursor: pointer;
-      border-radius: 4px; font-family: sans-serif;
+      border: none; cursor: pointer; border-radius: 4px;
       font-weight: bold;
     }
   </style>
@@ -36,20 +32,37 @@
 <body id="body">
 
 <button id="loginBtn">🔐 Inloggen met Google</button>
-<div id="cloudStatus">📡 Initialiseren...</div>
+<div id="cloudStatus">📡 Wachten op engine...</div>
+
+<div id="modal_parent">
+  <div id="modal_content">
+    <span id="modal_close_button">&times;</span>
+    <div id="store_link_modal_content" class="modal_inner"></div>
+    <div id="share_file_modal_content" class="modal_inner"></div>
+  </div>
+</div>
 
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
+    <div class="edge">
+      <div class="box">
+        <div class="black">
+          <img src="webapp/cover.jpg" class="cover" />
+          <p class="title">Drive Mad</p>
+          <p class="author">Martin Magni</p>
+        </div>
+      </div>
+    </div>
     <div id="progress_or_play">
       <progress id="progress" class="loading" value="0" max="100"></progress>
     </div>
   </div>
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-</div>
+  <div id="gradient"></div> <div id="webview_content"></div> </div>
 
 <script>
 /* ==========================
-   🔥 FIREBASE SETUP
+   🔥 FIREBASE & SYNC LOGIC
 ========================== */
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
@@ -70,15 +83,11 @@ const loginBtn = document.getElementById("loginBtn");
 let user = null;
 let cloudLevel = 1;
 let currentGameLevel = 1;
-let teleportDone = false;
+let teleportAttempted = false;
 
-// UI Helpers
-function setStatus(text) { statusBox.innerHTML = text; }
-function appendStatus(text) { statusBox.innerHTML += "<br>" + text; }
+// UI
+function setStatus(t) { statusBox.innerText = t; }
 
-/* ==========================
-   🔐 AUTH & CLOUD
-========================= */
 loginBtn.onclick = () => {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider);
@@ -93,30 +102,23 @@ auth.onAuthStateChanged(async (u) => {
   }
   user = u;
   loginBtn.style.display = "none";
-  setStatus("🔐 Ingelogd: " + user.email);
+  setStatus("🔐 Laden...");
   
-  // Data één keer ophalen
   const doc = await db.collection("drive_mad_saves").doc(user.uid).get();
   if (doc.exists) {
     cloudLevel = doc.data().lastLevel || 1;
-    appendStatus("☁️ Cloud level gevonden: " + cloudLevel);
-  } else {
-    appendStatus("☁️ Geen cloud save, we starten op Lvl 1");
+    setStatus("☁️ Cloud: Lvl " + cloudLevel);
   }
 });
 
-/* ==========================
-   🕹️ GAME HOOKS & SAVE
-========================= */
-
-// Deze functie wordt door Drive Mad aangeroepen bij elk nieuw level
+// HOOK
 window.poki_level_start = function(data) {
   const lvl = (typeof data === "object") ? (data.level || 1) : Number(data);
   currentGameLevel = lvl;
-  console.log("🕹️ Game level:", lvl);
+  console.log("🕹️ Level:", lvl);
 };
 
-// 💾 Elke 15 seconden opslaan
+// 15 SEC AUTO-SAVE
 setInterval(async () => {
   if (user && currentGameLevel > cloudLevel) {
     try {
@@ -125,32 +127,26 @@ setInterval(async () => {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       cloudLevel = currentGameLevel;
-      appendStatus("💾 Auto-save: Level " + cloudLevel);
-    } catch (e) { console.error("Save error", e); }
+      setStatus("💾 Opgeslagen: Lvl " + cloudLevel);
+    } catch (e) { console.error(e); }
   }
 }, 15000);
 
-/* ==========================
-   🚀 TELEPORT (De 'Skipper')
-========================= */
-const teleportInterval = setInterval(() => {
-  if (user && cloudLevel > 1 && !teleportDone) {
+// TELEPORT LOOP
+const skipper = setInterval(() => {
+  if (user && cloudLevel > 1 && !teleportAttempted) {
     if (window.Module && typeof Module._poki_level_start === "function") {
-      // Als we nog op een lager level zitten dan de cloud
       if (currentGameLevel < cloudLevel) {
-        appendStatus("🚀 Skipper: Naar level " + cloudLevel);
+        setStatus("🚀 Syncing naar Lvl " + cloudLevel);
         Module._poki_level_start(cloudLevel);
       } else {
-        appendStatus("✅ Sync compleet!");
-        teleportDone = true;
-        clearInterval(teleportInterval);
+        teleportAttempted = true;
+        setStatus("✅ Sync Lvl " + cloudLevel);
+        clearInterval(skipper);
       }
     }
   }
 }, 2000);
-
-// Stop de skipper na 30 seconden sowieso
-setTimeout(() => clearInterval(teleportInterval), 30000);
 
 var Module = {
   canvas: document.getElementById("canvas"),
