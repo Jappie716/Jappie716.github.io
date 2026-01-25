@@ -149,7 +149,40 @@
   });
 
   // ☁️ CLOUD LOAD
-  async function loadCloudLevel() {
+function loadCloudLevel() {
+  try {
+    const ref = db.collection("drive_mad_saves").doc(user.uid);
+
+    // 🔁 LIVE LISTENER
+    ref.onSnapshot((snap) => {
+      if (!snap.exists) {
+        cloudLevel = 1;
+        ref.set({
+          lastLevel: 1,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        appendStatus("☁️ Cloud level: 1");
+        return;
+      }
+
+      const data = snap.data();
+      const newLevel = data.lastLevel || 1;
+
+      // Alleen updaten als het echt verandert
+      if (newLevel !== cloudLevel) {
+        cloudLevel = newLevel;
+        appendStatus("☁️ Cloud level: " + cloudLevel);
+
+        // Als we nog niet geteleporteerd hebben → nu doen
+        autoTeleport();
+      }
+    });
+  } catch (e) {
+    appendStatus("❌ Cloud fout");
+    console.error(e);
+  }
+}
+
     try {
       const ref = db.collection("drive_mad_saves").doc(user.uid);
       const snap = await ref.get();
