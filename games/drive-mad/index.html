@@ -163,49 +163,34 @@
     }, 500);
   }
 
-  // =====================
-  // 🎮 LEVEL HOOK SYSTEM
+ // =====================
+  // 🎮 LEVEL HOOK SYSTEM (VERBETERD)
   // =====================
   function hookLevelSystem() {
-    const hook = setInterval(() => {
-      if (window.poki_level_start) {
-        clearInterval(hook);
+    // We maken de functie simpelweg ZELF aan voordat de engine dat doet
+    // De engine (source_min.js) zal deze bestaande functie gebruiken als hij hem vindt
+    window.poki_level_start = function(level) {
+      const lvl = Number(level || 1);
+      console.log("🕹️ Engine roept poki_level_start aan voor level:", lvl);
+      
+      // We slaan elk level direct op zodra het start
+      saveToCloud(lvl);
 
-        const originalStart = window.poki_level_start;
-
-        window.poki_level_start = function(level) {
-          const lvl = Number(level || 1);
-
-          console.log("🎮 Level gestart:", lvl);
-
-          // Save previous level
-          if (lvl > 1) {
-            saveToCloud(lvl - 1);
+      // Als we nog niet op het cloud-level zijn, skip naar het volgende
+      if (lvl < LAST_SAVED_LEVEL) {
+        console.log("⏩ Skip actief: we moeten naar level", LAST_SAVED_LEVEL);
+        setTimeout(() => {
+          if (typeof Module._poki_level_start === "function") {
+            Module._poki_level_start(lvl + 1);
           }
-
-          return originalStart.apply(this, arguments);
-        };
-
-        console.log("✅ Level hook actief");
+        }, 100);
       }
-    }, 500);
+    };
+    console.log("✅ Level hook klaargezet");
   }
 
-  // =====================
-  // ⚙️ EMSCRIPTEN MODULE
-  // =====================
-  var Module = {
-    canvas: document.getElementById("canvas"),
-    locateFile: (path) => "webapp/" + path,
-    onRuntimeInitialized: function() {
-      console.log("⚙️ Game engine klaar");
-      GAME_READY = true;
-      statusBox.style.display = "none";
-
-      hookLevelSystem();
-      tryStartSkip();
-    }
-  };
+  // We roepen de hook direct aan, niet wachten op de engine
+  hookLevelSystem();
 </script>
 
 <!-- 🎮 GAME FILES -->
