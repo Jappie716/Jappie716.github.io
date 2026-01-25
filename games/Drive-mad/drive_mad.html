@@ -2,10 +2,8 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <title>Drive Mad</title>
+  <title>Drive Mad - Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <meta name="google" content="notranslate" />
-
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
@@ -18,18 +16,20 @@
       position: absolute;
       top: 10px;
       left: 10px;
-      background: rgba(0,0,0,0.7);
-      padding: 6px 12px;
-      border-radius: 6px;
+      background: rgba(0,0,0,0.8);
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-family: sans-serif;
       font-size: 13px;
       color: #fff;
       z-index: 9999;
+      border: 1px solid #444;
     }
   </style>
 </head>
 <body id="body">
 
-<div id="status">Laden…</div>
+<div id="status">Systeem opstarten...</div>
 
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
@@ -45,16 +45,13 @@
     <div id="progress_or_play">
       <progress id="progress" class="loading" value="0" max="100"></progress>
     </div>
-    <p class="description"></p>
   </div>
-
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
   <div id="gradient"></div>
-  <div id="webview_content"></div>
 </div>
 
 <script>
-  // 1. FIREBASE CONFIG
+  // --- CONFIGURATIE ---
   const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -69,48 +66,73 @@
   const db = firebase.firestore();
 
   let USER_ID = null;
-  let GAME_READY = false;
-  let LOADED_LEVEL = 1;
+  let ENGINE_READY = false;
+  let DATA_LOADED = false;
+  let TARGET_START_LEVEL = 1;
 
   const statusBox = document.getElementById("status");
 
-  // 2. LOGIN CHECK
+  // --- STAP 1: FIREBASE DATA ---
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
-      alert("❌ Je bent niet ingelogd op de homepage!");
-      window.location.href = "index.html"; 
+      alert("Je bent niet ingelogd!");
+      window.location.href = "index.html";
       return;
     }
 
     USER_ID = user.uid;
-    console.log("🔐 Firebase verbonden:", user.email);
     statusBox.textContent = "Data ophalen...";
-    
-    // Haal level direct op zodra we weten wie de gebruiker is
+
     try {
-      const doc = await db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").get();
-      if (doc.exists) {
-        LOADED_LEVEL = Number(doc.data().level || 1);
-        console.log("📥 Level uit cloud:", LOADED_LEVEL);
+      // We zetten een timeout op het ophalen van data voor het geval een adblocker roet in het eten gooit
+      const dataPromise = db.collection("users").doc(USER_ID).collection("games").doc("drive_mad").get();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+
+      const doc = await Promise.race([dataPromise, timeoutPromise]);
+
+      if (doc && doc.exists) {
+        TARGET_START_LEVEL = Number(doc.data().level || 1);
+        console.log("📥 Level geladen uit Cloud:", TARGET_START_LEVEL);
       }
-      checkStartGame();
     } catch (e) {
-      console.error("Fout bij laden:", e);
+      console.warn("⚠️ Kon geen data ophalen (Adblocker?), we starten op level 1.");
     }
+
+    DATA_LOADED = true;
+    tryToStartGame();
   });
 
-  // 3. START LOGICA
-  function checkStartGame() {
-    if (USER_ID && GAME_READY) {
-      console.log("🎮 Game & User klaar. Start level:", LOADED_LEVEL);
-      if (window.poki_level_start) {
-        window.poki_level_start(LOADED_LEVEL);
-      }
+  // --- STAP 2: ENGINE SETUP ---
+  var Module = window.Module || {};
+  Module.canvas = document.getElementById("canvas");
+  Module.locateFile = function(path) { return "webapp/" + path; };
+  
+  Module.setStatus = function(text) {
+    if (text) statusBox.textContent = text;
+    if (text === "" || text === "Running...") {
+       ENGINE_READY = true;
+       tryToStartGame();
+    }
+  };
+
+  Module.onRuntimeInitialized = function() {
+    ENGINE_READY = true;
+    tryToStartGame();
+  };
+
+  // --- STAP 3: START CONTROLE ---
+  function tryToStartGame() {
+    if (DATA_LOADED && ENGINE_READY) {
       statusBox.style.display = "none";
+      console.log("🚀 Alles klaar! Starten op level:", TARGET_START_LEVEL);
+      
+      if (window.poki_level_start) {
+        window.poki_level_start(TARGET_START_LEVEL);
+      }
     }
   }
 
-  // 4. SAVE FUNCTIE
+  // --- STAP 4: OPSLAAN ---
   async function saveLevel(level) {
     if (!USER_ID) return;
     try {
@@ -118,52 +140,35 @@
         level: Number(level),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
-      console.log("✅ Vooruitgang opgeslagen: Level", level);
+      console.log("💾 Level opgeslagen:", level);
     } catch (e) {
-      console.warn("❌ Opslaan mislukt:", e.message);
+      console.error("❌ Save error:", e);
     }
   }
 
-  // Luister naar de game voor level-updates
+  // Luister naar de game
   window.addEventListener("message", (event) => {
     if (event.data && event.data.type === "level_complete") {
-        saveLevel(event.data.level);
+      saveLevel(event.data.level);
     }
   });
 
-  // Overschrijf Poki start voor automatische saves
-  const originelePokiStart = window.poki_level_start;
+  // Poki wrapper voor saves
+  const oldPokiStart = window.poki_level_start;
   window.poki_level_start = function(lvl) {
     saveLevel(lvl);
-    if (originelePokiStart) originelePokiStart(lvl);
-  };
-</script>
-
-<script>
-  // 5. EMSCRIPTEN (DE ENGINE)
-  var Module = window.Module || {};
-  Module.locateFile = function (path) { return "webapp/" + path; };
-  Module.canvas = document.getElementById("canvas");
-  Module.setStatus = function (text) { 
-    if (statusBox) statusBox.textContent = text; 
-  };
-
-  Module.onRuntimeInitialized = function () {
-    console.log("⚙️ Engine geladen");
-    GAME_READY = true;
-    checkStartGame();
+    if (oldPokiStart) oldPokiStart(lvl);
   };
 </script>
 
 <script src="webapp/source_min.js"></script>
 
 <script>
+  // Alleen index.js laden als hij er nog niet is
   if (typeof TARGET_LEVEL === 'undefined') {
-    var script = document.createElement('script');
-    script.src = 'webapp/index.js';
-    document.head.appendChild(script);
-  } else {
-    console.log("TARGET_LEVEL was al gedefinieerd, overslaan van dubbele load.");
+    const s = document.createElement('script');
+    s.src = 'webapp/index.js';
+    document.body.appendChild(s);
   }
 </script>
 
