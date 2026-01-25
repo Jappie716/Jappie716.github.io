@@ -12,75 +12,53 @@
 <style>
 body {
   margin: 0;
+  font-family: Arial, sans-serif;
   background: #0b0f19;
   color: white;
-  font-family: Arial, sans-serif;
   display: flex;
   height: 100vh;
 }
-
-/* SIDEBAR */
 .sidebar {
   width: 230px;
   background: #0f172a;
+  padding: 15px;
   display: flex;
   flex-direction: column;
-  padding: 15px;
-  box-shadow: 3px 0 10px black;
 }
-
 .logo {
+  text-align: center;
   font-size: 20px;
   font-weight: bold;
   color: #60a5fa;
   margin-bottom: 15px;
-  text-align: center;
 }
-
-.search-box {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
 .search-box input {
-  width: 85%;
+  width: 100%;
   padding: 8px;
   border-radius: 5px;
   border: none;
+  margin-bottom: 15px;
 }
-
 .category-btn {
+  background: #1e293b;
   padding: 10px;
   border-radius: 5px;
-  cursor: pointer;
   margin-bottom: 6px;
-  background: #1e293b;
-  transition: background 0.2s;
+  cursor: pointer;
 }
+.category-btn:hover { background: #334155; }
+.category-btn.active { background: #2563eb; }
 
-.category-btn:hover {
-  background: #334155;
-}
-
-.category-btn.active {
-  background: #2563eb;
-}
-
-/* MAIN */
 .main {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
 }
-
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
 }
-
 .auth-btn {
   background: #2563eb;
   border: none;
@@ -89,70 +67,45 @@ body {
   color: white;
   cursor: pointer;
 }
-
-.admin-btn {
-  background: #16a34a;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 5px;
-  color: white;
-  cursor: pointer;
-  margin-right: 10px;
-  display: none;
-}
-
 .section-title {
   color: #60a5fa;
-  margin-bottom: 15px;
+  margin: 15px 0;
 }
-
-/* GAMES */
 .game-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
 }
-
 .game-card {
   width: 160px;
   background: #1f2933;
   border-radius: 10px;
   overflow: hidden;
-  position: relative;
   cursor: pointer;
-  transition: transform 0.2s;
+  position: relative;
+  transition: transform .2s;
 }
-
-.game-card:hover {
-  transform: scale(1.05);
-}
-
+.game-card:hover { transform: scale(1.05); }
 .game-card img {
   width: 100%;
   height: 100px;
   object-fit: cover;
 }
-
 .game-card h3 {
-  font-size: 14px;
-  text-align: center;
-  padding: 6px;
   margin: 0;
+  padding: 6px;
+  text-align: center;
+  font-size: 14px;
 }
-
-/* STAR */
 .star {
   position: absolute;
   top: 6px;
   right: 8px;
+  cursor: pointer;
   font-size: 18px;
   color: #555;
-  cursor: pointer;
 }
-
-.star.fav {
-  color: gold;
-}
+.star.fav { color: gold; }
 
 /* LOGIN MODAL */
 .modal {
@@ -162,25 +115,20 @@ body {
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
 }
-
 .modal-box {
   background: #111827;
   padding: 20px;
   border-radius: 8px;
   width: 300px;
 }
-
-.modal-box input,
-.modal-box button {
+.modal-box input, .modal-box button {
   width: 100%;
+  margin-top: 10px;
   padding: 8px;
-  margin-top: 8px;
   border-radius: 5px;
   border: none;
 }
-
 .modal-box button {
   background: #2563eb;
   color: white;
@@ -190,47 +138,38 @@ body {
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
   <div class="search-box">
     <input id="searchInput" placeholder="Zoek games...">
   </div>
+  <div class="category-btn active" data-cat="all">Alle games</div>
+  <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
   <div id="categoryList"></div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <h2 id="sectionTitle" class="section-title">Alle games</h2>
     <div>
-      <button id="adminBtn" class="admin-btn">Admin Panel</button>
+      <button id="adminBtn" class="auth-btn" style="display:none" onclick="location.href='admin.html'">Admin</button>
       <button id="authBtn" class="auth-btn">Inloggen</button>
     </div>
   </div>
-
   <div id="gameGrid" class="game-grid"></div>
 </div>
 
-<!-- LOGIN -->
 <div id="loginModal" class="modal">
   <div class="modal-box">
     <h2>Inloggen</h2>
     <input id="emailInput" type="email" placeholder="E-mail">
     <input id="passwordInput" type="password" placeholder="Wachtwoord">
     <button id="loginSubmit">Inloggen</button>
-    <button id="registerSubmit" style="background:#16a34a">Account maken</button>
+    <button id="registerSubmit" style="background:#16a34a;">Account maken</button>
   </div>
 </div>
 
 <script>
-/* ======================
-   CONFIG
-====================== */
-const ADMIN_EMAILS = [
-  "someoeneheilig@gmail.com"
-];
-
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -244,190 +183,133 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+const ADMIN_EMAIL = "someoeneheilig@gmail.com";
+
 const authBtn = document.getElementById("authBtn");
 const adminBtn = document.getElementById("adminBtn");
 const modal = document.getElementById("loginModal");
+const loginSubmit = document.getElementById("loginSubmit");
+const registerSubmit = document.getElementById("registerSubmit");
+const gameGrid = document.getElementById("gameGrid");
+const categoryList = document.getElementById("categoryList");
 
 let currentUser = null;
 let favorites = {};
-let games = [];
 
-/* ======================
-   AUTH
-====================== */
 authBtn.onclick = () => {
   if (!currentUser) modal.style.display = "flex";
   else auth.signOut();
 };
 
 loginSubmit.onclick = () => {
-  auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
-    .catch(e => alert(e.message));
+  auth.signInWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(e => alert(e.message));
 };
 
 registerSubmit.onclick = () => {
-  auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
-    .catch(e => alert(e.message));
-};
-
-modal.onclick = e => {
-  if (e.target === modal) modal.style.display = "none";
+  auth.createUserWithEmailAndPassword(
+    emailInput.value,
+    passwordInput.value
+  ).catch(e => alert(e.message));
 };
 
 auth.onAuthStateChanged(user => {
   currentUser = user;
   favorites = {};
-
   if (user) {
     authBtn.textContent = "Uitloggen";
     modal.style.display = "none";
-
-    if (ADMIN_EMAILS.includes(user.email)) {
-      adminBtn.style.display = "inline-block";
-    } else {
-      adminBtn.style.display = "none";
-    }
-
+    adminBtn.style.display = user.email === ADMIN_EMAIL ? "inline-block" : "none";
     loadFavorites();
   } else {
     authBtn.textContent = "Inloggen";
     adminBtn.style.display = "none";
+    renderGames();
   }
 });
 
-/* ======================
-   ADMIN BUTTON
-====================== */
-adminBtn.onclick = () => {
-  location.href = "admin.html";
-};
-
-/* ======================
-   LOAD DATA
-====================== */
-function loadCategories() {
-  const list = document.getElementById("categoryList");
-  list.innerHTML = `
-    <div class="category-btn active" data-cat="all">Alle games</div>
-    <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
-  `;
-
-  db.collection("categories").get().then(snapshot => {
-    snapshot.forEach(doc => {
-      const div = document.createElement("div");
-      div.className = "category-btn";
-      div.dataset.cat = doc.id;
-      div.textContent = doc.data().name;
-      list.appendChild(div);
-    });
-
-    setupCategoryButtons();
-  });
-}
-
-function loadGames() {
-  db.collection("games").get().then(snapshot => {
-    games = [];
-    snapshot.forEach(doc => {
-      games.push({ id: doc.id, ...doc.data() });
-    });
-    renderGames("all");
-  });
-}
-
-/* ======================
-   RENDER
-====================== */
-function renderGames(filter) {
-  const grid = document.getElementById("gameGrid");
-  grid.innerHTML = "";
-
-  games.forEach(game => {
-    if (filter === "favorites" && !favorites[game.id]) return;
-    if (filter !== "all" && filter !== "favorites" && game.category !== filter) return;
-
-    const div = document.createElement("div");
-    div.className = "game-card";
-    div.innerHTML = `
-      <div class="star ${favorites[game.id] ? "fav" : ""}">★</div>
-      <img src="${game.image}">
-      <h3>${game.title}</h3>
-    `;
-
-    div.querySelector(".star").onclick = e => {
-      e.stopPropagation();
-      toggleFavorite(game);
-    };
-
-    div.onclick = () => {
-      location.href = game.link;
-    };
-
-    grid.appendChild(div);
-  });
-}
-
-/* ======================
-   FAVORITES
-====================== */
 function loadFavorites() {
   db.collection("users").doc(currentUser.uid)
-    .collection("favorites")
-    .get()
-    .then(snapshot => {
-      snapshot.forEach(doc => favorites[doc.id] = doc.data());
-      renderGames("all");
+    .collection("favorites").get()
+    .then(snap => {
+      snap.forEach(doc => favorites[doc.id] = doc.data());
+      renderGames();
     });
 }
 
-function toggleFavorite(game) {
+function toggleFavorite(card) {
   if (!currentUser) return alert("Log in om favorieten te gebruiken");
 
+  const id = card.dataset.id;
   const ref = db.collection("users")
     .doc(currentUser.uid)
     .collection("favorites")
-    .doc(game.id);
+    .doc(id);
 
-  if (favorites[game.id]) {
-    delete favorites[game.id];
+  if (favorites[id]) {
+    delete favorites[id];
     ref.delete();
   } else {
-    favorites[game.id] = game;
-    ref.set(game);
-  }
-
-  renderGames(document.querySelector(".category-btn.active").dataset.cat);
-}
-
-/* ======================
-   UI
-====================== */
-function setupCategoryButtons() {
-  document.querySelectorAll(".category-btn").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("sectionTitle").textContent = btn.textContent;
-      renderGames(btn.dataset.cat);
+    const data = {
+      title: card.dataset.title,
+      image: card.querySelector("img").src,
+      link: card.dataset.link
     };
+    favorites[id] = data;
+    ref.set(data);
+  }
+  renderGames();
+}
+
+function renderGames(filter = "all") {
+  gameGrid.innerHTML = "";
+  db.collection("games").get().then(snap => {
+    snap.forEach(doc => {
+      const g = doc.data();
+      const fav = favorites[doc.id];
+      if (filter === "favorites" && !fav) return;
+      if (filter !== "all" && filter !== "favorites" && g.category !== filter) return;
+
+      const div = document.createElement("div");
+      div.className = "game-card";
+      div.dataset.id = doc.id;
+      div.dataset.title = g.title;
+      div.dataset.link = g.link;
+
+      div.innerHTML = `
+        <div class="star ${fav ? "fav" : ""}">★</div>
+        <img src="${g.image}">
+        <h3>${g.title}</h3>
+      `;
+
+      div.onclick = () => location.href = g.link;
+      div.querySelector(".star").onclick = e => {
+        e.stopPropagation();
+        toggleFavorite(div);
+      };
+
+      gameGrid.appendChild(div);
+    });
   });
 }
 
-searchInput.oninput = () => {
-  const val = searchInput.value.toLowerCase();
-  document.querySelectorAll(".game-card").forEach(card => {
-    card.style.display = card.innerText.toLowerCase().includes(val)
-      ? "block"
-      : "none";
+function loadCategories() {
+  categoryList.innerHTML = "";
+  db.collection("categories").get().then(snap => {
+    snap.forEach(doc => {
+      const btn = document.createElement("div");
+      btn.className = "category-btn";
+      btn.textContent = doc.data().name;
+      btn.onclick = () => renderGames(doc.id);
+      categoryList.appendChild(btn);
+    });
   });
-};
+}
 
-/* ======================
-   START
-====================== */
 loadCategories();
-loadGames();
+renderGames();
 </script>
-
 </body>
 </html>
