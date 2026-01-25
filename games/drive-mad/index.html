@@ -6,7 +6,6 @@
   <title>Drive Mad - Cloud Save</title>
 
   <script type="text/javascript" src="Jump_Gamemonetize.js"></script>
-  <script src="/js/main.js"></script>
 
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <link rel="stylesheet" href="webapp/fancade.css" />
@@ -29,7 +28,8 @@
       padding: 10px;
       border-radius: 6px;
       z-index: 9999;
-      min-width: 220px;
+      min-width: 260px;
+      max-width: 320px;
     }
 
     #loginBtn {
@@ -50,10 +50,8 @@
 
 <body id="body">
 
-  <!-- LOGIN BUTTON -->
   <button id="loginBtn">🔐 Login met Google</button>
 
-  <!-- STATUS BOX -->
   <div id="cloudStatus">
     📡 Initialiseren...
   </div>
@@ -114,10 +112,15 @@
     let cloudLevel = 1;
     let teleported = false;
     let engineReady = false;
-    let lastKnownLevel = 1;
+
+    let detectedLevelFunc = null; // 👈 echte engine functie naam
 
     function setStatus(text) {
       statusBox.innerHTML = text;
+    }
+
+    function appendStatus(text) {
+      statusBox.innerHTML += "<br>" + text;
     }
 
     // 🔐 LOGIN
@@ -159,12 +162,10 @@
           });
         }
 
-        setStatus(
-          "🔐 Ingelogd:<br>" + user.email +
-          "<br>☁️ Cloud level: " + cloudLevel
-        );
+        appendStatus("☁️ Cloud level: " + cloudLevel);
       } catch (e) {
-        setStatus("❌ Cloud fout<br>" + e.message);
+        appendStatus("❌ Cloud fout");
+        console.error(e);
       }
     }
 
@@ -177,17 +178,27 @@
       }
     }, 500);
 
-    // 🪝 ENGINE HOOK
+    // 🪝 ENGINE HOOK MET AUTO-DETECT
     function hookEngine() {
-      if (!Module.ccall) return;
-
       const originalCall = Module.ccall;
 
       Module.ccall = function (func, returnType, argTypes, args) {
         try {
-          if (func === "poki_level_start") {
-            const newLevel = parseInt(args[0]);
+          // Log alles 1x in console zodat jij kan meekijken
+          console.log("CCALL:", func, args);
 
+          // Detecteer level-functie automatisch
+          if (!detectedLevelFunc && Array.isArray(args) && args.length === 1) {
+            const maybeLevel = parseInt(args[0]);
+            if (!isNaN(maybeLevel) && maybeLevel > 0 && maybeLevel < 5000) {
+              detectedLevelFunc = func;
+              appendStatus("🧠 Level-functie: " + func);
+            }
+          }
+
+          // Als we hem gevonden hebben → luister naar level changes
+          if (func === detectedLevelFunc) {
+            const newLevel = parseInt(args[0]);
             if (!isNaN(newLevel)) {
               onLevelChange(newLevel);
             }
@@ -199,12 +210,18 @@
         return originalCall.apply(this, arguments);
       };
 
-      setStatus(prevStatus() + "<br>📡 Engine gekoppeld");
-      autoTeleport();
+      appendStatus("📡 Engine gekoppeld");
+      waitAndTeleport();
     }
 
-    function prevStatus() {
-      return statusBox.innerHTML;
+    // ⏳ Wacht tot functie bekend is, dan teleport
+    function waitAndTeleport() {
+      const check = setInterval(() => {
+        if (detectedLevelFunc) {
+          clearInterval(check);
+          autoTeleport();
+        }
+      }, 500);
     }
 
     // 🚀 TELEPORT
@@ -212,14 +229,15 @@
       if (!user) return;
       if (teleported) return;
       if (!engineReady) return;
+      if (!detectedLevelFunc) return;
       if (cloudLevel <= 1) return;
 
       teleported = true;
 
-      setStatus(prevStatus() + "<br>🚀 Spring naar level " + cloudLevel);
+      appendStatus("🚀 Spring naar level " + cloudLevel);
 
       try {
-        Module.ccall("poki_level_start", null, ["number"], [cloudLevel]);
+        Module.ccall(detectedLevelFunc, null, ["number"], [cloudLevel]);
       } catch (e) {
         console.warn("Teleport failed:", e);
       }
@@ -227,14 +245,11 @@
 
     // 💾 SAVE LOGIC
     async function onLevelChange(newLevel) {
-      lastKnownLevel = newLevel;
-
       if (!user) return;
       if (newLevel <= cloudLevel) return;
 
       cloudLevel = newLevel;
-
-      setStatus(prevStatus() + "<br>💾 Opslaan: Level " + newLevel);
+      appendStatus("💾 Opslaan: Level " + newLevel);
 
       try {
         await db.collection("drive_mad_saves").doc(user.uid).set({
@@ -242,7 +257,8 @@
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       } catch (e) {
-        setStatus(prevStatus() + "<br>❌ Opslaan mislukt");
+        appendStatus("❌ Opslaan mislukt");
+        console.error(e);
       }
     }
   </script>
