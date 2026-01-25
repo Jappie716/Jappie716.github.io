@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
-  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -57,12 +56,11 @@
 
 <script>
 /* =========================
-   🔥 CLOUD + GAME SYNC (VERSIE 2.0)
+   🔥 CLOUD + GAME SYNC (VERSIE 3.0 - FORCE PUSH)
 ========================= */
 
 const statusBox = document.getElementById("status");
 
-// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -73,21 +71,18 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 let USER_ID = null;
-let LAST_SAVED_LEVEL = 1;
+let CLOUD_LEVEL = 1;
 let CURRENT_GAME_LEVEL = 1;
-let TELEPORT_DONE = false;
 
 /* =========================
    💾 SAVE SYSTEM
 ========================= */
 async function saveToCloud(level) {
   if (!USER_ID || level < 1) return;
-
   try {
     await db.collection("drive_mad_saves").doc(USER_ID).set({
       lastLevel: Number(level),
@@ -96,11 +91,6 @@ async function saveToCloud(level) {
 
     console.log("💾 Cloud save succes:", level);
     statusBox.textContent = "💾 Voortgang opgeslagen: Level " + level;
-    
-    // Na 3 seconden weer laten zien welk level we zijn
-    setTimeout(() => {
-        statusBox.textContent = "☁️ Cloud: Level " + level;
-    }, 3000);
   } catch (e) {
     console.error("❌ Save fout:", e);
   }
@@ -110,54 +100,55 @@ async function saveToCloud(level) {
    🧠 GAME HOOK
 ========================= */
 function hookGame() {
-  const hook = setInterval(() => {
+  const hookInterval = setInterval(() => {
     if (window.poki_level_start) {
-      clearInterval(hook);
-
+      clearInterval(hookInterval);
       const original = window.poki_level_start;
 
       window.poki_level_start = function(level) {
         let lvl = (typeof level === "object") ? (level.level || 1) : level;
         lvl = Number(lvl);
-
         CURRENT_GAME_LEVEL = lvl;
-        console.log("🕹️ Game melding: Start level", lvl);
+        
+        console.log("🕹️ Game zit nu op level:", lvl);
 
-        // Als we een nieuw level bereiken, sla het vorige op
-        if (lvl > LAST_SAVED_LEVEL) {
-          LAST_SAVED_LEVEL = lvl;
+        // Als we een nieuw level bereiken, sla het op
+        if (lvl > CLOUD_LEVEL) {
+          CLOUD_LEVEL = lvl;
           saveToCloud(lvl);
         }
-
         return original.apply(this, arguments);
       };
-
       console.log("✅ Game hook actief");
     }
   }, 100);
 }
 
 /* =========================
-   🚀 DE ECHTE TELEPORT
+   🚀 DE FORCE PUSHER (Skipper)
 ========================= */
 function startTeleportPusher() {
+  // Probeer elke seconde te skippen totdat CURRENT_GAME_LEVEL gelijk is aan CLOUD_LEVEL
   const pusher = setInterval(() => {
-    // We moeten wachten tot de engine functie (_poki_level_start) EN onze data er zijn
-    if (window.Module && typeof Module._poki_level_start === "function" && LAST_SAVED_LEVEL > 1 && !TELEPORT_DONE) {
+    if (window.Module && typeof Module._poki_level_start === "function") {
       
-      console.log("🚀 Skipper: Forceer naar level", LAST_SAVED_LEVEL);
-      statusBox.textContent = "🚀 Cloud save laden: Level " + LAST_SAVED_LEVEL;
-      
-      // DIT IS DE BELANGRIJKSTE REGEL: we roepen de engine aan, niet de hook
-      Module._poki_level_start(LAST_SAVED_LEVEL);
-      
-      TELEPORT_DONE = true; 
-      clearInterval(pusher);
+      if (CURRENT_GAME_LEVEL < CLOUD_LEVEL) {
+        console.log(`🚀 Forceer skip: ${CURRENT_GAME_LEVEL} -> ${CLOUD_LEVEL}`);
+        statusBox.textContent = `🚀 Cloud sync: Naar level ${CLOUD_LEVEL}...`;
+        
+        // Gebruik de interne engine skip
+        Module._poki_level_start(CLOUD_LEVEL);
+      } else {
+        // We zijn er!
+        console.log("✅ Teleport voltooid of niet nodig.");
+        statusBox.textContent = "☁️ Cloud: Level " + CLOUD_LEVEL;
+        clearInterval(pusher);
+      }
     }
-  }, 1000);
+  }, 1500);
 
-  // Stop na 15 seconden als er geen save is of teleport niet lukt
-  setTimeout(() => clearInterval(pusher), 15000);
+  // Failsafe: stop na 20 seconden sowieso met pushen
+  setTimeout(() => clearInterval(pusher), 20000);
 }
 
 /* =========================
@@ -165,29 +156,22 @@ function startTeleportPusher() {
 ========================= */
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
-    try {
-        await auth.signInAnonymously();
-    } catch (error) {
-        console.error("Login error", error);
-    }
+    try { await auth.signInAnonymously(); } catch (e) { console.error(e); }
     return;
   }
-
   USER_ID = user.uid;
-  console.log("🔐 Account:", user.email || "Anoniem (" + user.uid + ")");
+  console.log("🔐 Account:", user.email || "Anoniem");
 
   try {
     const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
     if (doc.exists) {
-      LAST_SAVED_LEVEL = Number(doc.data().lastLevel || 1);
-      statusBox.textContent = "☁️ Cloud gevonden: Level " + LAST_SAVED_LEVEL;
-      console.log("☁️ Data geladen van Cloud:", LAST_SAVED_LEVEL);
+      CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
+      statusBox.textContent = "☁️ Cloud gevonden: Level " + CLOUD_LEVEL;
+      console.log("☁️ Data van cloud:", CLOUD_LEVEL);
     } else {
-      statusBox.textContent = "☁️ Nieuwe cloud save gestart";
+      statusBox.textContent = "☁️ Nieuwe save gestart";
     }
-  } catch (e) {
-    console.error("❌ Load fout:", e);
-  }
+  } catch (e) { console.error("❌ Load fout:", e); }
 });
 
 /* =========================
@@ -199,12 +183,12 @@ var Module = {
   onRuntimeInitialized: function() {
     console.log("⚙️ Engine geladen");
     hookGame();
-    startTeleportPusher();
+    // Wacht even tot de game echt "zichtbaar" is voordat we skippen
+    setTimeout(startTeleportPusher, 3000);
   }
 };
 </script>
 
-<!-- 🎮 GAME ENGINE -->
 <script src="webapp/source_min.js"></script>
 <script src="webapp/index.js"></script>
 
