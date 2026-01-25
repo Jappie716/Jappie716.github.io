@@ -1,67 +1,77 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Drive Mad - Cloud Sync</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Drive Mad - Cloud Sync</title>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <link rel="stylesheet" href="webapp/fancade.css" />
-    <link rel="icon" href="webapp/cover.jpg" />
-    
-    <style>
-      #cloud-status {
-        position: fixed;
-        top: 15px;
-        right: 15px;
-        background: rgba(0, 0, 0, 0.85);
-        color: #00ff00;
-        padding: 8px 18px;
-        border-radius: 25px;
-        font-family: sans-serif;
-        font-size: 13px;
-        z-index: 10000;
-        border: 2px solid #00ff00;
-        box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
-      }
-      /* Verbergt de webview content die soms in de weg zit */
-      #webview_content { pointer-events: none; }
-    </style>
-  </head>
-  <body id="body">
-    <div id="cloud-status">📡 Initialiseren...</div>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    <div id="modal_parent">
-      <div id="modal_content">
-        <span id="modal_close_button">&times;</span>
-        <div id="store_link_modal_content" class="modal_inner"></div>
-        <div id="share_file_modal_content" class="modal_inner"></div>
-      </div>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <link rel="stylesheet" href="webapp/fancade.css" />
+  <link rel="icon" href="webapp/cover.jpg" />
+
+  <style>
+    #cloud-status {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #00ff00;
+      padding: 8px 18px;
+      border-radius: 25px;
+      font-family: sans-serif;
+      font-size: 13px;
+      z-index: 10000;
+      border: 2px solid #00ff00;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+      pointer-events: none;
+    }
+    #webview_content {
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body id="body">
+  <div id="cloud-status">📡 Initialiseren...</div>
+
+  <div id="modal_parent">
+    <div id="modal_content">
+      <span id="modal_close_button">&times;</span>
+      <div id="store_link_modal_content" class="modal_inner"></div>
+      <div id="share_file_modal_content" class="modal_inner"></div>
     </div>
+  </div>
 
-    <div id="canvas_border" class="emscripten_border">
-      <div id="play_content" class="middle center">
-        <div class="edge">
-          <div class="box">
-            <div class="black">
-              <img src="webapp/cover.jpg" class="cover" />
-              <p class="title">Drive Mad</p>
-              <p class="author">Martin Magni</p>
-            </div>
+  <div id="canvas_border" class="emscripten_border">
+    <div id="play_content" class="middle center">
+      <div class="edge">
+        <div class="box">
+          <div class="black">
+            <img src="webapp/cover.jpg" class="cover" />
+            <p class="title">Drive Mad</p>
+            <p class="author">Martin Magni</p>
           </div>
         </div>
-        <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
       </div>
-      <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
-      <div id="gradient"></div>
-      <div id="webview_content"></div>
+      <div id="progress_or_play">
+        <progress id="progress" class="loading" value="0" max="100"></progress>
+      </div>
     </div>
 
-      <script>
+    <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+    <div id="gradient"></div>
+    <div id="webview_content"></div>
+  </div>
+
+  <!-- ============================
+       CLOUD + ENGINE LOGIC
+  ============================ -->
+  <script>
 const statusBox = document.getElementById("cloud-status");
 
 /* ============================
@@ -89,11 +99,11 @@ let TELEPORTED = false;
    CLOUD SAVE
 ============================ */
 async function saveToCloud(level) {
-  if (!USER_ID) return;
-  if (level <= CLOUD_LEVEL) return;
+  if (!USER_ID || level <= CLOUD_LEVEL) return;
 
   try {
     CLOUD_LEVEL = level;
+
     await db.collection("drive_mad_saves").doc(USER_ID).set({
       lastLevel: level,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -107,15 +117,18 @@ async function saveToCloud(level) {
 }
 
 /* ============================
-   ENGINE PATCH (NIET OVERSCHRIJVEN)
+   ENGINE PATCH (ECHTE FIX)
 ============================ */
 function hookEngine() {
   if (typeof window.poki_level_start === "function" && !window._poki_patched) {
-    const original = window.poki_level_start;
+    const engineFunc = window.poki_level_start;
+
+    window._ENGINE_LEVEL_START = engineFunc;
     window._poki_patched = true;
 
     window.poki_level_start = function(level) {
-      original(level); // game laten werken
+      // Laat de engine ECHT werken
+      engineFunc(level);
 
       let lvl = (typeof level === "object") ? (level.level || 1) : level;
       lvl = Number(lvl || 1);
@@ -132,25 +145,28 @@ function hookEngine() {
   return false;
 }
 
+// blijf proberen tot engine er is
 const hookTimer = setInterval(() => {
   if (hookEngine()) clearInterval(hookTimer);
 }, 500);
 
 /* ============================
-   TELEPORT (ÉÉN KEER)
+   TELEPORT (ECHTE ENGINE CALL)
 ============================ */
 function teleportOnce() {
   if (TELEPORTED) return;
 
   const jumpTimer = setInterval(() => {
-    if (typeof window.poki_level_start === "function") {
+    if (typeof window._ENGINE_LEVEL_START === "function") {
       TELEPORTED = true;
       clearInterval(jumpTimer);
 
       if (CLOUD_LEVEL > 1) {
         console.log("🚀 Teleport →", CLOUD_LEVEL);
         statusBox.textContent = "🚀 Spring naar level " + CLOUD_LEVEL;
-        window.poki_level_start(CLOUD_LEVEL);
+
+        // Gebruik ECHTE engine functie
+        window._ENGINE_LEVEL_START(CLOUD_LEVEL);
       } else {
         statusBox.textContent = "☁️ Level 1";
       }
@@ -201,9 +217,9 @@ var Module = {
     console.log("⚙️ Engine ready");
   }
 };
-    </script>
+  </script>
 
-    <script type="text/javascript" src="webapp/source_min.js"></script>
-    <script type="text/javascript" src="webapp/index.js"></script>
-  </body>
+  <script src="webapp/source_min.js"></script>
+  <script src="webapp/index.js"></script>
+</body>
 </html>
