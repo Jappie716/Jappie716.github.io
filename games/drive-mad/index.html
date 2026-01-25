@@ -3,10 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <title>Drive Mad - Cloud Sync</title>
-
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="google" content="notranslate" />
-
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
@@ -33,10 +31,9 @@
     }
   </style>
 </head>
-
 <body id="body">
 
-<!-- 🔧 Engine verwacht deze -->
+<!-- Engine verwacht deze -->
 <div id="overlay"></div>
 
 <div id="status">☁️ Verbinden met cloud...</div>
@@ -62,6 +59,8 @@
 </div>
 
 <script>
+console.log("🚀 Drive Mad Cloud Build Loaded");
+
 /* ============================
    FIREBASE
 ============================ */
@@ -77,6 +76,7 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -84,12 +84,14 @@ let USER_ID = null;
 let CLOUD_LEVEL = 1;
 let CURRENT_GAME_LEVEL = 1;
 let TELEPORTED = false;
+let AUTH_CHECKED = false;
 
 /* ============================
    CLOUD SAVE
 ============================ */
 async function saveToCloud(level) {
-  if (!USER_ID || level <= CLOUD_LEVEL) return;
+  if (!USER_ID) return;
+  if (level <= CLOUD_LEVEL) return;
 
   try {
     CLOUD_LEVEL = level;
@@ -154,22 +156,34 @@ function teleportOnce() {
       }
     }
   }, 1000);
+
+  // failsafe stop
+  setTimeout(() => clearInterval(jumpTimer), 20000);
 }
 
 /* ============================
-   LOGIN
+   LOGIN (ANTI-RELOAD FIX)
 ============================ */
 auth.onAuthStateChanged(async (user) => {
+  if (AUTH_CHECKED) return;
+  AUTH_CHECKED = true;
+
   if (!user) {
-    window.location.href = "index.html";
+    console.log("❌ Niet ingelogd — redirect over 1.5s");
+    statusBox.textContent = "❌ Niet ingelogd...";
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 1500);
     return;
   }
 
   USER_ID = user.uid;
   console.log("🔐 Ingelogd:", user.email);
+  statusBox.textContent = "☁️ Cloud laden...";
 
   try {
     const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
+
     if (doc.exists) {
       CLOUD_LEVEL = Number(doc.data().lastLevel || 1);
       statusBox.textContent = "☁️ Cloud level: " + CLOUD_LEVEL;
@@ -180,6 +194,7 @@ auth.onAuthStateChanged(async (user) => {
     teleportOnce();
   } catch (e) {
     console.error("Cloud load error:", e);
+    statusBox.textContent = "❌ Cloud fout";
   }
 });
 
