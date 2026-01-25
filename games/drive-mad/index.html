@@ -23,23 +23,34 @@
             position: fixed; top: 10px; left: 10px;
             z-index: 9999; padding: 10px 15px;
             background: #4285F4; color: white; border: none; cursor: pointer;
+            border-radius: 4px; font-weight: bold;
         }
     </style>
 </head>
 <body id="body">
 
-<button id="loginBtn">🔐 Inloggen</button>
+<button id="loginBtn">🔐 Inloggen met Google</button>
 
 <div id="cloudStatus">
     <div id="stats">Wachten op login...</div>
     <button id="syncBtn" style="display:none">NU SYNCHRONISEREN</button>
 </div>
 
+<div id="modal_parent"><div id="modal_content"><span id="modal_close_button">&times;</span><div id="store_link_modal_content" class="modal_inner"></div><div id="share_file_modal_content" class="modal_inner"></div></div></div>
+
 <div id="canvas_border" class="emscripten_border">
+    <div id="play_content" class="middle center">
+        <div id="progress_or_play"><progress id="progress" class="loading" value="0" max="100"></progress></div>
+    </div>
     <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
+    <div id="gradient"></div>
+    <div id="webview_content"></div>
 </div>
 
 <script>
+/* ==========================
+   🔥 FIREBASE LOGIC
+========================== */
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -60,7 +71,6 @@ let CURRENT_GAME_LEVEL = 1;
 const stats = document.getElementById("stats");
 const syncBtn = document.getElementById("syncBtn");
 
-// 1. Inloggen & Live Data
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         USER_ID = user.uid;
@@ -82,40 +92,58 @@ function updateUI() {
     stats.innerHTML = `👤 Ingelogd<br>☁️ Cloud: Lvl ${CLOUD_LEVEL}<br>🕹️ Game: Lvl ${CURRENT_GAME_LEVEL}`;
 }
 
-// 2. De "Hamer" (Blijven proberen te teleporten)
-function forceTeleport() {
-    if (CLOUD_LEVEL > CURRENT_GAME_LEVEL) {
-        console.log("🚀 Poging tot teleport naar level", CLOUD_LEVEL);
+/* ==========================
+   🪝 ENGINE HIJACK (De Fix)
+========================== */
+const hijackInterval = setInterval(() => {
+    if (typeof startGame === 'function') {
+        const originalStartGame = startGame;
+        window.startGame = function() {
+            console.log("🚀 Hijack: Engine start gedetecteerd.");
+            originalStartGame(); // Start de motor
+            
+            // Forceer teleport na een ultrakorte delay (zodat de engine klaar is)
+            if (USER_ID && CLOUD_LEVEL > 1) {
+                setTimeout(() => {
+                    console.log("⚡ Forceer cloud level: " + CLOUD_LEVEL);
+                    if(window.Module && Module._poki_level_start) {
+                        Module._poki_level_start(CLOUD_LEVEL);
+                    }
+                }, 250);
+            }
+        };
+        console.log("✅ Engine succesvol gekaapt.");
+        clearInterval(hijackInterval);
+    }
+}, 50);
+
+// De "Hamer" voor als de hijack te vroeg kwam
+setInterval(() => {
+    if (USER_ID && CLOUD_LEVEL > CURRENT_GAME_LEVEL) {
         if (window.Module && typeof Module._poki_level_start === "function") {
             Module._poki_level_start(CLOUD_LEVEL);
         }
     }
-}
+}, 3000);
 
-// Check elke 2 seconden of we al op het cloud level zijn
-const teleportTimer = setInterval(() => {
-    if (USER_ID && CLOUD_LEVEL > CURRENT_GAME_LEVEL) {
-        forceTeleport();
-    } else if (USER_ID && CURRENT_GAME_LEVEL >= CLOUD_LEVEL && CLOUD_LEVEL > 1) {
-        console.log("✅ Sync voltooid");
-        updateUI();
-    }
-}, 2000);
+syncBtn.onclick = () => {
+    if(window.Module && Module._poki_level_start) Module._poki_level_start(CLOUD_LEVEL);
+};
 
-syncBtn.onclick = () => forceTeleport();
-
-// 3. Level Detectie & Auto-Save
+/* ==========================
+   💾 AUTO-SAVE HOOK
+========================== */
 window.poki_level_start = function(data) {
     let lvl = (typeof data === "object") ? (data.level || 1) : Number(data);
     CURRENT_GAME_LEVEL = lvl;
     updateUI();
 
-    // Sla op als we verder zijn
     if (USER_ID && lvl > CLOUD_LEVEL) {
         db.collection("drive_mad_saves").doc(USER_ID).set({
             lastLevel: lvl,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+        CLOUD_LEVEL = lvl; // Update lokale cache om loop te voorkomen
     }
 };
 
