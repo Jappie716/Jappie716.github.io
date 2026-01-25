@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="webapp/fancade.css" />
   <link rel="icon" href="webapp/cover.jpg" />
 
-  <!-- 🔥 Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -20,12 +19,13 @@
     #status {
       position: fixed;
       top: 10px;
-      left: 10px;
-      background: rgba(0,0,0,0.7);
+      right: 10px; /* Verplaatst naar rechts voor betere zichtbaarheid */
+      background: rgba(0, 255, 0, 0.2);
+      border: 1px solid #00ff00;
       padding: 6px 12px;
-      border-radius: 6px;
+      border-radius: 20px;
       font-size: 13px;
-      color: #fff;
+      color: #00ff00;
       z-index: 9999;
       font-family: sans-serif;
     }
@@ -34,9 +34,16 @@
 
 <body id="body">
 
-<div id="status">Laden...</div>
+<div id="status">Verbinden met cloud...</div>
 
-<!-- 🎮 GAME STRUCTUUR -->
+<div id="modal_parent">
+  <div id="modal_content">
+    <span id="modal_close_button">&times;</span>
+    <div id="store_link_modal_content" class="modal_inner"></div>
+    <div id="share_file_modal_content" class="modal_inner"></div>
+  </div>
+</div>
+
 <div id="canvas_border" class="emscripten_border">
   <div id="play_content" class="middle center">
     <div class="edge">
@@ -48,21 +55,15 @@
         </div>
       </div>
     </div>
-
     <div id="progress_or_play">
       <progress id="progress" class="loading" value="0" max="100"></progress>
-      <p class="description"></p>
     </div>
   </div>
 
   <canvas class="emscripten" id="canvas" tabindex="-1"></canvas>
   <div id="gradient"></div>
-  <div id="webview_content"></div>
 </div>
 
-<!-- =========================
-     🔥 FIREBASE CLOUD SYSTEM
-========================== -->
 <script>
   const statusBox = document.getElementById("status");
 
@@ -77,123 +78,91 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-
   const auth = firebase.auth();
   const db = firebase.firestore();
 
   let USER_ID = null;
-  let GAME_READY = false;
   let LAST_SAVED_LEVEL = 1;
 
-  // =====================
-  // 🔐 LOGIN CHECK
-  // =====================
+  // 1. LOGIN & CLOUD LOAD
   auth.onAuthStateChanged(async (user) => {
     if (!user) {
-      alert("❌ Niet ingelogd!");
       window.location.href = "index.html";
       return;
     }
-
     USER_ID = user.uid;
     console.log("🔐 Ingelogd als:", user.email);
-    statusBox.textContent = "Cloud laden...";
-
+    statusBox.textContent = "Cloud data ophalen...";
+    
     await loadFromCloud();
-    tryStartSkip();
   });
 
-  // =====================
-  // ☁️ LOAD FROM CLOUD
-  // =====================
   async function loadFromCloud() {
     try {
-      const doc = await db
-        .collection("drive_mad_saves")
-        .doc(USER_ID)
-        .get();
-
-      if (!doc.exists) {
-        console.log("ℹ️ Geen save gevonden");
-        LAST_SAVED_LEVEL = 1;
-        return;
+      const doc = await db.collection("drive_mad_saves").doc(USER_ID).get();
+      if (doc.exists) {
+        LAST_SAVED_LEVEL = Number(doc.data().lastLevel || 1);
+        statusBox.textContent = "☁️ Cloud Level: " + LAST_SAVED_LEVEL;
+        console.log("☁️ Data geladen: Level", LAST_SAVED_LEVEL);
+      } else {
+        statusBox.textContent = "☁️ Nieuwe cloud save";
       }
-
-      LAST_SAVED_LEVEL = Number(doc.data().lastLevel || 1);
-      console.log("☁️ Cloud level:", LAST_SAVED_LEVEL);
     } catch (e) {
-      console.warn("❌ Cloud load fout:", e.message);
+      console.error("❌ Cloud load fout:", e);
+      statusBox.textContent = "⚠️ Cloud offline";
     }
   }
 
-  // =====================
-  // 💾 SAVE TO CLOUD
-  // =====================
+  // 2. CLOUD SAVE
   async function saveToCloud(level) {
     if (!USER_ID || !level) return;
-
     try {
-      await db
-        .collection("drive_mad_saves")
-        .doc(USER_ID)
-        .set({
-          lastLevel: Number(level),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-
-      console.log("💾 Level opgeslagen:", level);
+      await db.collection("drive_mad_saves").doc(USER_ID).set({
+        lastLevel: Number(level),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      statusBox.textContent = "💾 Opgeslagen: Level " + level;
+      console.log("💾 Firestore Save:", level);
     } catch (e) {
-      console.warn("❌ Save fout:", e.message);
+      console.error("❌ Save fout:", e);
     }
   }
 
-  // =====================
-  // ⏩ SKIP NAAR CLOUD LEVEL
-  // =====================
-  function tryStartSkip() {
-    if (!GAME_READY || !LAST_SAVED_LEVEL) return;
-
-    const wait = setInterval(() => {
-      if (window.poki_level_start) {
-        clearInterval(wait);
-
-        console.log("🎮 Starten op level:", LAST_SAVED_LEVEL + 1);
-        window.poki_level_start(LAST_SAVED_LEVEL + 1);
-      }
-    }, 500);
-  }
-
- // =====================
-  // 🎮 LEVEL HOOK SYSTEM (VERBETERD)
-  // =====================
+  // 3. LEVEL HOOK SYSTEM
   function hookLevelSystem() {
-    // We maken de functie simpelweg ZELF aan voordat de engine dat doet
-    // De engine (source_min.js) zal deze bestaande functie gebruiken als hij hem vindt
     window.poki_level_start = function(level) {
       const lvl = Number(level || 1);
-      console.log("🕹️ Engine roept poki_level_start aan voor level:", lvl);
+      console.log("🕹️ Engine event - Level:", lvl);
       
-      // We slaan elk level direct op zodra het start
+      // Verberg status pas als game echt begint
+      setTimeout(() => { statusBox.style.opacity = "0.5"; }, 2000);
+
       saveToCloud(lvl);
 
-      // Als we nog niet op het cloud-level zijn, skip naar het volgende
+      // Skip logica
       if (lvl < LAST_SAVED_LEVEL) {
-        console.log("⏩ Skip actief: we moeten naar level", LAST_SAVED_LEVEL);
+        console.log("⏩ Automatisch skippen naar level", LAST_SAVED_LEVEL);
         setTimeout(() => {
-          if (typeof Module._poki_level_start === "function") {
+          if (Module && typeof Module._poki_level_start === "function") {
             Module._poki_level_start(lvl + 1);
           }
         }, 100);
       }
     };
-    console.log("✅ Level hook klaargezet");
+    console.log("✅ Hook klaar");
   }
 
-  // We roepen de hook direct aan, niet wachten op de engine
   hookLevelSystem();
+
+  var Module = {
+    canvas: document.getElementById("canvas"),
+    locateFile: (path) => "webapp/" + path,
+    onRuntimeInitialized: function() {
+      console.log("⚙️ Engine klaar");
+    }
+  };
 </script>
 
-<!-- 🎮 GAME FILES -->
 <script src="webapp/source_min.js"></script>
 <script src="webapp/index.js"></script>
 
