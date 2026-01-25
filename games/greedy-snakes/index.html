@@ -1,222 +1,245 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Greedy Snake - Cloud Sync</title>
-<link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greedy Snake</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<style>
-.auth-bar {
-  position: fixed;
-  top: 10px;
-  right: 70px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-#loginBtn {
-  padding: 5px 12px;
-  background: #4285F4;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-#userDisplay {
-  color: white;
-  font-family: sans-serif;
-  font-size: 13px;
-}
-#cloudStatus {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(0,0,0,0.8);
-  color: #00ffcc;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-family: monospace;
-  font-size: 12px;
-  z-index: 9999;
-}
-</style>
+    <style>
+        .auth-bar {
+            position: fixed; top: 10px; right: 70px; z-index: 9999;
+            display: flex; align-items: center; gap: 10px;
+        }
+        #loginBtn {
+            padding: 5px 12px; background: #4285F4; color: white;
+            border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        #userDisplay { color: white; font-family: sans-serif; font-size: 13px; }
+    </style>
 </head>
-<script>
-/* =========================
-   FIREBASE
-========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-  authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490",
-  storageBucket: "gameparadise-80490.firebasestorage.app",
-  messagingSenderId: "335620903527",
-  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-};
-
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-let currentUser = null;
-let lastSaveHash = null;
-
-/* =========================
-   LOGIN
-========================= */
-auth.onAuthStateChanged(async (user) => {
-  currentUser = user;
-  if (!user) return;
-
-  console.log("☁️ Cloud login:", user.email);
-  await loadGreedyState();
-});
-
-/* =========================
-   GAME STATE READER
-========================= */
-function getGameState() {
-  return {
-    playerName: document.getElementById("playerName")?.value || "",
-    yellowMoney: window.yellowMoney || 0,
-    greenMoney: window.greenMoney || 0,
-    sizeLevel: window.sizeLevel || 1,
-    speedLevel: window.speedLevel || 1,
-    multiplierLevel: window.multiplierLevel || 1,
-    selectedSkin: window.selectedSkin || 0
-  };
-}
-
-function hashState(state) {
-  return JSON.stringify(state);
-}
-
-/* =========================
-   SAVE
-========================= */
-async function saveGreedyState() {
-  if (!currentUser) return;
-
-  const state = getGameState();
-  const hash = hashState(state);
-
-  // Niet opnieuw saven als er niks veranderd is
-  if (hash === lastSaveHash) return;
-  lastSaveHash = hash;
-
-  try {
-    await db
-      .collection("users")
-      .doc(currentUser.uid)
-      .collection("games")
-      .doc("greedySnakes")
-      .set(
-        {
-          ...state,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        },
-        { merge: true }
-      );
-
-    console.log("💾 Cloud saved");
-  } catch (e) {
-    console.error("Cloud save error:", e);
-  }
-}
-
-/* =========================
-   LOAD
-========================= */
-async function loadGreedyState() {
-  try {
-    const doc = await db
-      .collection("users")
-      .doc(currentUser.uid)
-      .collection("games")
-      .doc("greedySnakes")
-      .get();
-
-    if (!doc.exists) return;
-
-    const data = doc.data();
-    console.log("☁️ Cloud loaded:", data);
-
-    // Inject in globals (werkt ook als game.js ze later overschrijft)
-    window.yellowMoney = data.yellowMoney || 0;
-    window.greenMoney = data.greenMoney || 0;
-    window.sizeLevel = data.sizeLevel || 1;
-    window.speedLevel = data.speedLevel || 1;
-    window.multiplierLevel = data.multiplierLevel || 1;
-    window.selectedSkin = data.selectedSkin || 0;
-
-    if (data.playerName && document.getElementById("playerName")) {
-      document.getElementById("playerName").value = data.playerName;
-    }
-
-    // UI refresh proberen
-    if (typeof window.refreshUI === "function") {
-      window.refreshUI();
-    }
-  } catch (e) {
-    console.error("Cloud load error:", e);
-  }
-}
-
-/* =========================
-   AUTO DETECT CHANGES
-========================= */
-function hookVar(name) {
-  let value = window[name];
-
-  Object.defineProperty(window, name, {
-    get() {
-      return value;
-    },
-    set(v) {
-      value = v;
-      saveGreedyState();
-    },
-    configurable: true
-  });
-}
-
-/* =========================
-   WAIT FOR GAME GLOBALS
-========================= */
-const hookTimer = setInterval(() => {
-  if (
-    "yellowMoney" in window &&
-    "greenMoney" in window &&
-    "sizeLevel" in window
-  ) {
-    console.log("🪝 Cloud hooks actief");
-    hookVar("yellowMoney");
-    hookVar("greenMoney");
-    hookVar("sizeLevel");
-    hookVar("speedLevel");
-    hookVar("multiplierLevel");
-    hookVar("selectedSkin");
-    clearInterval(hookTimer);
-  }
-}, 500);
-
-/* =========================
-   BACKUP AUTOSAVE
-========================= */
-setInterval(saveGreedyState, 15000);
-window.addEventListener("beforeunload", saveGreedyState);
-document.addEventListener("click", saveGreedyState);
-</script>
-
 <body>
+    <div class="auth-bar">
+        <span id="userDisplay"></span>
+        <button id="loginBtn">Login with Google</button>
+    </div>
 
-<script src="game.js"></script>
+    <a id="githubLink" class="github-link" href="https://github.com/ikhouvankaasq/greedy-snakes/tree/main" target="_blank" rel="noopener noreferrer">
+        <img src="https://raw.githubusercontent.com/ikhouvankaasq/ikhouvankaasq.github.io/refs/heads/main/storage/img/github-mark-white.png" alt="GitHub Repository">
+    </a>
+
+    <div id="startScreen" class="screen active">
+        <div class="start-yellow-money">
+            <span class="money-icon">💰</span>
+            <span id="yellowMoneyCount">0</span>
+        </div>
+
+        <div class="skins-tab-indicator">
+            <span class="arrow">←</span>
+            <span class="skins-text">Skins</span>
+        </div>
+
+        <div class="start-container">
+            <div class="logo-container">
+                <img src="https://github.com/ikhouvankaasq/greedy-snakes/blob/3b9552b2aefa25d2581cb3f1fc607b6f3b925f01/logo.png?raw=true" alt="Greedy Snake Logo" class="logo-image">
+            </div>
+            
+            <div class="name-input-group">
+                <input type="text" id="playerName" class="name-input" placeholder="Enter your name" maxlength="20">
+            </div>
+            
+            <div class="options-row">
+                <div class="option-selector">
+                    <button class="option-display-btn" id="mapDisplayBtn">
+                        <span class="option-label">Map Theme</span>
+                        <span class="option-value" id="mapValue">Stars</span>
+                    </button>
+                    <div class="option-modal" id="mapModal">
+                        <div class="modal-content">
+                            <h3>Select Map Theme</h3>
+                            <div class="modal-options">
+                                <button class="modal-option active" data-map="stars"><span>Stars</span></button>
+                                <button class="modal-option" data-map="rainbow"><span>Rainbow</span></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="option-selector">
+                    <button class="option-display-btn" id="sizeDisplayBtn">
+                        <span class="option-label">Map Size</span>
+                        <span class="option-value" id="sizeValue">Normal</span>
+                    </button>
+                    <div class="option-modal" id="sizeModal">
+                        <div class="modal-content">
+                            <h3>Select Map Size</h3>
+                            <div class="modal-options">
+                                <button class="modal-option" data-size="small">Small</button>
+                                <button class="modal-option active" data-size="normal">Normal</button>
+                                <button class="modal-option" data-size="big">Big</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="option-selector">
+                    <button class="option-display-btn" id="difficultyDisplayBtn">
+                        <span class="option-label">Difficulty</span>
+                        <span class="option-value" id="difficultyValue">Easy</span>
+                    </button>
+                    <div class="option-modal" id="difficultyModal">
+                        <div class="modal-content">
+                            <h3>Select Difficulty</h3>
+                            <div class="modal-options">
+                                <button class="modal-option active" data-difficulty="easy">Easy</button>
+                                <button class="modal-option" data-difficulty="normal">Normal</button>
+                                <button class="modal-option" data-difficulty="hard">Hard</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="startButton" class="start-button">Start Game</button>
+        </div>
+    </div>
+
+    <div id="skinsScreen" class="screen">
+        <button class="back-button" id="backButton">← Back</button>
+        <div class="skins-yellow-money">
+            <span class="money-icon">💰</span>
+            <span id="yellowMoneySkins">0</span>
+        </div>
+        <div class="skins-page-container">
+            <h1>Choose Your Snake Skin</h1>
+            <div class="skin-carousel">
+                <button class="carousel-nav prev" id="prevSkinBtn">❮</button>
+                <div class="skin-display">
+                    <div class="skin-item active" id="skinItem0">
+                        <div class="skin-preview-large ball-skin-green"></div>
+                        <h2 id="skinName0">Green Ball</h2>
+                        <p id="skinStatus0" class="skin-status owned">Owned</p>
+                    </div>
+                    <div class="skin-item" id="skinItem1"><div class="skin-preview-large ball-skin-red"></div><h2 id="skinName1">Red Ball</h2><p id="skinStatus1" class="skin-status locked">5 💰</p></div>
+                    <div class="skin-item" id="skinItem2"><div class="skin-preview-large ball-skin-blue"></div><h2 id="skinName2">Blue Ball</h2><p id="skinStatus2" class="skin-status locked">5 💰</p></div>
+                    <div class="skin-item" id="skinItem3"><div class="skin-preview-large ball-skin-purple"></div><h2 id="skinName3">Purple Ball</h2><p id="skinStatus3" class="skin-status locked">5 💰</p></div>
+                    <div class="skin-item" id="skinItem4"><div class="skin-preview-large ball-skin-yellow"></div><h2 id="skinName4">Yellow Ball</h2><p id="skinStatus4" class="skin-status locked">5 💰</p></div>
+                    <div class="skin-item" id="skinItem5"><div class="skin-preview-large ball-skin-cyan"></div><h2 id="skinName5">Cyan Ball</h2><p id="skinStatus5" class="skin-status locked">5 💰</p></div>
+                    <div class="skin-item" id="skinItem6"><div class="skin-preview-large vector-skin"></div><h2 id="skinName6">ERROR :]</h2><p id="skinStatus6" class="skin-status locked">100 💰</p></div>
+                </div>
+                <button class="carousel-nav next" id="nextSkinBtn">❯</button>
+            </div>
+            <div class="skin-actions">
+                <button class="select-button" id="selectSkinBtn">Select Skin</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingScreen" class="screen">
+        <div class="loading-container">
+            <div class="loading-snake">
+                <div class="snake-segment"></div><div class="snake-segment"></div><div class="snake-segment"></div>
+            </div>
+            <p class="loading-text">Loading Game...</p>
+        </div>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-ui">
+            <div class="money-counter">
+                <div class="green-money"><span class="money-icon">💵</span><span id="greenMoneyCount">0</span></div>
+                <div class="yellow-money"><span class="money-icon">💰</span><span id="yellowMoneyCountGame">0</span></div>
+            </div>
+            <div class="upgrade-panel">
+                <h3>Upgrades</h3>
+                <div class="upgrade-item"><span>Size (Lv <span id="sizeLevel">1</span>)</span><button id="upgradeSize" class="upgrade-btn">Buy ($<span id="sizeCost">10</span>)</button></div>
+                <div class="upgrade-item"><span>Speed (Lv <span id="speedLevel">1</span>)</span><button id="upgradeSpeed" class="upgrade-btn">Buy ($<span id="speedCost">10</span>)</button></div>
+                <div class="upgrade-item"><span>Multiplier (Lv <span id="multiplierLevel">1</span>)</span><button id="upgradeMultiplier" class="upgrade-btn">Buy ($<span id="multiplierCost">10</span>)</button></div>
+            </div>
+        </div>
+    </div>
+
+    <button id="modButton" class="mod-button"><span class="mod-icon">⚙️</span></button>
+    <div id="modPanel" class="mod-panel">
+        <div class="mod-panel-header"><h2>Mods</h2><button id="closeModPanel" class="close-mod-btn">✕</button></div>
+        <div class="mod-search"><input type="text" id="modSearchBar" placeholder="Search mods..."></div>
+        <div class="mod-filters"><h3>Filters</h3><label><input type="checkbox" id="filterMadeByDev"> Made by Dev</label></div>
+        <div id="modList" class="mod-list"><p class="no-mods-message">No mods available</p></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+            authDomain: "gameparadise-80490.firebaseapp.com",
+            projectId: "gameparadise-80490",
+            storageBucket: "gameparadise-80490.firebasestorage.app",
+            messagingSenderId: "335620903527",
+            appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+
+        // Login Knop
+        document.getElementById('loginBtn').onclick = () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
+        };
+
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            if (user) {
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('userDisplay').innerText = "Player: " + user.displayName.split(' ')[0];
+                loadUserData();
+            }
+        });
+
+        // ALGEMENE RULE: Sla username op in 'users/{id}/profile'
+        function saveUsername(name) {
+            if (!currentUser) return;
+            db.collection("users").doc(currentUser.uid).set({
+                profile: { username: name }
+            }, { merge: true });
+        }
+
+        // GAME SPECIFIEKE SAVE
+        function saveGreedyState(state) {
+            if (!currentUser) return;
+            db.collection("users").doc(currentUser.uid).collection("games").doc("greedySnakes").set({
+                ...state,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+
+        function loadUserData() {
+            if (!currentUser) return;
+            // Laad Profiel (Username)
+            db.collection("users").doc(currentUser.uid).get().then(doc => {
+                if (doc.exists && doc.data().profile) {
+                    const cloudName = doc.data().profile.username;
+                    if (cloudName && document.getElementById('playerName')) {
+                        document.getElementById('playerName').value = cloudName;
+                    }
+                }
+            });
+            // Laad Game Save
+            db.collection("users").doc(currentUser.uid).collection("games").doc("greedySnakes").get().then(doc => {
+                if (doc.exists && window.applyLoadedState) {
+                    window.applyLoadedState(doc.data());
+                }
+            });
+        }
+    </script>
+
+    <script src="game.js"></script>
 </body>
 </html>
