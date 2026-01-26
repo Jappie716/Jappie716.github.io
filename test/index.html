@@ -219,7 +219,17 @@ body {
 
   <div class="search-box">
     <!-- autocomplete UIT zodat hij niet als email gaat doen -->
-    <input id="searchInput" type="search" autocomplete="off" placeholder="Zoek games...">
+   <input 
+  id="searchInput"
+  type="search"
+  placeholder="Zoek games..."
+  autocomplete="off"
+  autocorrect="off"
+  autocapitalize="off"
+  spellcheck="false"
+  name="game-search"
+/>
+
   </div>
 
   <div class="category-btn active" data-cat="all">Alle games</div>
@@ -450,6 +460,11 @@ document.querySelectorAll(".category-btn").forEach(btn => {
 
 /* SEARCH */
 searchInput.oninput = () => renderGames();
+  window.addEventListener("load", () => {
+  searchInput.value = "";
+  renderGames();
+});
+
 </script>
 
 </body>
