@@ -99,8 +99,21 @@ body {
 .modal-box input { background: #1e293b; color: white; }
 .modal-box button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
 
-/* EMPTY STATE */
-.empty-state { text-align: center; padding: 50px; color: #94a3b8; }
+/* EMPTY STATE FIX */
+.empty-state { 
+  grid-column: 1 / -1; /* Pakt de volledige breedte van het grid */
+  text-align: center; 
+  padding: 80px 20px; 
+  color: #94a3b8; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.empty-state h3 { font-size: 24px; color: #60a5fa; margin-bottom: 10px; }
+.empty-state p { font-size: 16px; max-width: 500px; line-height: 1.6; margin-bottom: 25px; }
+.empty-state .btn-row { display: flex; gap: 10px; }
+.secondary-btn { background: #1e293b; border: none; padding: 10px 18px; border-radius: 8px; color: white; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -175,10 +188,14 @@ let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 
-/* UI FUNCTIONS */
 function showLogin(reason = false) {
     document.getElementById('modalSub').style.display = reason ? 'block' : 'none';
     modal.style.display = "flex";
+}
+
+function resetToAllGames() {
+    const allBtn = document.querySelector(".category-btn[data-cat='all']");
+    if (allBtn) allBtn.click();
 }
 
 /* AUTH LOGIC */
@@ -239,13 +256,15 @@ function renderGames() {
   const search = searchInput.value.toLowerCase();
   gameGrid.innerHTML = "";
 
-  // Filteren op favorieten als je niet bent ingelogd
   if (currentFilter === "favorites" && !currentUser) {
       gameGrid.innerHTML = `
         <div class="empty-state">
             <h3>⭐ Favorieten</h3>
-            <p>Je moet ingelogd zijn om favorieten te bekijken en op te slaan.</p>
-            <button class="auth-btn" onclick="showLogin(true)">Nu Inloggen</button>
+            <p>Wil je je favoriete games bewaren en altijd snel terugvinden? Log dan in of maak een account aan om je persoonlijke lijst te beheren.</p>
+            <div class="btn-row">
+                <button class="auth-btn" onclick="showLogin(true)">Nu Inloggen</button>
+                <button class="secondary-btn" onclick="resetToAllGames()">Terug naar alle games</button>
+            </div>
         </div>`;
       return;
   }
@@ -282,7 +301,6 @@ function renderGames() {
   }
 }
 
-/* DATA LOADING */
 function loadGames() {
   document.getElementById("loader").style.display = "block";
   db.collection("games").get().then(snap => {
@@ -295,11 +313,12 @@ function loadGames() {
 
 function loadCategories() {
   const catList = document.getElementById("categoryList");
+  const currentActiveId = currentFilter;
   catList.innerHTML = "";
   db.collection("categories").get().then(snap => {
     snap.forEach(doc => {
       const btn = document.createElement("div");
-      btn.className = "category-btn";
+      btn.className = "category-btn" + (currentActiveId === doc.id ? " active" : "");
       btn.textContent = doc.data().name;
       btn.onclick = () => {
         document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
@@ -313,7 +332,6 @@ function loadCategories() {
   });
 }
 
-/* SIDEBAR FIXED BUTTONS */
 document.querySelectorAll(".category-btn[data-cat]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
@@ -324,9 +342,7 @@ document.querySelectorAll(".category-btn[data-cat]").forEach(btn => {
   };
 });
 
-/* SEARCH FIX */
 searchInput.oninput = () => renderGames();
-// Voorkom dat de browser na een refresh iets invult
 window.onload = () => { 
     searchInput.value = ""; 
     renderGames();
