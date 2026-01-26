@@ -1,25 +1,56 @@
-// 🔥 Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-
-// 🔥 Firebase config (die van jou)
+// ==========================================
+// FIREBASE CONFIGURATION & SETUP
+// ==========================================
+// VUL HIER JOUW EIGEN FIREBASE GEGEVENS IN
 const firebaseConfig = {
-  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-  authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490",
-  storageBucket: "gameparadise-80490.firebasestorage.app",
-  messagingSenderId: "335620903527",
-  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+       apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
 };
 
-// Init Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+let db = null;
+let auth = null;
 
-// Global user
-let currentUser = null;
+// Initialize Firebase silently
+try {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "JOUW_API_KEY_HIER") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        
+        // Sign in anonymously so we can write to the database securely
+        auth.signInAnonymously().catch((error) => {
+            console.warn("Silent auth failed (game will continue offline):", error);
+        });
+    } else {
+        console.log("Firebase not configured yet. Game running in offline mode.");
+    }
+} catch (e) {
+    console.warn("Firebase initialization skipped:", e);
+}
+
+// Function to upload score silently
+function uploadScore(playerName, score, yellowMoney) {
+    if (!db || !auth || !auth.currentUser) return;
+
+    db.collection("scores").add({
+        playerName: playerName,
+        score: Math.floor(score), // Green money collected this run
+        totalYellowMoney: yellowMoney,
+        date: firebase.firestore.FieldValue.serverTimestamp(),
+        uid: auth.currentUser.uid
+    }).catch((error) => {
+        // Silently fail - do not disturb the player
+        console.warn("Score upload failed:", error);
+    });
+}
+
+// ==========================================
+// GAME LOGIC (ORIGINAL + INTEGRATION)
+// ==========================================
 
 // Game State
 let gameState = {
@@ -53,15 +84,12 @@ function getValidatedYellowMoney() {
 }
 
 function saveYellowMoney(amount) {
-  const validAmount = Math.max(0, Math.min(amount, 999999999));
-  gameState.yellowMoney = validAmount;
-
-  localStorage.setItem('yellowMoney', validAmount.toString());
-  localStorage.setItem('yellowMoneyChecksum', getYellowMoneyChecksum(validAmount).toString());
-
-  savePlayerData(); // 🔥 Firebase sync
+    // Clamp to reasonable values to prevent overflow hacks
+    const validAmount = Math.max(0, Math.min(amount, 999999999));
+    gameState.yellowMoney = validAmount;
+    localStorage.setItem('yellowMoney', validAmount.toString());
+    localStorage.setItem('yellowMoneyChecksum', getYellowMoneyChecksum(validAmount).toString());
 }
-
 
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
@@ -115,22 +143,6 @@ const mapSizes = {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-
-  onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    currentUser = null;
-    console.log("Guest mode actief");
-    return;
-  }
-
-  currentUser = user;
-
-  // Als guest al progress had → push naar Firebase
-  await savePlayerData();
-  await loadPlayerData(user.uid);
-});
-
-
     setupStartScreen();
     setupSkinsPage();
     setupModPanel();
@@ -273,7 +285,6 @@ function setupSkinsPage() {
                 localStorage.setItem('ownedSkins', JSON.stringify(gameState.ownedSkins));
                 gameState.selectedSkin = skin.id;
                 localStorage.setItem('selectedSkin', skin.id);
-                savePlayerData();
                 updateSkinsDisplay();
                 updateYellowMoneyDisplay();
             }
@@ -1141,6 +1152,12 @@ function gameOver() {
     gameState.gameRunning = false;
     cancelAnimationFrame(gameLoop);
     
+    // SILENT FIREBASE UPLOAD
+    // Upload the score (green money) and current yellow money
+    if (playerSnake) {
+        uploadScore(gameState.playerName, playerSnake.greenMoney, gameState.yellowMoney);
+    }
+
     setTimeout(() => {
         gameScreen.classList.remove('active');
         startScreen.classList.add('active');
@@ -1504,129 +1521,5 @@ class Money {
         ctx.fillText('$', 0, 0);
         
         ctx.restore();
-        draw(ctx) {
-  this.update();
-
-  ctx.save();
-  ctx.translate(this.x, this.y);
-  ctx.rotate(this.rotation);
-
-  ctx.fillStyle = this.type === 'green' ? '#00ff00' : '#FFD700';
-
-  ctx.beginPath();
-  ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = '#000';
-  ctx.font = `${this.size * 1.2}px Arial`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('$', 0, 0);
-
-  ctx.restore();
-}
-}
-
-        // 📥 Load player data from Firebase
-async function loadPlayerData(uid) {
-  try {
-    const ref = doc(db, "players", uid);
-    const snap = await getDoc(ref);
-
-    if (snap.exists()) {
-      const data = snap.data();
-
-      gameState.yellowMoney = data.yellowMoney || 0;
-      gameState.ownedSkins = data.ownedSkins || ["ball-green"];
-      gameState.selectedSkin = data.selectedSkin || "ball-green";
-      gameState.playerName = data.playerName || "Player";
-
-      // Sync to localStorage so game logic stays happy
-      localStorage.setItem("yellowMoney", gameState.yellowMoney.toString());
-      localStorage.setItem("yellowMoneyChecksum", getYellowMoneyChecksum(gameState.yellowMoney).toString());
-      localStorage.setItem("ownedSkins", JSON.stringify(gameState.ownedSkins));
-      localStorage.setItem("selectedSkin", gameState.selectedSkin);
-
-      updateYellowMoneyDisplay();
-      updateSkinsDisplay();
-    } else {
-      // First time player
-      await savePlayerData();
     }
-  } catch (err) {
-    console.error("Load error:", err);
-  }
-}
-
-// 📤 Save player data to Firebase
-async function savePlayerData() {
-  if (!currentUser) return; // guest = alleen local
-
-
-  try {
-    const ref = doc(db, "players", currentUser.uid);
-
-    await setDoc(ref, {
-      playerName: gameState.playerName,
-      yellowMoney: gameState.yellowMoney,
-      ownedSkins: gameState.ownedSkins,
-      selectedSkin: gameState.selectedSkin,
-      lastSeen: Date.now()
-    }, { merge: true });
-
-  } catch (err) {
-    console.error("Save error:", err);
-  }
-}
-
-// 📥 Load player data from Firebase
-async function loadPlayerData(uid) {
-  try {
-    const ref = doc(db, "players", uid);
-    const snap = await getDoc(ref);
-
-    if (snap.exists()) {
-      const data = snap.data();
-
-      gameState.yellowMoney = data.yellowMoney || 0;
-      gameState.ownedSkins = data.ownedSkins || ["ball-green"];
-      gameState.selectedSkin = data.selectedSkin || "ball-green";
-      gameState.playerName = data.playerName || "Player";
-
-      localStorage.setItem("yellowMoney", gameState.yellowMoney.toString());
-      localStorage.setItem("yellowMoneyChecksum", getYellowMoneyChecksum(gameState.yellowMoney).toString());
-      localStorage.setItem("ownedSkins", JSON.stringify(gameState.ownedSkins));
-      localStorage.setItem("selectedSkin", gameState.selectedSkin);
-
-      updateYellowMoneyDisplay();
-      updateSkinsDisplay();
-    } else {
-      await savePlayerData();
-    }
-  } catch (err) {
-    console.error("Load error:", err);
-  }
-}
-
-// 📤 Save player data to Firebase
-async function savePlayerData() {
-  if (!currentUser) return;
-
-  try {
-    const ref = doc(db, "players", currentUser.uid);
-
-    await setDoc(ref, {
-      playerName: gameState.playerName,
-      yellowMoney: gameState.yellowMoney,
-      ownedSkins: gameState.ownedSkins,
-      selectedSkin: gameState.selectedSkin,
-      lastSeen: Date.now()
-    }, { merge: true });
-
-  } catch (err) {
-    console.error("Save error:", err);
-  }
 }
