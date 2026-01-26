@@ -12,41 +12,50 @@
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b0f19;
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(180deg, #020617, #0b0f19);
   color: white;
   display: flex;
   height: 100vh;
 }
+
 .sidebar {
-  width: 230px;
-  background: #0f172a;
+  width: 240px;
+  background: #020617;
   padding: 15px;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid #1e293b;
 }
+
 .logo {
   text-align: center;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
   color: #60a5fa;
   margin-bottom: 15px;
 }
+
 .search-box input {
   width: 100%;
   padding: 8px;
-  border-radius: 5px;
+  border-radius: 8px;
   border: none;
+  background: #1e293b;
+  color: white;
   margin-bottom: 15px;
 }
+
 .category-btn {
-  background: #1e293b;
+  background: #020617;
   padding: 10px;
-  border-radius: 5px;
+  border-radius: 8px;
   margin-bottom: 6px;
   cursor: pointer;
+  transition: background 0.2s;
 }
-.category-btn:hover { background: #334155; }
+
+.category-btn:hover { background: #1e293b; }
 .category-btn.active { background: #2563eb; }
 
 .main {
@@ -54,58 +63,93 @@ body {
   padding: 20px;
   overflow-y: auto;
 }
+
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .auth-btn {
   background: #2563eb;
   border: none;
   padding: 8px 14px;
-  border-radius: 5px;
+  border-radius: 8px;
   color: white;
   cursor: pointer;
 }
+
 .section-title {
   color: #60a5fa;
   margin: 15px 0;
 }
+
 .game-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 15px;
 }
+
 .game-card {
-  width: 160px;
-  background: #1f2933;
-  border-radius: 10px;
+  background: #020617;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
-  transition: transform .2s;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 10px 20px rgba(0,0,0,.3);
 }
-.game-card:hover { transform: scale(1.05); }
+
+.game-card:hover {
+  transform: translateY(-5px) scale(1.03);
+  box-shadow: 0 20px 40px rgba(0,0,0,.5);
+}
+
 .game-card img {
   width: 100%;
-  height: 100px;
+  height: 110px;
   object-fit: cover;
 }
+
 .game-card h3 {
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   text-align: center;
   font-size: 14px;
 }
+
 .star {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: 8px;
+  right: 10px;
   cursor: pointer;
-  font-size: 18px;
-  color: #555;
+  font-size: 20px;
+  color: #444;
 }
+
 .star.fav { color: gold; }
+
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.game-card:hover .play-overlay {
+  opacity: 1;
+}
+
+.play-overlay span {
+  background: #2563eb;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+}
 
 /* LOGIN MODAL */
 .modal {
@@ -116,19 +160,27 @@ body {
   justify-content: center;
   align-items: center;
 }
+
 .modal-box {
-  background: #111827;
+  background: #020617;
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 300px;
 }
+
 .modal-box input, .modal-box button {
   width: 100%;
   margin-top: 10px;
   padding: 8px;
-  border-radius: 5px;
+  border-radius: 8px;
   border: none;
 }
+
+.modal-box input {
+  background: #1e293b;
+  color: white;
+}
+
 .modal-box button {
   background: #2563eb;
   color: white;
@@ -179,7 +231,10 @@ const firebaseConfig = {
   appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
@@ -192,9 +247,11 @@ const loginSubmit = document.getElementById("loginSubmit");
 const registerSubmit = document.getElementById("registerSubmit");
 const gameGrid = document.getElementById("gameGrid");
 const categoryList = document.getElementById("categoryList");
+const searchInput = document.getElementById("searchInput");
 
 let currentUser = null;
 let favorites = {};
+let allGames = {};
 
 authBtn.onclick = () => {
   if (!currentUser) modal.style.display = "flex";
@@ -252,46 +309,52 @@ function toggleFavorite(card) {
     delete favorites[id];
     ref.delete();
   } else {
-    const data = {
-      title: card.dataset.title,
-      image: card.querySelector("img").src,
-      link: card.dataset.link
-    };
-    favorites[id] = data;
-    ref.set(data);
+    favorites[id] = allGames[id];
+    ref.set(allGames[id]);
   }
   renderGames();
 }
 
 function renderGames(filter = "all") {
+  const search = searchInput.value.toLowerCase();
   gameGrid.innerHTML = "";
+
+  Object.entries(allGames).forEach(([id, g]) => {
+    const fav = favorites[id];
+    if (filter === "favorites" && !fav) return;
+    if (filter !== "all" && filter !== "favorites" && g.category !== filter) return;
+    if (!g.title.toLowerCase().includes(search)) return;
+
+    const div = document.createElement("div");
+    div.className = "game-card";
+    div.dataset.id = id;
+
+    div.innerHTML = `
+      <div class="star ${fav ? "fav" : ""}">★</div>
+      <img src="${g.image}">
+      <h3>${g.title}</h3>
+      <div class="play-overlay"><span>▶ Play</span></div>
+    `;
+
+    div.onclick = () => {
+      if (!g.link) return alert("Deze game heeft nog geen link");
+      location.href = g.link;
+    };
+
+    div.querySelector(".star").onclick = e => {
+      e.stopPropagation();
+      toggleFavorite(div);
+    };
+
+    gameGrid.appendChild(div);
+  });
+}
+
+function loadGames() {
   db.collection("games").get().then(snap => {
-    snap.forEach(doc => {
-      const g = doc.data();
-      const fav = favorites[doc.id];
-      if (filter === "favorites" && !fav) return;
-      if (filter !== "all" && filter !== "favorites" && g.category !== filter) return;
-
-      const div = document.createElement("div");
-      div.className = "game-card";
-      div.dataset.id = doc.id;
-      div.dataset.title = g.title;
-      div.dataset.link = g.link;
-
-      div.innerHTML = `
-        <div class="star ${fav ? "fav" : ""}">★</div>
-        <img src="${g.image}">
-        <h3>${g.title}</h3>
-      `;
-
-      div.onclick = () => location.href = g.link;
-      div.querySelector(".star").onclick = e => {
-        e.stopPropagation();
-        toggleFavorite(div);
-      };
-
-      gameGrid.appendChild(div);
-    });
+    allGames = {};
+    snap.forEach(doc => allGames[doc.id] = doc.data());
+    renderGames();
   });
 }
 
@@ -308,8 +371,10 @@ function loadCategories() {
   });
 }
 
+searchInput.oninput = () => renderGames();
+
 loadCategories();
-renderGames();
+loadGames();
 </script>
 </body>
 </html>
