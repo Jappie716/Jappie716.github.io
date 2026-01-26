@@ -10,6 +10,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -17,10 +19,13 @@ body {
   color: white;
   display: flex;
   height: 100vh;
+  overflow: hidden;
 }
 
+/* SIDEBAR */
 .sidebar {
   width: 240px;
+  min-width: 240px;
   background: #020617;
   padding: 15px;
   display: flex;
@@ -29,61 +34,35 @@ body {
 }
 
 .logo {
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-  color: #60a5fa;
-  margin-bottom: 15px;
+  text-align: center; font-size: 22px; font-weight: bold;
+  color: #60a5fa; margin-bottom: 15px;
 }
 
 .search-box input {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-  background: #1e293b;
-  color: white;
-  margin-bottom: 15px;
+  width: 100%; padding: 8px; border-radius: 8px; border: none;
+  background: #1e293b; color: white; margin-bottom: 15px;
 }
 
+/* CATEGORIES */
 .category-btn {
-  background: #020617;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
+  background: #020617; padding: 10px; border-radius: 8px;
+  margin-bottom: 6px; cursor: pointer; transition: background 0.2s;
 }
-
 .category-btn:hover { background: #1e293b; }
 .category-btn.active { background: #2563eb; }
 
-.main {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
+/* MAIN */
+.main { flex: 1; padding: 20px; overflow-y: auto; }
+.topbar { display: flex; justify-content: space-between; align-items: center; }
 .auth-btn {
-  background: #2563eb;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
+  background: #2563eb; border: none; padding: 8px 14px;
+  border-radius: 8px; color: white; cursor: pointer; margin-left: 6px;
 }
 
-.section-title {
-  color: #60a5fa;
-  margin: 15px 0;
-}
+.section-title { color: #60a5fa; margin: 15px 0; }
+.loader { display: none; text-align: center; margin-top: 40px; color: #60a5fa; font-size: 18px; }
 
+/* GAMES GRID */
 .game-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -91,120 +70,55 @@ body {
 }
 
 .game-card {
-  background: #020617;
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  position: relative;
-  transition: transform .2s, box-shadow .2s;
+  background: #020617; border-radius: 12px; overflow: hidden;
+  position: relative; transition: transform .2s, box-shadow .2s;
   box-shadow: 0 10px 20px rgba(0,0,0,.3);
 }
+.game-card:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,.5); }
+.game-card img { width: 100%; height: 110px; object-fit: cover; }
+.game-card h3 { margin: 0; padding: 8px; text-align: center; font-size: 14px; }
 
-.game-card:hover {
-  transform: translateY(-5px) scale(1.03);
-  box-shadow: 0 20px 40px rgba(0,0,0,.5);
-}
-
-.game-card img {
-  width: 100%;
-  height: 110px;
-  object-fit: cover;
-}
-
-.game-card h3 {
-  margin: 0;
-  padding: 8px;
-  text-align: center;
-  font-size: 14px;
-}
-
-.star {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  cursor: pointer;
-  font-size: 20px;
-  color: #444;
-}
-
+.star { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 20px; color: #444; z-index: 3; }
 .star.fav { color: gold; }
 
 .play-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  opacity: 0;
-  transition: opacity .2s;
+  position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; justify-content: center; align-items: center;
+  opacity: 0; transition: opacity .2s; pointer-events: none;
 }
-
-.game-card:hover .play-overlay {
-  opacity: 1;
-}
-
-.play-overlay span {
-  background: #2563eb;
-  padding: 8px 14px;
-  border-radius: 20px;
-  font-weight: bold;
-}
+.game-card:hover .play-overlay { opacity: 1; }
+.play-overlay span { background: #2563eb; padding: 8px 20px; border-radius: 20px; font-weight: bold; }
 
 /* LOGIN MODAL */
 .modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  display: none; justify-content: center; align-items: center; z-index: 10000;
 }
+.modal-box { background: #0f172a; padding: 25px; border-radius: 12px; width: 320px; text-align: center; border: 1px solid #1e293b; }
+.modal-box input, .modal-box button { width: 100%; margin-top: 10px; padding: 10px; border-radius: 8px; border: none; }
+.modal-box input { background: #1e293b; color: white; }
+.modal-box button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
 
-.modal-box {
-  background: #020617;
-  padding: 20px;
-  border-radius: 12px;
-  width: 300px;
-}
-
-.modal-box input, .modal-box button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 8px;
-  border-radius: 8px;
-  border: none;
-}
-
-.modal-box input {
-  background: #1e293b;
-  color: white;
-}
-
-.modal-box button {
-  background: #2563eb;
-  color: white;
-  cursor: pointer;
-}
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 50px; color: #94a3b8; }
 </style>
 </head>
 <body>
 
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
+
   <div class="search-box">
     <input 
-  id="searchInput"
-  type="search"
-  placeholder="Zoek games..."
-  autocomplete="off"
-  autocorrect="off"
-  autocapitalize="off"
-  spellcheck="false"
-  name="game-search"
-/>
-
+      id="searchInput" 
+      type="text" 
+      placeholder="Zoek games..." 
+      autocomplete="new-password"
+      onfocus="this.removeAttribute('readonly');" 
+      readonly
+    >
   </div>
+
   <div class="category-btn active" data-cat="all">Alle games</div>
   <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
   <div id="categoryList"></div>
@@ -218,16 +132,20 @@ body {
       <button id="authBtn" class="auth-btn">Inloggen</button>
     </div>
   </div>
+
+  <div id="loader" class="loader">⏳ Games laden...</div>
   <div id="gameGrid" class="game-grid"></div>
 </div>
 
 <div id="loginModal" class="modal">
   <div class="modal-box">
-    <h2>Inloggen</h2>
+    <h2 id="modalTitle">Inloggen</h2>
+    <p id="modalSub" style="font-size: 13px; color: #94a3b8; display: none;">Log in om je favorieten op te slaan!</p>
     <input id="emailInput" type="email" placeholder="E-mail">
     <input id="passwordInput" type="password" placeholder="Wachtwoord">
     <button id="loginSubmit">Inloggen</button>
     <button id="registerSubmit" style="background:#16a34a;">Account maken</button>
+    <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: #64748b; font-size: 12px;">Annuleren</button>
   </div>
 </div>
 
@@ -242,19 +160,14 @@ const firebaseConfig = {
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 const ADMIN_EMAIL = "someoeneheilig@gmail.com";
-
 const authBtn = document.getElementById("authBtn");
 const adminBtn = document.getElementById("adminBtn");
 const modal = document.getElementById("loginModal");
-const loginSubmit = document.getElementById("loginSubmit");
-const registerSubmit = document.getElementById("registerSubmit");
 const gameGrid = document.getElementById("gameGrid");
-const categoryList = document.getElementById("categoryList");
 const searchInput = document.getElementById("searchInput");
 
 let currentUser = null;
@@ -262,31 +175,26 @@ let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 
-// AUTH UI
-authBtn.onclick = () => {
-  if (!currentUser) modal.style.display = "flex";
-  else auth.signOut();
+/* UI FUNCTIONS */
+function showLogin(reason = false) {
+    document.getElementById('modalSub').style.display = reason ? 'block' : 'none';
+    modal.style.display = "flex";
+}
+
+/* AUTH LOGIC */
+authBtn.onclick = () => currentUser ? auth.signOut() : showLogin();
+
+document.getElementById("loginSubmit").onclick = () => {
+    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value).catch(e => alert(e.message));
 };
 
-loginSubmit.onclick = () => {
-  auth.signInWithEmailAndPassword(
-    emailInput.value,
-    passwordInput.value
-  ).catch(e => alert(e.message));
+document.getElementById("registerSubmit").onclick = () => {
+    auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value).catch(e => alert(e.message));
 };
 
-registerSubmit.onclick = () => {
-  auth.createUserWithEmailAndPassword(
-    emailInput.value,
-    passwordInput.value
-  ).catch(e => alert(e.message));
-};
-
-// MAIN AUTH HANDLER
 auth.onAuthStateChanged(user => {
   currentUser = user;
   favorites = {};
-
   if (user) {
     authBtn.textContent = "Uitloggen";
     modal.style.display = "none";
@@ -297,35 +205,25 @@ auth.onAuthStateChanged(user => {
     adminBtn.style.display = "none";
     renderGames();
   }
-
-  // ALTIJD laden
   loadCategories();
   loadGames();
 });
 
-// FAVORITES
+/* FAVORITES LOGIC */
 function loadFavorites() {
   if (!currentUser) return;
-
-  db.collection("users")
-    .doc(currentUser.uid)
-    .collection("favorites")
-    .get()
-    .then(snap => {
+  db.collection("users").doc(currentUser.uid).collection("favorites").get().then(snap => {
       snap.forEach(doc => favorites[doc.id] = doc.data());
       renderGames();
-    });
+  });
 }
 
-function toggleFavorite(card) {
-  if (!currentUser) return alert("Log in om favorieten te gebruiken");
-
-  const id = card.dataset.id;
-  const ref = db.collection("users")
-    .doc(currentUser.uid)
-    .collection("favorites")
-    .doc(id);
-
+function toggleFavorite(id) {
+  if (!currentUser) {
+    showLogin(true);
+    return;
+  }
+  const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
   if (favorites[id]) {
     delete favorites[id];
     ref.delete();
@@ -336,81 +234,103 @@ function toggleFavorite(card) {
   renderGames();
 }
 
-// RENDER
+/* RENDERING */
 function renderGames() {
   const search = searchInput.value.toLowerCase();
   gameGrid.innerHTML = "";
 
+  // Filteren op favorieten als je niet bent ingelogd
+  if (currentFilter === "favorites" && !currentUser) {
+      gameGrid.innerHTML = `
+        <div class="empty-state">
+            <h3>⭐ Favorieten</h3>
+            <p>Je moet ingelogd zijn om favorieten te bekijken en op te slaan.</p>
+            <button class="auth-btn" onclick="showLogin(true)">Nu Inloggen</button>
+        </div>`;
+      return;
+  }
+
+  let count = 0;
   Object.entries(allGames).forEach(([id, g]) => {
     const fav = favorites[id];
-
     if (currentFilter === "favorites" && !fav) return;
     if (currentFilter !== "all" && currentFilter !== "favorites" && g.category !== currentFilter) return;
-    if (!g.title.toLowerCase().includes(search)) return;
+    if (search && !g.title.toLowerCase().includes(search)) return;
 
+    count++;
     const div = document.createElement("div");
     div.className = "game-card";
-    div.dataset.id = id;
-
     div.innerHTML = `
-      <div class="star ${fav ? "fav" : ""}">★</div>
-      <img src="${g.image || ""}">
-      <h3>${g.title || "Geen titel"}</h3>
+      <div class="star ${fav ? 'fav' : ''}">★</div>
+      <img src="${g.image || ''}">
+      <h3>${g.title || 'Laden...'}</h3>
       <div class="play-overlay"><span>▶ Play</span></div>
     `;
 
-    div.onclick = () => {
-      if (!g.link) return alert("Deze game heeft nog geen link");
-      location.href = g.link;
+    div.onclick = (e) => {
+        if (e.target.classList.contains("star")) {
+            toggleFavorite(id);
+        } else {
+            location.href = g.link;
+        }
     };
-
-    div.querySelector(".star").onclick = e => {
-      e.stopPropagation();
-      toggleFavorite(div);
-    };
-
     gameGrid.appendChild(div);
   });
+
+  if (count === 0 && !document.querySelector('.empty-state')) {
+      gameGrid.innerHTML = `<div class="empty-state"><p>Geen games gevonden...</p></div>`;
+  }
 }
 
-// DATA LOADERS
+/* DATA LOADING */
 function loadGames() {
+  document.getElementById("loader").style.display = "block";
   db.collection("games").get().then(snap => {
     allGames = {};
     snap.forEach(doc => allGames[doc.id] = doc.data());
+    document.getElementById("loader").style.display = "none";
     renderGames();
   });
 }
 
 function loadCategories() {
-  categoryList.innerHTML = "";
-
+  const catList = document.getElementById("categoryList");
+  catList.innerHTML = "";
   db.collection("categories").get().then(snap => {
     snap.forEach(doc => {
       const btn = document.createElement("div");
       btn.className = "category-btn";
       btn.textContent = doc.data().name;
-
       btn.onclick = () => {
         document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentFilter = doc.id;
+        document.getElementById("sectionTitle").textContent = doc.data().name;
         renderGames();
       };
-
-      categoryList.appendChild(btn);
+      catList.appendChild(btn);
     });
   });
 }
 
-// SEARCH
-searchInput.oninput = () => renderGames();
-  window.addEventListener("load", () => {
-  searchInput.value = "";
-  renderGames();
+/* SIDEBAR FIXED BUTTONS */
+document.querySelectorAll(".category-btn[data-cat]").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter = btn.dataset.cat;
+    document.getElementById("sectionTitle").textContent = btn.textContent;
+    renderGames();
+  };
 });
 
+/* SEARCH FIX */
+searchInput.oninput = () => renderGames();
+// Voorkom dat de browser na een refresh iets invult
+window.onload = () => { 
+    searchInput.value = ""; 
+    renderGames();
+};
 </script>
-
 </body>
 </html>
