@@ -3,7 +3,7 @@
 // ==========================================
 // VUL HIER JOUW EIGEN FIREBASE GEGEVENS IN
 const firebaseConfig = {
-       apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
     projectId: "gameparadise-80490",
     storageBucket: "gameparadise-80490.firebasestorage.app",
@@ -13,43 +13,74 @@ const firebaseConfig = {
 
 let db = null;
 let auth = null;
+let currentUser = null;
 
-// Initialize Firebase silently
+// Initialize Firebase
 try {
+    // Check of Firebase al geladen is via de HTML scripts
     if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "JOUW_API_KEY_HIER") {
-        firebase.initializeApp(firebaseConfig);
+        // Voorkom dubbele initialisatie
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
         db = firebase.firestore();
         auth = firebase.auth();
-        
-        // Sign in anonymously so we can write to the database securely
-        auth.signInAnonymously().catch((error) => {
-            console.warn("Silent auth failed (game will continue offline):", error);
+
+        // Authenticatie Listener: Dit zorgt dat we ALTIJD een UserID hebben
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Gebruiker is ingelogd (of anoniem of echt)
+                currentUser = user;
+                console.log("Connected to Firebase as:", user.uid);
+            } else {
+                // Geen gebruiker? Log anoniem in zodat ze toch kunnen spelen en saven
+                console.log("No user found, signing in anonymously...");
+                auth.signInAnonymously().catch((error) => {
+                    console.error("Anonymous auth failed:", error);
+                });
+            }
         });
     } else {
-        console.log("Firebase not configured yet. Game running in offline mode.");
+        console.log("Firebase not configured or script missing. Running offline.");
     }
 } catch (e) {
-    console.warn("Firebase initialization skipped:", e);
+    console.warn("Firebase initialization error:", e);
 }
 
-// Function to upload score silently
-function uploadScore(playerName, score, yellowMoney) {
-    if (!db || !auth || !auth.currentUser) return;
+// Functie om naar het specifieke pad te schrijven: /users/<userID>/saveData/greedySnake
+function saveToFirebase(score, yellowMoney) {
+    if (!db || !currentUser) {
+        console.warn("Cannot save: No database connection or user not logged in.");
+        return;
+    }
 
-    db.collection("scores").add({
-        playerName: playerName,
-        score: Math.floor(score), // Green money collected this run
-        totalYellowMoney: yellowMoney,
-        date: firebase.firestore.FieldValue.serverTimestamp(),
-        uid: auth.currentUser.uid
-    }).catch((error) => {
-        // Silently fail - do not disturb the player
-        console.warn("Score upload failed:", error);
-    });
+    // Het exacte pad dat je vroeg
+    const docRef = db.collection('users')
+                     .doc(currentUser.uid)
+                     .collection('saveData')
+                     .doc('greedySnake');
+
+    // Data om op te slaan
+    const dataToSave = {
+        lastScore: Math.floor(score),       // Score van dit potje
+        yellowMoney: yellowMoney,           // Huidige totaal aan muntjes
+        lastPlayed: firebase.firestore.FieldValue.serverTimestamp(),
+        playerName: gameState.playerName || "Anonymous"
+    };
+
+    // set met { merge: true } zorgt dat we bestaande data updaten en niet wissen
+    docRef.set(dataToSave, { merge: true })
+        .then(() => {
+            console.log("Score saved successfully to /users/" + currentUser.uid + "/saveData/greedySnake");
+        })
+        .catch((error) => {
+            console.warn("Error saving score:", error);
+        });
 }
 
 // ==========================================
-// GAME LOGIC (ORIGINAL + INTEGRATION)
+// GAME LOGIC
 // ==========================================
 
 // Game State
@@ -1153,9 +1184,8 @@ function gameOver() {
     cancelAnimationFrame(gameLoop);
     
     // SILENT FIREBASE UPLOAD
-    // Upload the score (green money) and current yellow money
     if (playerSnake) {
-        uploadScore(gameState.playerName, playerSnake.greenMoney, gameState.yellowMoney);
+        saveToFirebase(playerSnake.greenMoney, gameState.yellowMoney);
     }
 
     setTimeout(() => {
