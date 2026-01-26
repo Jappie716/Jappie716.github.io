@@ -231,9 +231,7 @@ const firebaseConfig = {
   appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
 };
 
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -252,7 +250,9 @@ const searchInput = document.getElementById("searchInput");
 let currentUser = null;
 let favorites = {};
 let allGames = {};
+let currentFilter = "all";
 
+// AUTH UI
 authBtn.onclick = () => {
   if (!currentUser) modal.style.display = "flex";
   else auth.signOut();
@@ -272,9 +272,11 @@ registerSubmit.onclick = () => {
   ).catch(e => alert(e.message));
 };
 
+// MAIN AUTH HANDLER
 auth.onAuthStateChanged(user => {
   currentUser = user;
   favorites = {};
+
   if (user) {
     authBtn.textContent = "Uitloggen";
     modal.style.display = "none";
@@ -285,11 +287,20 @@ auth.onAuthStateChanged(user => {
     adminBtn.style.display = "none";
     renderGames();
   }
+
+  // ALTIJD laden
+  loadCategories();
+  loadGames();
 });
 
+// FAVORITES
 function loadFavorites() {
-  db.collection("users").doc(currentUser.uid)
-    .collection("favorites").get()
+  if (!currentUser) return;
+
+  db.collection("users")
+    .doc(currentUser.uid)
+    .collection("favorites")
+    .get()
     .then(snap => {
       snap.forEach(doc => favorites[doc.id] = doc.data());
       renderGames();
@@ -315,14 +326,16 @@ function toggleFavorite(card) {
   renderGames();
 }
 
-function renderGames(filter = "all") {
+// RENDER
+function renderGames() {
   const search = searchInput.value.toLowerCase();
   gameGrid.innerHTML = "";
 
   Object.entries(allGames).forEach(([id, g]) => {
     const fav = favorites[id];
-    if (filter === "favorites" && !fav) return;
-    if (filter !== "all" && filter !== "favorites" && g.category !== filter) return;
+
+    if (currentFilter === "favorites" && !fav) return;
+    if (currentFilter !== "all" && currentFilter !== "favorites" && g.category !== currentFilter) return;
     if (!g.title.toLowerCase().includes(search)) return;
 
     const div = document.createElement("div");
@@ -331,8 +344,8 @@ function renderGames(filter = "all") {
 
     div.innerHTML = `
       <div class="star ${fav ? "fav" : ""}">★</div>
-      <img src="${g.image}">
-      <h3>${g.title}</h3>
+      <img src="${g.image || ""}">
+      <h3>${g.title || "Geen titel"}</h3>
       <div class="play-overlay"><span>▶ Play</span></div>
     `;
 
@@ -350,6 +363,7 @@ function renderGames(filter = "all") {
   });
 }
 
+// DATA LOADERS
 function loadGames() {
   db.collection("games").get().then(snap => {
     allGames = {};
@@ -360,21 +374,28 @@ function loadGames() {
 
 function loadCategories() {
   categoryList.innerHTML = "";
+
   db.collection("categories").get().then(snap => {
     snap.forEach(doc => {
       const btn = document.createElement("div");
       btn.className = "category-btn";
       btn.textContent = doc.data().name;
-      btn.onclick = () => renderGames(doc.id);
+
+      btn.onclick = () => {
+        document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = doc.id;
+        renderGames();
+      };
+
       categoryList.appendChild(btn);
     });
   });
 }
 
+// SEARCH
 searchInput.oninput = () => renderGames();
-
-loadCategories();
-loadGames();
 </script>
+
 </body>
 </html>
