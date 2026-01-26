@@ -280,6 +280,15 @@ auth.onAuthStateChanged(user => {
 function logout() {
   auth.signOut().then(() => location.href = "index.html");
 }
+// INPUT REFERENCES
+const gameId = document.getElementById("gameId");
+const gameTitle = document.getElementById("gameTitle");
+const gameImage = document.getElementById("gameImage");
+const gameLink = document.getElementById("gameLink");
+const gameCategory = document.getElementById("gameCategory");
+
+const catId = document.getElementById("catId");
+const catName = document.getElementById("catName");
 
 // STATS
 function loadStats() {
