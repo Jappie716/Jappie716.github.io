@@ -22,6 +22,35 @@ body {
   overflow: hidden;
 }
 
+/* --- TOAST MELDINGEN --- */
+#toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 99999;
+}
+
+.toast {
+  background: #1e293b;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  border-left: 5px solid #2563eb;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  animation: slideIn 0.3s ease forwards;
+  font-size: 14px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* SIDEBAR */
 .sidebar {
   width: 240px;
@@ -78,8 +107,9 @@ body {
 .game-card img { width: 100%; height: 110px; object-fit: cover; }
 .game-card h3 { margin: 0; padding: 8px; text-align: center; font-size: 14px; }
 
-.star { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 20px; color: #444; z-index: 3; }
-.star.fav { color: gold; }
+.star { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 20px; color: #444; z-index: 3; transition: transform 0.2s; }
+.star:hover { transform: scale(1.2); }
+.star.fav { color: gold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
 
 .play-overlay {
   position: absolute; inset: 0; background: rgba(0,0,0,0.6);
@@ -99,9 +129,8 @@ body {
 .modal-box input { background: #1e293b; color: white; }
 .modal-box button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
 
-/* EMPTY STATE FIX */
 .empty-state { 
-  grid-column: 1 / -1; /* Pakt de volledige breedte van het grid */
+  grid-column: 1 / -1; 
   text-align: center; 
   padding: 80px 20px; 
   color: #94a3b8; 
@@ -117,6 +146,8 @@ body {
 </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
 
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
@@ -188,6 +219,29 @@ let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 
+/* --- NOTIFICATIE FUNCTIE --- */
+function notify(msg, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  // Gebruik de kleuren van je admin paneel
+  t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
+  
+  // Voeg een icoontje toe voor de extra touch
+  const icon = type === 'success' ? '✅' : '🗑️';
+  t.innerHTML = `<span>${icon}</span> ${msg}`;
+  
+  container.appendChild(t);
+  
+  // Verwijder na 3 seconden met een kleine fade-out
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(20px)';
+    t.style.transition = '0.3s';
+    setTimeout(() => t.remove(), 300);
+  }, 3000);
+}
+
 function showLogin(reason = false) {
     document.getElementById('modalSub').style.display = reason ? 'block' : 'none';
     modal.style.display = "flex";
@@ -202,11 +256,15 @@ function resetToAllGames() {
 authBtn.onclick = () => currentUser ? auth.signOut() : showLogin();
 
 document.getElementById("loginSubmit").onclick = () => {
-    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value).catch(e => alert(e.message));
+    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .then(() => notify("Succesvol ingelogd!"))
+        .catch(e => notify(e.message, 'danger'));
 };
 
 document.getElementById("registerSubmit").onclick = () => {
-    auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value).catch(e => alert(e.message));
+    auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
+        .then(() => notify("Account aangemaakt! Veel plezier."))
+        .catch(e => notify(e.message, 'danger'));
 };
 
 auth.onAuthStateChanged(user => {
@@ -241,12 +299,16 @@ function toggleFavorite(id) {
     return;
   }
   const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
+  const gameName = allGames[id].title;
+
   if (favorites[id]) {
     delete favorites[id];
     ref.delete();
+    notify(`"${gameName}" verwijderd uit favorieten`, 'danger');
   } else {
     favorites[id] = allGames[id];
     ref.set(allGames[id]);
+    notify(`"${gameName}" toegevoegd aan favorieten!`, 'success');
   }
   renderGames();
 }
