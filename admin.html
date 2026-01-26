@@ -2,100 +2,198 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Game Hub Admin</title>
+<title>Game Paradise – Admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: #eee;
-}
-
-header {
-  background: #1c1c1c;
-  padding: 10px 20px;
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(180deg, #020617, #0b0f19);
+  color: white;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  height: 100vh;
 }
 
-button {
-  background: #4caf50;
+.sidebar {
+  width: 240px;
+  background: #020617;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1e293b;
+}
+
+.logo {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: #60a5fa;
+  margin-bottom: 20px;
+}
+
+.nav-btn {
+  background: #020617;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.nav-btn:hover { background: #1e293b; }
+.nav-btn.active { background: #2563eb; }
+
+.btn {
+  background: #2563eb;
   border: none;
   padding: 8px 14px;
+  border-radius: 8px;
   color: white;
-  border-radius: 5px;
   cursor: pointer;
 }
 
-button.danger {
-  background: #e53935;
-}
+.btn.red { background: #dc2626; }
+.btn.green { background: #16a34a; }
 
-.container {
-  max-width: 800px;
-  margin: 30px auto;
-  background: #222;
+.main {
+  flex: 1;
   padding: 20px;
-  border-radius: 10px;
+  overflow-y: auto;
 }
 
-input, textarea {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  border-radius: 5px;
-  border: none;
-}
-
-.game-item {
-  background: #111;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 5px;
+.topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
+.section { margin-top: 20px; }
+
+.card {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 10px 20px rgba(0,0,0,.4);
+}
+
+.card h3 {
+  margin-top: 0;
+  color: #60a5fa;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: none;
+  background: #1e293b;
+  color: white;
+}
+
+.list-item {
+  background: #020617;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stats {
+  display: flex;
+  gap: 15px;
+}
+
+.stat-box {
+  flex: 1;
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-box h2 {
+  margin: 0;
+  color: #60a5fa;
+}
 </style>
 </head>
+
 <body>
 
-<header>
-  <h2>🎮 Game Hub Admin</h2>
-  <div>
-    <span id="admin-email">Niet ingelogd</span>
-    <button id="logout">Logout</button>
-  </div>
-</header>
-
-<div class="container">
-  <h3>Nieuwe game toevoegen</h3>
-
-  <label>Game naam</label>
-  <input id="game-title" placeholder="Bijv. Drive Mad">
-
-  <label>Beschrijving</label>
-  <textarea id="game-desc" placeholder="Wat is dit voor chaos"></textarea>
-
-  <label>Game link</label>
-  <input id="game-link" placeholder="drive_mad.html">
-
-  <br><br>
-  <button id="save-game">Game opslaan</button>
-
-  <hr>
-
-  <h3>Games in database</h3>
-  <div id="game-list">Laden...</div>
+<div class="sidebar">
+  <div class="logo">🛠️ Admin Panel</div>
+  <div class="nav-btn active" id="dashboardTab">Dashboard</div>
+  <div class="nav-btn" id="gamesTab">Games beheren</div>
+  <div class="nav-btn" id="categoriesTab">Categorieën beheren</div>
+  <button class="btn" style="margin-top:auto" onclick="location.href='index.html'">← Terug</button>
 </div>
 
-<!-- FIREBASE -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<div class="main">
+  <div class="topbar">
+    <h2 id="pageTitle">Dashboard</h2>
+    <button class="btn red" onclick="logout()">Uitloggen</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardSection" class="section">
+    <div class="stats">
+      <div class="stat-box">
+        <h2 id="statGames">0</h2>
+        <p>Games</p>
+      </div>
+      <div class="stat-box">
+        <h2 id="statCategories">0</h2>
+        <p>Categorieën</p>
+      </div>
+      <div class="stat-box">
+        <h2>👤</h2>
+        <p>Admins Only</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAMES -->
+  <div id="gamesSection" class="section" style="display:none">
+    <div class="card">
+      <h3>Game toevoegen</h3>
+      <input id="gameId" placeholder="Game ID (bijv: drive-mad)">
+      <input id="gameTitle" placeholder="Titel">
+      <input id="gameImage" placeholder="Afbeelding URL">
+      <input id="gameLink" placeholder="Game link (bijv: games/drive-mad.html)">
+      <select id="gameCategory"></select>
+      <button class="btn green" onclick="addGame()">Game opslaan</button>
+    </div>
+
+    <div class="card">
+      <h3>Bestaande games</h3>
+      <div id="gamesList"></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div id="categoriesSection" class="section" style="display:none">
+    <div class="card">
+      <h3>Categorie toevoegen</h3>
+      <input id="catId" placeholder="Categorie ID (bijv: arcade)">
+      <input id="catName" placeholder="Categorie naam">
+      <button class="btn green" onclick="addCategory()">Categorie opslaan</button>
+    </div>
+
+    <div class="card">
+      <h3>Bestaande categorieën</h3>
+      <div id="categoriesList"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -107,109 +205,200 @@ const firebaseConfig = {
   appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* ELEMENTEN */
-const adminEmail = document.getElementById("admin-email");
-const logoutBtn = document.getElementById("logout");
-const saveBtn = document.getElementById("save-game");
-const gameList = document.getElementById("game-list");
+const ADMIN_EMAIL = "someoeneheilig@gmail.com";
 
-const titleInput = document.getElementById("game-title");
-const descInput = document.getElementById("game-desc");
-const linkInput = document.getElementById("game-link");
+/* ELEMENTS */
+const dashboardTab = document.getElementById("dashboardTab");
+const gamesTab = document.getElementById("gamesTab");
+const categoriesTab = document.getElementById("categoriesTab");
 
-/* ADMIN CHECK */
-const ADMIN_EMAILS = [
-  "admin@gmail.com" // zet hier je eigen email in
-];
+const dashboardSection = document.getElementById("dashboardSection");
+const gamesSection = document.getElementById("gamesSection");
+const categoriesSection = document.getElementById("categoriesSection");
 
+const pageTitle = document.getElementById("pageTitle");
+const statGames = document.getElementById("statGames");
+const statCategories = document.getElementById("statCategories");
+
+const gameId = document.getElementById("gameId");
+const gameTitle = document.getElementById("gameTitle");
+const gameImage = document.getElementById("gameImage");
+const gameLink = document.getElementById("gameLink");
+const gameCategory = document.getElementById("gameCategory");
+
+const catId = document.getElementById("catId");
+const catName = document.getElementById("catName");
+
+/* TABS */
+function showTab(tab) {
+  dashboardSection.style.display = "none";
+  gamesSection.style.display = "none";
+  categoriesSection.style.display = "none";
+
+  dashboardTab.classList.remove("active");
+  gamesTab.classList.remove("active");
+  categoriesTab.classList.remove("active");
+
+  if (tab === "dashboard") {
+    dashboardSection.style.display = "block";
+    dashboardTab.classList.add("active");
+    pageTitle.textContent = "Dashboard";
+  }
+
+  if (tab === "games") {
+    gamesSection.style.display = "block";
+    gamesTab.classList.add("active");
+    pageTitle.textContent = "Games beheren";
+  }
+
+  if (tab === "categories") {
+    categoriesSection.style.display = "block";
+    categoriesTab.classList.add("active");
+    pageTitle.textContent = "Categorieën beheren";
+  }
+}
+
+dashboardTab.onclick = () => showTab("dashboard");
+gamesTab.onclick = () => showTab("games");
+categoriesTab.onclick = () => showTab("categories");
+
+/* AUTH */
 auth.onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "index.html";
+  if (!user || user.email !== ADMIN_EMAIL) {
+    alert("Geen toegang, kleine sterveling.");
+    location.href = "index.html";
     return;
   }
 
-  if (!ADMIN_EMAILS.includes(user.email)) {
-    alert("Jij bent geen admin. Ga spelen of zo.");
-    window.location.href = "index.html";
-    return;
-  }
-
-  adminEmail.innerText = user.email;
+  loadCategories();
   loadGames();
+  loadStats();
 });
 
 /* LOGOUT */
-logoutBtn.onclick = () => {
-  auth.signOut();
-};
-
-/* GAME OPSLAAN */
-saveBtn.onclick = () => {
-  const title = titleInput.value.trim();
-  const desc = descInput.value.trim();
-  const link = linkInput.value.trim();
-
-  if (!title || !link) {
-    alert("Game naam en link zijn verplicht, held.");
-    return;
-  }
-
-  db.collection("games").add({
-    title,
-    desc,
-    link,
-    created: new Date()
-  }).then(() => {
-    titleInput.value = "";
-    descInput.value = "";
-    linkInput.value = "";
-    loadGames();
-  });
-};
-
-/* GAMES LADEN */
-function loadGames() {
-  gameList.innerHTML = "Laden...";
-
-  db.collection("games").orderBy("created", "desc").get()
-    .then(snapshot => {
-      gameList.innerHTML = "";
-
-      if (snapshot.empty) {
-        gameList.innerText = "Nog geen games. Saai admin.";
-        return;
-      }
-
-      snapshot.forEach(doc => {
-        const game = doc.data();
-
-        const div = document.createElement("div");
-        div.className = "game-item";
-
-        div.innerHTML = `
-          <div>
-            <strong>${game.title}</strong><br>
-            <small>${game.link}</small>
-          </div>
-          <button class="danger">Verwijder</button>
-        `;
-
-        div.querySelector("button").onclick = () => {
-          if (confirm("Deze game echt weggooien?")) {
-            db.collection("games").doc(doc.id).delete()
-              .then(loadGames);
-          }
-        };
-
-        gameList.appendChild(div);
-      });
-    });
+function logout() {
+  auth.signOut().then(() => location.href = "index.html");
 }
+
+/* STATS */
+function loadStats() {
+  db.collection("games").get().then(snap => {
+    statGames.textContent = snap.size;
+  });
+
+  db.collection("categories").get().then(snap => {
+    statCategories.textContent = snap.size;
+  });
+}
+
+/* CATEGORIES */
+function addCategory() {
+  const id = catId.value.trim();
+  const name = catName.value.trim();
+  if (!id || !name) return alert("Vul alles in");
+
+  db.collection("categories").doc(id).set({ name }).then(() => {
+    catId.value = "";
+    catName.value = "";
+    loadCategories();
+    loadStats();
+  });
+}
+
+function loadCategories() {
+  const list = document.getElementById("categoriesList");
+  const select = document.getElementById("gameCategory");
+
+  list.innerHTML = "";
+  select.innerHTML = "";
+
+  db.collection("categories").get().then(snap => {
+    snap.forEach(doc => {
+      const data = doc.data();
+
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <span>${data.name} (${doc.id})</span>
+        <button class="btn red">Verwijderen</button>
+      `;
+
+      div.querySelector("button").onclick = () => {
+        if (!confirm("Categorie verwijderen?")) return;
+        db.collection("categories").doc(doc.id).delete().then(() => {
+          loadCategories();
+          loadStats();
+        });
+      };
+
+      list.appendChild(div);
+
+      const opt = document.createElement("option");
+      opt.value = doc.id;
+      opt.textContent = data.name;
+      select.appendChild(opt);
+    });
+  });
+}
+
+/* GAMES */
+function addGame() {
+  const id = gameId.value.trim();
+  if (!id) return alert("Game ID nodig");
+
+  const data = {
+    title: gameTitle.value.trim(),
+    image: gameImage.value.trim(),
+    link: gameLink.value.trim(),
+    category: gameCategory.value
+  };
+
+  db.collection("games").doc(id).set(data).then(() => {
+    gameId.value = "";
+    gameTitle.value = "";
+    gameImage.value = "";
+    gameLink.value = "";
+    loadGames();
+    loadStats();
+  });
+}
+
+function loadGames() {
+  const list = document.getElementById("gamesList");
+  list.innerHTML = "";
+
+  db.collection("games").get().then(snap => {
+    snap.forEach(doc => {
+      const g = doc.data();
+
+      const div = document.createElement("div");
+      div.className = "list-item";
+      div.innerHTML = `
+        <span>${g.title || "(geen titel)"} (${doc.id})</span>
+        <button class="btn red">Verwijderen</button>
+      `;
+
+      div.querySelector("button").onclick = () => {
+        if (!confirm("Game verwijderen?")) return;
+        db.collection("games").doc(doc.id).delete().then(() => {
+          loadGames();
+          loadStats();
+        });
+      };
+
+      list.appendChild(div);
+    });
+  });
+}
+
+showTab("dashboard");
 </script>
 
 </body>
