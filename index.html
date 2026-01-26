@@ -193,7 +193,17 @@ body {
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
   <div class="search-box">
-    <input id="searchInput" placeholder="Zoek games...">
+    <input 
+  id="searchInput"
+  type="search"
+  placeholder="Zoek games..."
+  autocomplete="off"
+  autocorrect="off"
+  autocapitalize="off"
+  spellcheck="false"
+  name="game-search"
+/>
+
   </div>
   <div class="category-btn active" data-cat="all">Alle games</div>
   <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
@@ -395,6 +405,11 @@ function loadCategories() {
 
 // SEARCH
 searchInput.oninput = () => renderGames();
+  window.addEventListener("load", () => {
+  searchInput.value = "";
+  renderGames();
+});
+
 </script>
 
 </body>
