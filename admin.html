@@ -230,10 +230,16 @@ function showTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
 }
 
-// --- DATA ---
+// Lijst met toegestane admins
+const adminEmails = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+
 auth.onAuthStateChanged(user => {
-  if (user && user.email === "someoeneheilig@gmail.com") init();
-  else location.href = "index.html";
+  // Check of er een user is EN of het emailadres in de lijst staat
+  if (user && adminEmails.includes(user.email)) {
+    init();
+  } else {
+    location.href = "index.html";
+  }
 });
 
 function init() {
