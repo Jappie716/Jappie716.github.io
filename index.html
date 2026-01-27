@@ -207,7 +207,7 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-ADMIN_EMAIL = "someoeneheilig@gmail.com", "melle1337k@gmail.com";
+const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 const authBtn = document.getElementById("authBtn");
 const adminBtn = document.getElementById("adminBtn");
 const modal = document.getElementById("loginModal");
@@ -258,13 +258,25 @@ authBtn.onclick = () => currentUser ? auth.signOut() : showLogin();
 document.getElementById("loginSubmit").onclick = () => {
     auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
         .then(() => notify("Succesvol ingelogd!"))
-        .catch(e => notify(e.message, 'danger'));
+        .catch(e => {
+            // Geen vage Engelse codes meer, maar gewoon dit:
+            notify("Wachtwoord of e-mail onjuist", 'danger');
+        });
 };
 
 document.getElementById("registerSubmit").onclick = () => {
     auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
         .then(() => notify("Account aangemaakt! Veel plezier."))
-        .catch(e => notify(e.message, 'danger'));
+        .catch(e => {
+            // We kijken hier wel even naar de foutcode voor een slimme tip
+            if (e.code === 'auth/email-already-in-use') {
+                notify("Dit e-mailadres is al in gebruik", 'danger');
+            } else if (e.code === 'auth/weak-password') {
+                notify("Wachtwoord moet minimaal 6 tekens zijn", 'danger');
+            } else {
+                notify("Vul alle velden correct in", 'danger');
+            }
+        });
 };
 
 auth.onAuthStateChanged(user => {
@@ -273,7 +285,7 @@ auth.onAuthStateChanged(user => {
   if (user) {
     authBtn.textContent = "Uitloggen";
     modal.style.display = "none";
-    adminBtn.style.display = user.email === ADMIN_EMAIL ? "inline-block" : "none";
+    adminBtn.style.display = (user && ADMIN_EMAILS.includes(user.email)) ? "inline-block" : "none";
     loadFavorites();
   } else {
     authBtn.textContent = "Inloggen";
@@ -322,7 +334,7 @@ function renderGames() {
       gameGrid.innerHTML = `
         <div class="empty-state">
             <h3>⭐ Favorieten</h3>
-            <p>Wil je je favoriete games bewaren en altijd snel terugvinden? Log dan in of maak een account aan om je persoonlijke lijst te beheren.</p>
+            <p>Wil je je favoriete games bewaren en altijd snel terugvinden? Log dan in of maak een account aan om je favorieten te beheren.</p>
             <div class="btn-row">
                 <button class="auth-btn" onclick="showLogin(true)">Nu Inloggen</button>
                 <button class="secondary-btn" onclick="resetToAllGames()">Terug naar alle games</button>
