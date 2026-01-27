@@ -52,48 +52,16 @@ body {
   margin-bottom: 25px;
 }
 
-/* DATABASE EMBED BIJSNIJDEN */
-.db-wrapper {
-  width: 100%;
-  height: 650px;
-  overflow: hidden; /* Dit zorgt voor het 'bijsnijden' */
-  position: relative;
-  background: #0f172a;
-  border-radius: 10px;
-  border: 1px solid #1e293b;
-}
-
-/* We verschuiven de iframe om de menu's van Google te verbergen */
-.db-iframe {
-  position: absolute;
-  top: -120px;  /* Verbergt de Google header */
-  left: -200px; /* Verbergt de Google sidebar */
-  width: calc(100% + 200px);
-  height: calc(100% + 120px);
-  border: none;
-}
-
 .stat-box { text-align: center; }
 .stat-val { font-size: 32px; font-weight: bold; color: var(--accent); display: block; }
 .stat-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
-/* TOAST MELDINGEN */
 #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
 .toast {
   background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px;
   margin-bottom: 10px; border-left: 5px solid var(--primary);
   box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-
-/* EDITOR PREVIEW */
-.editor-layout { display: grid; grid-template-columns: 1fr 320px; gap: 30px; }
-.preview-pane { display: flex; flex-direction: column; align-items: center; border-left: 1px solid #1e293b; padding-left: 30px; }
-.game-preview-card {
-  width: 200px; background: #020617; border-radius: 12px;
-  overflow: hidden; border: 1px solid #334155;
-}
-.game-preview-card img { width: 100%; height: 120px; object-fit: cover; background: #0f172a; }
-.game-preview-card h4 { margin: 0; padding: 12px; text-align: center; font-size: 14px; }
 
 input, select {
   width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px;
@@ -104,7 +72,7 @@ input, select {
 .danger { background: var(--danger); color: white; }
 .warning { background: var(--warning); color: white; }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
 td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
 .thumb { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
 </style>
@@ -139,57 +107,38 @@ td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
       </div>
     </div>
 
-    <div class="card" style="padding: 15px;">
+    <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-        <h3 style="margin:0">📂 Database Manager (Firestore)</h3>
-        <a href="https://console.firebase.google.com/u/0/project/gameparadise-80490/firestore/databases/-default-/data" target="_blank" class="btn" style="background:var(--primary); color:white; padding:5px 15px; font-size:12px">Open in nieuw tabblad</a>
+        <h3 style="margin:0">👥 Database Gebruikers</h3>
+        <button class="btn" onclick="loadDatabaseView()" style="background:var(--primary); color:white; padding: 8px 15px;">🔄 Verversen</button>
       </div>
       
-      <div class="card">
-  <div style="display:flex; justify-content:space-between; margin-bottom:15px">
-    <h3>👥 Database Overzicht</h3>
-    <button class="btn" onclick="loadDatabaseView()" style="background:var(--primary); color:white">🔄 Verversen</button>
-  </div>
-  
-  <div style="overflow-x:auto;">
-    <table style="width:100%; border-collapse: collapse;">
-      <thead>
-        <tr style="background: rgba(255,255,255,0.05);">
-          <th>ID / E-mail</th>
-          <th>Status</th>
-          <th>Acties</th>
-        </tr>
-      </thead>
-      <tbody id="dbViewTable">
-        </tbody>
-    </table>
-  </div>
-</div>
-      <p style="color:#64748b; font-size:12px; margin-top:10px;">Opmerking: Als de database hierboven niet laadt, blokkeert Google de weergave binnen andere websites. Gebruik dan de knop rechtsboven.</p>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID / Info</th>
+              <th>Status</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="dbViewTable">
+            <tr><td colspan="3">Laden...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <div id="editorSection" class="section">
     <div class="card">
-      <div class="editor-layout">
-        <div class="form-side">
-          <h3 id="editorTitle">Game Toevoegen</h3>
-          <input id="editId" placeholder="Game ID (bijv: super-cars)">
-          <input id="editTitle" placeholder="Naam van de game" oninput="updatePreview()">
-          <input id="editImg" placeholder="Afbeelding URL" oninput="updatePreview()">
-          <input id="editLink" value="games/" oninput="updatePreview()">
-          <select id="editCat"></select>
-          <button class="btn success" style="width:100%" onclick="saveGame()">💾 Game Opslaan</button>
-        </div>
-        <div class="preview-pane">
-          <p style="color:#64748b; font-size:11px; margin-bottom:10px">PREVIEW</p>
-          <div class="game-preview-card">
-            <img id="preImg" src="https://via.placeholder.com/200x120?text=Geen+Foto">
-            <h4 id="preTitle">Titel</h4>
-          </div>
-          <button class="btn" style="margin-top:20px; background:#1e293b; color:white" onclick="resetEditor()">🧹 Reset</button>
-        </div>
-      </div>
+        <h3>Game Toevoegen / Bewerken</h3>
+        <input id="editId" placeholder="Game ID (bijv: super-cars)">
+        <input id="editTitle" placeholder="Naam van de game">
+        <input id="editImg" placeholder="Afbeelding URL">
+        <input id="editLink" value="games/">
+        <select id="editCat"></select>
+        <button class="btn success" style="width:100%" onclick="saveGame()">💾 Game Opslaan</button>
     </div>
   </div>
 
@@ -205,17 +154,16 @@ td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
 
   <div id="categoriesSection" class="section">
     <div class="card">
-      <h3>Nieuwe Categorie</h3>
+      <h3>Categorie Beheer</h3>
       <input id="catId" placeholder="ID (bijv: actie)">
       <input id="catName" placeholder="Naam (bijv: Actie Spellen)">
       <button class="btn success" onclick="addCategory()">Toevoegen</button>
+      <div id="categoriesList" style="margin-top:20px"></div>
     </div>
-    <div class="card" id="categoriesList"></div>
   </div>
 </div>
 
 <script>
-// --- CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
   authDomain: "gameparadise-80490.firebaseapp.com",
@@ -256,6 +204,8 @@ auth.onAuthStateChanged(user => {
 });
 
 function init() {
+  loadDatabaseView();
+  
   db.collection("games").get().then(s => {
     document.getElementById('statGames').textContent = s.size;
     const list = document.getElementById('gamesList');
@@ -289,9 +239,28 @@ function init() {
   });
 }
 
-function updatePreview() {
-  document.getElementById('preImg').src = document.getElementById('editImg').value || 'https://via.placeholder.com/200x120?text=Geen+Foto';
-  document.getElementById('preTitle').textContent = document.getElementById('editTitle').value || "Titel";
+function loadDatabaseView() {
+  const tableBody = document.getElementById('dbViewTable');
+  tableBody.innerHTML = "<tr><td colspan='3'>Laden...</td></tr>";
+
+  db.collection("users").limit(50).get().then((querySnapshot) => {
+      tableBody.innerHTML = "";
+      querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          tableBody.innerHTML += `
+              <tr>
+                  <td>
+                      <div style="font-weight:bold">${data.email || 'Anonieme Gebruiker'}</div>
+                      <small style="color:#64748b">UID: ${doc.id}</small>
+                  </td>
+                  <td><span style="color:var(--success)">●</span> Online</td>
+                  <td>
+                      <button class="btn danger" style="padding:4px 8px; font-size:11px" onclick="deleteItem('users', '${doc.id}')">Verwijderen</button>
+                  </td>
+              </tr>`;
+      });
+      if(querySnapshot.empty) tableBody.innerHTML = "<tr><td colspan='3'>Geen gebruikers gevonden.</td></tr>";
+  }).catch(err => notify("Fout: " + err.message, "danger"));
 }
 
 function saveGame() {
@@ -304,91 +273,21 @@ function saveGame() {
   };
   if(!id) return notify("ID verplicht!", "danger");
   db.collection("games").doc(id).set(data).then(() => {
-    notify(`Game '${data.title}' succesvol opgeslagen!`);
-    resetEditor();
-    init();
-  });
-}
-
-function editGame(id) {
-  db.collection("games").doc(id).get().then(doc => {
-    const g = doc.data();
-    document.getElementById('editId').value = id;
-    document.getElementById('editId').disabled = true;
-    document.getElementById('editTitle').value = g.title;
-    document.getElementById('editImg').value = g.image;
-    document.getElementById('editLink').value = g.link;
-    document.getElementById('editCat').value = g.category;
-    document.getElementById('editorTitle').textContent = "Bewerken: " + g.title;
-    updatePreview();
-    showTab('editor');
-  });
-}
-
-function resetEditor() {
-  document.getElementById('editId').value = "";
-  document.getElementById('editId').disabled = false;
-  document.getElementById('editTitle').value = "";
-  document.getElementById('editImg').value = "";
-  document.getElementById('editLink').value = "games/";
-  updatePreview();
-}
-
-function addCategory() {
-  const id = document.getElementById('catId').value;
-  const name = document.getElementById('catName').value;
-  db.collection("categories").doc(id).set({name}).then(() => {
-    notify(`Categorie '${name}' toegevoegd!`);
+    notify(`Game '${data.title}' opgeslagen!`);
     init();
   });
 }
 
 function deleteItem(col, id) {
-  if(confirm("Zeker weten?")) {
+  if(confirm(`Weet je zeker dat je ${id} wilt verwijderen uit ${col}?`)) {
     db.collection(col).doc(id).delete().then(() => {
-      notify(`${id} verwijderd uit ${col}`, 'danger');
+      notify("Item verwijderd", "danger");
       init();
     });
   }
 }
 
 function logout() { auth.signOut().then(() => location.href="index.html"); }
-  function loadDatabaseView() {
-    const tableBody = document.getElementById('dbViewTable');
-    tableBody.innerHTML = "<tr><td colspan='3'>Laden...</td></tr>";
-
-    // Verander "users" naar de naam van de collectie die je wilt zien (bijv. "aanvragen")
-    db.collection("users").limit(20).get().then((querySnapshot) => {
-        tableBody.innerHTML = "";
-        
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const row = `
-                <tr>
-                    <td>
-                        <div style="font-weight:bold">${data.email || 'Geen email'}</div>
-                        <small style="color:#64748b">${doc.id}</small>
-                    </td>
-                    <td><span class="status-dot online"></span> Actief</td>
-                    <td>
-                        <button class="btn danger" style="padding:4px 8px; font-size:11px" onclick="deleteItem('users', '${doc.id}')">Verwijderen</button>
-                    </td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
-        });
-        
-        if(querySnapshot.empty) {
-            tableBody.innerHTML = "<tr><td colspan='3'>Geen gegevens gevonden in deze collectie.</td></tr>";
-        }
-    }).catch(err => {
-        notify("Fout bij laden database: " + err.message, "danger");
-    });
-}
-
-// Zorg dat de data geladen wordt als de pagina start
-// Voeg dit toe in je init() functie:
-// loadDatabaseView();
 </script>
 </body>
 </html>
