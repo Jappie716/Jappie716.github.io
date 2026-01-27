@@ -145,9 +145,26 @@ td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
         <a href="https://console.firebase.google.com/u/0/project/gameparadise-80490/firestore/databases/-default-/data" target="_blank" class="btn" style="background:var(--primary); color:white; padding:5px 15px; font-size:12px">Open in nieuw tabblad</a>
       </div>
       
-      <div class="db-wrapper">
-        <iframe class="db-iframe" src="https://console.firebase.google.com/u/0/project/gameparadise-80490/firestore/databases/-default-/data"></iframe>
-      </div>
+      <div class="card">
+  <div style="display:flex; justify-content:space-between; margin-bottom:15px">
+    <h3>👥 Database Overzicht</h3>
+    <button class="btn" onclick="loadDatabaseView()" style="background:var(--primary); color:white">🔄 Verversen</button>
+  </div>
+  
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: rgba(255,255,255,0.05);">
+          <th>ID / E-mail</th>
+          <th>Status</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+      <tbody id="dbViewTable">
+        </tbody>
+    </table>
+  </div>
+</div>
       <p style="color:#64748b; font-size:12px; margin-top:10px;">Opmerking: Als de database hierboven niet laadt, blokkeert Google de weergave binnen andere websites. Gebruik dan de knop rechtsboven.</p>
     </div>
   </div>
@@ -336,6 +353,42 @@ function deleteItem(col, id) {
 }
 
 function logout() { auth.signOut().then(() => location.href="index.html"); }
+  function loadDatabaseView() {
+    const tableBody = document.getElementById('dbViewTable');
+    tableBody.innerHTML = "<tr><td colspan='3'>Laden...</td></tr>";
+
+    // Verander "users" naar de naam van de collectie die je wilt zien (bijv. "aanvragen")
+    db.collection("users").limit(20).get().then((querySnapshot) => {
+        tableBody.innerHTML = "";
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = `
+                <tr>
+                    <td>
+                        <div style="font-weight:bold">${data.email || 'Geen email'}</div>
+                        <small style="color:#64748b">${doc.id}</small>
+                    </td>
+                    <td><span class="status-dot online"></span> Actief</td>
+                    <td>
+                        <button class="btn danger" style="padding:4px 8px; font-size:11px" onclick="deleteItem('users', '${doc.id}')">Verwijderen</button>
+                    </td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        });
+        
+        if(querySnapshot.empty) {
+            tableBody.innerHTML = "<tr><td colspan='3'>Geen gegevens gevonden in deze collectie.</td></tr>";
+        }
+    }).catch(err => {
+        notify("Fout bij laden database: " + err.message, "danger");
+    });
+}
+
+// Zorg dat de data geladen wordt als de pagina start
+// Voeg dit toe in je init() functie:
+// loadDatabaseView();
 </script>
 </body>
 </html>
