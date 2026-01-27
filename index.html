@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Game Paradise - home</title>
+  <script src="https://elfsightcdn.com/platform.js" async></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -192,7 +193,16 @@ body {
     <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: #64748b; font-size: 12px;">Annuleren</button>
   </div>
 </div>
+<div id="registerModal" class="modal">
+  <div class="modal-box" style="width: 500px; max-width: 95%;">
+    <h2 style="color: #60a5fa; margin-bottom: 5px;">Account Aanvragen</h2>
+    <p style="font-size: 14px; color: #94a3b8; margin-bottom: 20px;">Niet iedereen kan zomaar een account maken. Vul dit formulier in om toegang te krijgen.</p>
+    
+    <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
 
+    <button onclick="document.getElementById('registerModal').style.display='none'" style="background:transparent; color: #64748b; font-size: 12px; margin-top: 20px;">Terug naar home</button>
+  </div>
+</div>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
@@ -265,18 +275,10 @@ document.getElementById("loginSubmit").onclick = () => {
 };
 
 document.getElementById("registerSubmit").onclick = () => {
-    auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
-        .then(() => notify("Account aangemaakt! Veel plezier."))
-        .catch(e => {
-            // We kijken hier wel even naar de foutcode voor een slimme tip
-            if (e.code === 'auth/email-already-in-use') {
-                notify("Dit e-mailadres is al in gebruik", 'danger');
-            } else if (e.code === 'auth/weak-password') {
-                notify("Wachtwoord moet minimaal 6 tekens zijn", 'danger');
-            } else {
-                notify("Vul alle velden correct in", 'danger');
-            }
-        });
+    // Sluit het inlogvenster
+    document.getElementById('loginModal').style.display = 'none';
+    // Open het aanvraagformulier
+    document.getElementById('registerModal').style.display = 'flex';
 };
 
 auth.onAuthStateChanged(user => {
