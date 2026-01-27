@@ -1,87 +1,4 @@
-/**
- * GREEDY SNAKE - FULL FIREBASE EDITION (REPAIRED & SILENT SAVE)
- */
-
-// --- 1. FIREBASE SETUP (Laden op de achtergrond) ---
-const scriptApp = document.createElement('script');
-scriptApp.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js";
-const scriptAuth = document.createElement('script');
-scriptAuth.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js";
-const scriptDb = document.createElement('script');
-scriptDb.src = "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js";
-
-document.head.appendChild(scriptApp);
-document.head.appendChild(scriptAuth);
-document.head.appendChild(scriptDb);
-
-let db, auth, currentUser = null;
-
-// Wacht tot scripts geladen zijn
-scriptDb.onload = () => {
-    const firebaseConfig = {
-        apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-        authDomain: "gameparadise-80490.firebaseapp.com",
-        projectId: "gameparadise-80490",
-        storageBucket: "gameparadise-80490.firebasestorage.app",
-        messagingSenderId: "335620903527",
-        appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-    };
-    
-    // Check dubbele init voorkomen
-    if (typeof firebase !== 'undefined' && !firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
-
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                loadFirebaseData();
-            } else {
-                auth.signInAnonymously().catch(e => console.warn("Auth failed:", e));
-            }
-        });
-    }
-};
-
-function loadFirebaseData() {
-    if (!db || !currentUser) return;
-    db.collection("users").doc(currentUser.uid).collection("saveData").doc("greedySnake").get().then(doc => {
-        if (doc.exists) {
-            const data = doc.data();
-            if (data.yellowMoney !== undefined) {
-                gameState.yellowMoney = data.yellowMoney;
-                gameState.ownedSkins = data.ownedSkins || ["ball-green"];
-                gameState.selectedSkin = data.selectedSkin || "ball-green";
-                updateYellowMoneyDisplay();
-                updateSkinsDisplay();
-            }
-        }
-    }).catch(e => console.log("Offline mode or load error"));
-}
-
-function saveToFirebase(score) {
-    if (!db || !currentUser) return;
-    
-    // Save Yellow Money & Skins
-    db.collection("users").doc(currentUser.uid).collection("saveData").doc("greedySnake").set({
-        yellowMoney: gameState.yellowMoney,
-        ownedSkins: gameState.ownedSkins,
-        selectedSkin: gameState.selectedSkin,
-        lastScore: score,
-        lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    // Save Highscore apart (voor eventuele leaderboards)
-    db.collection("scores").add({
-        playerName: gameState.playerName,
-        score: score,
-        uid: currentUser.uid,
-        date: firebase.firestore.FieldValue.serverTimestamp()
-    });
-}
-
-// --- 2. GAME STATE & SECURITY ---
+// Game State
 let gameState = {
     playerName: '',
     selectedMap: 'stars',
@@ -93,6 +10,7 @@ let gameState = {
     selectedSkin: localStorage.getItem('selectedSkin') || 'ball-green'
 };
 
+// Checksum functions to prevent console hacking
 function getYellowMoneyChecksum(amount) {
     return (amount * 17 + 42) % 1000000;
 }
@@ -100,38 +18,67 @@ function getYellowMoneyChecksum(amount) {
 function getValidatedYellowMoney() {
     const amount = parseInt(localStorage.getItem('yellowMoney') || '0');
     const storedChecksum = parseInt(localStorage.getItem('yellowMoneyChecksum') || '0');
-    if (storedChecksum !== getYellowMoneyChecksum(amount)) return 0;
+    const expectedChecksum = getYellowMoneyChecksum(amount);
+    
+    // If checksum doesn't match, reset to 0
+    if (storedChecksum !== expectedChecksum) {
+        localStorage.setItem('yellowMoney', '0');
+        localStorage.setItem('yellowMoneyChecksum', getYellowMoneyChecksum(0).toString());
+        return 0;
+    }
     return amount;
 }
 
 function saveYellowMoney(amount) {
+    // Clamp to reasonable values to prevent overflow hacks
     const validAmount = Math.max(0, Math.min(amount, 999999999));
     gameState.yellowMoney = validAmount;
     localStorage.setItem('yellowMoney', validAmount.toString());
     localStorage.setItem('yellowMoneyChecksum', getYellowMoneyChecksum(validAmount).toString());
-    
-    // Direct sync voor aankopen
-    if (currentUser && db) {
-        db.collection("users").doc(currentUser.uid).collection("saveData").doc("greedySnake").set({
-            yellowMoney: gameState.yellowMoney,
-            ownedSkins: gameState.ownedSkins,
-            selectedSkin: gameState.selectedSkin
-        }, { merge: true });
-    }
 }
 
-// --- 3. CANVAS & GAME CONSTANTS ---
+// Canvas setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// Screen elements
 const startScreen = document.getElementById('startScreen');
 const loadingScreen = document.getElementById('loadingScreen');
 const gameScreen = document.getElementById('gameScreen');
 
-let snakes = [], playerSnake = null, money = [], gameLoop = null, lastTime = 0;
-let camera = { x: 0, y: 0, zoom: 2.0 };
-let worldWidth = 3000, worldHeight = 2000;
-let starPositions = [];
+// Game variables
+let snakes = [];
+let playerSnake = null;
+let money = [];
+let gameLoop = null;
+let lastTime = 0;
+let mouseX = 0;
+let mouseY = 0;
 
+// Track pressed keys to fix movement glitch
+let keysPressed = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    arrowup: false,
+    arrowdown: false,
+    arrowleft: false,
+    arrowright: false
+};
+
+// Camera system
+let camera = {
+    x: 0,
+    y: 0,
+    zoom: 2.0 // Zoom level (2x = more zoomed in)
+};
+
+// World dimensions (larger than canvas for scrolling)
+let worldWidth = 0;
+let worldHeight = 0;
+
+// Map sizes (bigger maps with more bots)
 const mapSizes = {
     small: { width: 2000, height: 1500, maxBots: 8, moneyAmount: 400 },
     normal: { width: 3000, height: 2000, maxBots: 15, moneyAmount: 600 },
@@ -140,8 +87,110 @@ const mapSizes = {
     gigantic: { width: 8000, height: 6000, maxBots: 60, moneyAmount: 1500 }
 };
 
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    setupStartScreen();
+    setupSkinsPage();
+    setupModPanel();
+    updateYellowMoneyDisplay();
+    
+    // Edge detection for skins page
+    document.addEventListener('mousemove', (e) => {
+        if (e.clientX < 10 && !gameState.gameRunning && document.getElementById('startScreen').classList.contains('active')) {
+            openSkinsPage();
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (gameState.gameRunning && playerSnake) {
+            resizeCanvas();
+            // Update camera to maintain player position
+            camera.x = playerSnake.x - (canvas.width / camera.zoom / 2);
+            camera.y = playerSnake.y - (canvas.height / camera.zoom / 2);
+            // Clamp camera to world bounds
+            camera.x = Math.max(0, Math.min(camera.x, worldWidth - (canvas.width / camera.zoom)));
+            camera.y = Math.max(0, Math.min(camera.y, worldHeight - (canvas.height / camera.zoom)));
+        }
+    });
+});
+
+function openSkinsPage() {
+    document.getElementById('startScreen').classList.remove('active');
+    document.getElementById('skinsScreen').classList.add('active');
+    document.getElementById('githubLink').style.display = 'none';
+}
+
+function closeSkinsPage() {
+    document.getElementById('skinsScreen').classList.remove('active');
+    document.getElementById('startScreen').classList.add('active');
+    document.getElementById('githubLink').style.display = 'flex';
+}
+
+// Mods system
+let mods = []; // Array to store available mods
+
+function setupModPanel() {
+    const modButton = document.getElementById('modButton');
+    const modPanel = document.getElementById('modPanel');
+    const closeModBtn = document.getElementById('closeModPanel');
+    const modSearchBar = document.getElementById('modSearchBar');
+    const filterMadeByDev = document.getElementById('filterMadeByDev');
+    const githubLink = document.getElementById('githubLink');
+    
+    // Open/close mod panel
+    modButton.addEventListener('click', () => {
+        modPanel.classList.toggle('open');
+        githubLink.classList.toggle('hidden');
+    });
+    
+    closeModBtn.addEventListener('click', () => {
+        modPanel.classList.remove('open');
+        githubLink.classList.remove('hidden');
+    });
+    
+    // Close panel when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!modPanel.contains(e.target) && e.target !== modButton && !modButton.contains(e.target)) {
+            modPanel.classList.remove('open');
+            githubLink.classList.remove('hidden');
+        }
+    });
+    
+    // Search and filter functionality
+    modSearchBar.addEventListener('input', updateModsList);
+    filterMadeByDev.addEventListener('change', updateModsList);
+}
+
+function updateModsList() {
+    const modList = document.getElementById('modList');
+    const searchTerm = document.getElementById('modSearchBar').value.toLowerCase();
+    const filterMadeByDev = document.getElementById('filterMadeByDev').checked;
+    
+    // Filter mods based on search and filters
+    let filteredMods = mods.filter(mod => {
+        const matchesSearch = mod.name.toLowerCase().includes(searchTerm) || 
+                             mod.description.toLowerCase().includes(searchTerm);
+        const matchesFilter = !filterMadeByDev || mod.author === 'dev';
+        return matchesSearch && matchesFilter;
+    });
+    
+    // Display filtered mods or no mods message
+    if (filteredMods.length === 0) {
+        modList.innerHTML = '<p class="no-mods-message">No mods available</p>';
+    } else {
+        modList.innerHTML = filteredMods.map(mod => `
+            <div class="mod-item">
+                <h4>${mod.name}</h4>
+                <p>${mod.description}</p>
+                <span class="mod-author">By: ${mod.author}</span>
+            </div>
+        `).join('');
+    }
+}
+
 const skins = [
-    { id: 'ball-green', name: 'Green Ball', cost: 0, type: 'ball', color: '#44FF44', preview: 'ball-skin-green' },
+    { id: 'ball-green', name: 'Green Ball', cost: 0, type: 'ball', color: '#44FF44', preview: 'ball-skin-green', automatic: true },
     { id: 'ball-red', name: 'Red Ball', cost: 5, type: 'ball', color: '#FF4444', preview: 'ball-skin-red' },
     { id: 'ball-blue', name: 'Blue Ball', cost: 5, type: 'ball', color: '#4444FF', preview: 'ball-skin-blue' },
     { id: 'ball-purple', name: 'Purple Ball', cost: 5, type: 'ball', color: '#DD44DD', preview: 'ball-skin-purple' },
@@ -152,85 +201,84 @@ const skins = [
 
 let currentSkinIndex = 0;
 
-// --- 4. UI & MENU LOGICA ---
-document.addEventListener('DOMContentLoaded', () => {
-    setupStartScreen();
-    setupSkinsPage();
-    setupUpgrades();
-    updateYellowMoneyDisplay();
-    
-    document.addEventListener('mousemove', (e) => {
-        if (e.clientX < 10 && !gameState.gameRunning && startScreen.classList.contains('active')) {
-            openSkinsPage();
-        }
-    });
-
-    window.addEventListener('resize', resizeCanvas);
-});
-
-function openSkinsPage() {
-    startScreen.classList.remove('active');
-    document.getElementById('skinsScreen').classList.add('active');
-    updateSkinsDisplay();
-}
-
-function closeSkinsPage() {
-    document.getElementById('skinsScreen').classList.remove('active');
-    startScreen.classList.add('active');
-}
-
 function setupSkinsPage() {
-    document.getElementById('prevSkinBtn').onclick = () => {
-        currentSkinIndex = (currentSkinIndex - 1 + skins.length) % skins.length;
-        updateSkinsDisplay();
-    };
-    document.getElementById('nextSkinBtn').onclick = () => {
-        currentSkinIndex = (currentSkinIndex + 1) % skins.length;
-        updateSkinsDisplay();
-    };
-    document.getElementById('backButton').onclick = closeSkinsPage;
-
-    document.getElementById('selectSkinBtn').onclick = () => {
+    const prevBtn = document.getElementById('prevSkinBtn');
+    const nextBtn = document.getElementById('nextSkinBtn');
+    const selectBtn = document.getElementById('selectSkinBtn');
+    const backBtn = document.getElementById('backButton');
+    
+    // Always start at green ball (index 0)
+    currentSkinIndex = 0;
+    
+    prevBtn.addEventListener('click', () => {
+        showSkinItem((currentSkinIndex - 1 + skins.length) % skins.length);
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        showSkinItem((currentSkinIndex + 1) % skins.length);
+    });
+    
+    selectBtn.addEventListener('click', () => {
         const skin = skins[currentSkinIndex];
         if (gameState.ownedSkins.includes(skin.id)) {
             gameState.selectedSkin = skin.id;
             localStorage.setItem('selectedSkin', skin.id);
-            saveYellowMoney(gameState.yellowMoney); // Trigger save
             closeSkinsPage();
-        } else if (gameState.yellowMoney >= skin.cost) {
-            saveYellowMoney(gameState.yellowMoney - skin.cost);
-            gameState.ownedSkins.push(skin.id);
-            localStorage.setItem('ownedSkins', JSON.stringify(gameState.ownedSkins));
-            gameState.selectedSkin = skin.id;
-            localStorage.setItem('selectedSkin', skin.id);
-            updateSkinsDisplay();
-            updateYellowMoneyDisplay();
+        } else {
+            if (gameState.yellowMoney >= skin.cost) {
+                saveYellowMoney(gameState.yellowMoney - skin.cost);
+                gameState.ownedSkins.push(skin.id);
+                localStorage.setItem('ownedSkins', JSON.stringify(gameState.ownedSkins));
+                gameState.selectedSkin = skin.id;
+                localStorage.setItem('selectedSkin', skin.id);
+                updateSkinsDisplay();
+                updateYellowMoneyDisplay();
+            }
         }
-    };
+    });
+    
+    backBtn.addEventListener('click', () => {
+        closeSkinsPage();
+    });
+    
+    updateSkinsDisplay();
+}
+
+function showSkinItem(index) {
+    currentSkinIndex = index;
+    updateSkinsDisplay();
 }
 
 function updateSkinsDisplay() {
+    document.querySelectorAll('.skin-item').forEach((item, index) => {
+        item.classList.remove('active');
+    });
+    document.getElementById('skinItem' + currentSkinIndex).classList.add('active');
+    
+    // Update all skin names and statuses
     skins.forEach((skin, index) => {
-        const item = document.getElementById('skinItem' + index);
-        if (item) {
-            item.classList.toggle('active', index === currentSkinIndex);
-            const statusEl = document.getElementById('skinStatus' + index);
-            if (statusEl) {
-                if (gameState.ownedSkins.includes(skin.id)) {
-                    statusEl.textContent = (gameState.selectedSkin === skin.id) ? 'Selected' : 'Owned';
-                    statusEl.className = 'skin-status owned';
-                } else {
-                    statusEl.innerHTML = `${skin.cost} 💰`;
-                    statusEl.className = 'skin-status locked';
-                }
+        const nameEl = document.getElementById('skinName' + index);
+        const statusEl = document.getElementById('skinStatus' + index);
+        if (nameEl) nameEl.textContent = skin.name;
+        
+        const isOwned = gameState.ownedSkins.includes(skin.id);
+        if (statusEl) {
+            if (isOwned || skin.automatic) {
+                statusEl.textContent = 'Owned';
+                statusEl.className = 'skin-status owned';
+            } else {
+                statusEl.innerHTML = `${skin.cost} <span class="money-icon">💰</span>`;
+                statusEl.className = 'skin-status locked';
             }
         }
     });
     
     const skin = skins[currentSkinIndex];
+    const isOwned = gameState.ownedSkins.includes(skin.id);
     const selectBtn = document.getElementById('selectSkinBtn');
-    if (gameState.ownedSkins.includes(skin.id)) {
-        selectBtn.textContent = (gameState.selectedSkin === skin.id) ? 'Selected' : 'Select Skin';
+    
+    if (isOwned) {
+        selectBtn.textContent = 'Select Skin';
         selectBtn.disabled = false;
     } else {
         selectBtn.textContent = `Buy for ${skin.cost} 💰`;
@@ -238,257 +286,612 @@ function updateSkinsDisplay() {
     }
 }
 
-function updateYellowMoneyDisplay() {
-    ['yellowMoneyCount', 'yellowMoneySkins', 'yellowMoneyCountGame'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = gameState.yellowMoney;
+function setupStartScreen() {
+    // Setup modal popups for Map Theme
+    const mapDisplayBtn = document.getElementById('mapDisplayBtn');
+    const mapModal = document.getElementById('mapModal');
+    const mapValue = document.getElementById('mapValue');
+
+    mapDisplayBtn.addEventListener('click', () => {
+        // Toggle modal visibility
+        mapModal.classList.toggle('active');
+        // Close other modals
+        document.getElementById('sizeModal').classList.remove('active');
+        document.getElementById('difficultyModal').classList.remove('active');
+    });
+
+    document.querySelectorAll('#mapModal .modal-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('disabled')) return;
+            document.querySelectorAll('#mapModal .modal-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.selectedMap = btn.dataset.map;
+            mapValue.textContent = btn.textContent.trim();
+            mapModal.classList.remove('active');
+        });
+    });
+
+    // Setup modal popups for Map Size
+    const sizeDisplayBtn = document.getElementById('sizeDisplayBtn');
+    const sizeModal = document.getElementById('sizeModal');
+    const sizeValue = document.getElementById('sizeValue');
+
+    sizeDisplayBtn.addEventListener('click', () => {
+        // Toggle modal visibility
+        sizeModal.classList.toggle('active');
+        // Close other modals
+        document.getElementById('mapModal').classList.remove('active');
+        document.getElementById('difficultyModal').classList.remove('active');
+    });
+
+    document.querySelectorAll('#sizeModal .modal-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('disabled')) return;
+            document.querySelectorAll('#sizeModal .modal-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.mapSize = btn.dataset.size;
+            sizeValue.textContent = btn.textContent.trim();
+            sizeModal.classList.remove('active');
+        });
+    });
+
+    // Setup modal popups for Difficulty
+    const difficultyDisplayBtn = document.getElementById('difficultyDisplayBtn');
+    const difficultyModal = document.getElementById('difficultyModal');
+    const difficultyValue = document.getElementById('difficultyValue');
+
+    difficultyDisplayBtn.addEventListener('click', () => {
+        // Toggle modal visibility
+        difficultyModal.classList.toggle('active');
+        // Close other modals
+        document.getElementById('mapModal').classList.remove('active');
+        document.getElementById('sizeModal').classList.remove('active');
+    });
+
+    document.querySelectorAll('#difficultyModal .modal-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.classList.contains('disabled')) return;
+            document.querySelectorAll('#difficultyModal .modal-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.botDifficulty = btn.dataset.difficulty;
+            difficultyValue.textContent = btn.textContent.trim();
+            difficultyModal.classList.remove('active');
+        });
+    });
+
+    // Close modals when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.option-selector') && !e.target.closest('.option-display-btn')) {
+            document.getElementById('mapModal').classList.remove('active');
+            document.getElementById('sizeModal').classList.remove('active');
+            document.getElementById('difficultyModal').classList.remove('active');
+        }
+    });
+
+    // Start button
+    document.getElementById('startButton').addEventListener('click', () => {
+        gameState.playerName = document.getElementById('playerName').value || 'Player';
+        startGame();
     });
 }
 
-function setupStartScreen() {
-    document.getElementById('startButton').onclick = () => {
-        gameState.playerName = document.getElementById('playerName').value || 'Player';
-        startGame();
-    };
-
-    // Modals
-    const setupModal = (type) => {
-        document.querySelectorAll(`#${type}Modal .modal-option`).forEach(opt => {
-            opt.onclick = function() {
-                if(this.classList.contains('disabled')) return;
-                
-                if (type === 'map') gameState.selectedMap = this.dataset.map;
-                if (type === 'size') gameState.mapSize = this.dataset.size;
-                if (type === 'difficulty') gameState.botDifficulty = this.dataset.difficulty;
-                
-                document.getElementById(`${type}Value`).textContent = this.textContent;
-                this.parentElement.querySelectorAll('.modal-option').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(`${type}Modal`).classList.remove('active');
-            };
-        });
-        
-        document.getElementById(`${type}DisplayBtn`).onclick = (e) => {
-            e.stopPropagation();
-            document.querySelectorAll('.option-modal').forEach(m => m.classList.remove('active'));
-            document.getElementById(`${type}Modal`).classList.add('active');
-        };
-    };
-
-    setupModal('map');
-    setupModal('size');
-    setupModal('difficulty');
-
-    window.onclick = () => document.querySelectorAll('.option-modal').forEach(m => m.classList.remove('active'));
+function updateYellowMoneyDisplay() {
+    document.getElementById('yellowMoneyCount').textContent = gameState.yellowMoney;
+    if (document.getElementById('yellowMoneyCountGame')) {
+        document.getElementById('yellowMoneyCountGame').textContent = gameState.yellowMoney;
+    }
+    if (document.getElementById('yellowMoneySkins')) {
+        document.getElementById('yellowMoneySkins').textContent = gameState.yellowMoney;
+    }
 }
 
-function setupUpgrades() {
-    // Koppel upgrade knoppen
-    const bindUpgrade = (id, type) => {
-        const btn = document.getElementById(id);
-        if(btn) {
-            btn.onclick = () => {
-                if(playerSnake && playerSnake.alive) playerSnake.buyUpgrade(type);
-            };
-        }
-    };
-    bindUpgrade('upgradeSize', 'size');
-    bindUpgrade('upgradeSpeed', 'speed');
-    bindUpgrade('upgradeMultiplier', 'multiplier');
-}
-
-// --- 5. GAME ENGINE ---
 function startGame() {
     startScreen.classList.remove('active');
     loadingScreen.classList.add('active');
     
-    // Configureren wereld
-    const size = mapSizes[gameState.mapSize];
-    worldWidth = size.width;
-    worldHeight = size.height;
+    // Longer loading time for gigantic map
+    const loadTime = gameState.mapSize === 'gigantic' ? 3500 : 2000;
     
-    // Stars genereren
-    starPositions = [];
-    for(let i=0; i<100; i++) {
-        starPositions.push({
-            x: Math.random() * worldWidth,
-            y: Math.random() * worldHeight,
-            size: Math.random() * 2 + 0.5
-        });
-    }
-
+    // Simulate loading
     setTimeout(() => {
         loadingScreen.classList.remove('active');
         gameScreen.classList.add('active');
         initGame();
-    }, 1500);
+    }, loadTime);
 }
 
 function resizeCanvas() {
+    // Make canvas fullscreen
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
 
 function initGame() {
-    resizeCanvas();
+    try {
+        const size = mapSizes[gameState.mapSize];
+        if (!size) {
+            console.error('Invalid map size:', gameState.mapSize);
+            return;
+        }
+        
+        // Canvas size is fullscreen
+        resizeCanvas();
+        
+        // World size is larger
+        worldWidth = size.width;
+        worldHeight = size.height;
+    
+    // Reset game state
     snakes = [];
     money = [];
-
-    const playerSkin = skins.find(s => s.id === gameState.selectedSkin);
-    playerSnake = new Snake(worldWidth / 2, worldHeight / 2, playerSkin.color, true, gameState.playerName, playerSkin);
+    playerSnake = null;
+    starPositions = []; // Reset stars for new map
+    
+    // Create player snake in world coordinates
+    const playerStartX = worldWidth / 2;
+    const playerStartY = worldHeight / 2;
+    
+    // Get selected skin
+    const selectedSkinId = gameState.selectedSkin || 'ball-green';
+    const selectedSkinObj = skins.find(s => s.id === selectedSkinId);
+    
+    playerSnake = new Snake(
+        playerStartX,
+        playerStartY,
+        '#00ff00',
+        true,
+        gameState.playerName,
+        selectedSkinObj
+    );
     snakes.push(playerSnake);
-
-    const sizeCfg = mapSizes[gameState.mapSize];
-    for (let i = 0; i < sizeCfg.maxBots; i++) {
-        spawnBot();
+    
+    // Initialize camera to center on player (after canvas is resized)
+    camera.zoom = 2.0;
+    camera.x = playerStartX - (canvas.width / camera.zoom / 2);
+    camera.y = playerStartY - (canvas.height / camera.zoom / 2);
+    
+    // Create bots
+    const botCount = size.maxBots;
+    for (let i = 0; i < botCount; i++) {
+        let x, y;
+        let attempts = 0;
+        // Find a position that's not too close to existing snakes
+        do {
+            x = Math.random() * worldWidth;
+            y = Math.random() * worldHeight;
+            attempts++;
+        } while (isPositionTooCloseToSnakes(x, y, 200) && attempts < 50);
+        
+        const bot = new Snake(x, y, getRandomColor(), false, getRandomBotName());
+        bot.isBot = true;
+        bot.difficulty = gameState.botDifficulty;
+        snakes.push(bot);
     }
-
-    for (let i = 0; i < sizeCfg.moneyAmount; i++) spawnMoney();
-
-    setupInput();
+    
+    // Spawn initial money based on map size
+    const moneyAmount = size.moneyAmount;
+    spawnMoney(moneyAmount);
+    
+    // Setup upgrades
+    setupUpgrades();
+    
+    // Start game loop
     gameState.gameRunning = true;
     lastTime = performance.now();
     gameLoop = requestAnimationFrame(update);
-}
-
-function spawnBot() {
-    const colors = ['#ff0000', '#00ffff', '#ffff00', '#ff8800', '#ff00ff'];
-    let x, y;
-    // Niet te dicht bij speler spawnen
-    do {
-        x = Math.random() * worldWidth;
-        y = Math.random() * worldHeight;
-    } while (playerSnake && Math.hypot(x - playerSnake.x, y - playerSnake.y) < 300);
-
-    const bot = new Snake(x, y, colors[Math.floor(Math.random()*colors.length)], false, 'Bot ' + Math.floor(Math.random()*1000));
-    bot.isBot = true;
-    bot.difficulty = gameState.botDifficulty;
-    snakes.push(bot);
-}
-
-function spawnMoney(amount = 1) {
-    for(let i=0; i<amount; i++) {
-        const type = Math.random() < 0.1 ? 'yellow' : 'green';
-        money.push(new Money(Math.random() * worldWidth, Math.random() * worldHeight, type));
+    
+    // Setup input
+    setupInput();
+    } catch (error) {
+        console.error('Error initializing game:', error);
+        alert('Error starting game. Please refresh the page.');
     }
+}
+
+function updateDirectionFromKeys() {
+    if (!gameState.gameRunning || !playerSnake) return;
+    
+    let dx = 0;
+    let dy = 0;
+    
+    // Check which keys are pressed
+    if (keysPressed.w || keysPressed.arrowup) {
+        dy = -1;
+    }
+    if (keysPressed.s || keysPressed.arrowdown) {
+        dy = 1;
+    }
+    if (keysPressed.a || keysPressed.arrowleft) {
+        dx = -1;
+    }
+    if (keysPressed.d || keysPressed.arrowright) {
+        dx = 1;
+    }
+    
+    // Only set direction if at least one key is pressed
+    if (dx !== 0 || dy !== 0) {
+        playerSnake.setDirection(dx, dy, true); // Allow reversals from keyboard
+    }
+}
+
+function setupInput() {
+    // Key down handler
+    const keyDownHandler = (e) => {
+        if (!gameState.gameRunning || !playerSnake) return;
+        
+        const key = e.key.toLowerCase();
+        
+        // Upgrade hotkeys
+        if (key === '1') {
+            const cost = playerSnake.getUpgradeCost('size');
+            if (playerSnake.greenMoney >= cost && playerSnake.sizeLevel < 20) {
+                playerSnake.buyUpgrade('size');
+                document.getElementById('sizeCost').textContent = playerSnake.getUpgradeCost('size');
+                document.getElementById('sizeLevel').textContent = playerSnake.sizeLevel;
+                document.getElementById('greenMoneyCount').textContent = playerSnake.greenMoney;
+                document.getElementById('upgradeSize').disabled = 
+                    playerSnake.sizeLevel >= 20 || playerSnake.greenMoney < playerSnake.getUpgradeCost('size');
+            }
+            return;
+        } else if (key === '2') {
+            const cost = playerSnake.getUpgradeCost('speed');
+            if (playerSnake.greenMoney >= cost && playerSnake.speedLevel < 15) {
+                playerSnake.buyUpgrade('speed');
+                document.getElementById('speedCost').textContent = playerSnake.getUpgradeCost('speed');
+                document.getElementById('speedLevel').textContent = playerSnake.speedLevel;
+                document.getElementById('greenMoneyCount').textContent = playerSnake.greenMoney;
+                document.getElementById('upgradeSpeed').disabled = 
+                    playerSnake.speedLevel >= 15 || playerSnake.greenMoney < playerSnake.getUpgradeCost('speed');
+            }
+            return;
+        } else if (key === '3') {
+            const cost = playerSnake.getUpgradeCost('multiplier');
+            if (playerSnake.greenMoney >= cost && playerSnake.multiplierLevel < 20) {
+                playerSnake.buyUpgrade('multiplier');
+                document.getElementById('multiplierCost').textContent = playerSnake.getUpgradeCost('multiplier');
+                document.getElementById('multiplierLevel').textContent = playerSnake.multiplierLevel;
+                document.getElementById('greenMoneyCount').textContent = playerSnake.greenMoney;
+                document.getElementById('upgradeMultiplier').disabled = 
+                    playerSnake.multiplierLevel >= 20 || playerSnake.greenMoney < playerSnake.getUpgradeCost('multiplier');
+            }
+            return;
+        }
+        
+        if (key === 'w' || key === 'arrowup' || key === 's' || key === 'arrowdown' ||
+            key === 'a' || key === 'arrowleft' || key === 'd' || key === 'arrowright') {
+            e.preventDefault();
+            // Only update if the key state actually changed
+            if (!keysPressed[key]) {
+                keysPressed[key] = true;
+                updateDirectionFromKeys();
+            }
+        }
+    };
+    
+    // Key up handler
+    const keyUpHandler = (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'w' || key === 'arrowup' || key === 's' || key === 'arrowdown' ||
+            key === 'a' || key === 'arrowleft' || key === 'd' || key === 'arrowright') {
+            e.preventDefault();
+            keysPressed[key] = false;
+            updateDirectionFromKeys();
+        }
+    };
+    
+    // Remove old listeners if any
+    if (setupInput.keyDownHandler) {
+        document.removeEventListener('keydown', setupInput.keyDownHandler);
+        document.removeEventListener('keyup', setupInput.keyUpHandler);
+    }
+    
+    setupInput.keyDownHandler = keyDownHandler;
+    setupInput.keyUpHandler = keyUpHandler;
+    document.addEventListener('keydown', keyDownHandler);
+    document.addEventListener('keyup', keyUpHandler);
+    
+    // Mouse input - convert screen coordinates to world coordinates
+    const mouseHandler = (e) => {
+        if (!gameState.gameRunning || !playerSnake) return;
+        
+        // Check if any keyboard keys are pressed - if so, ignore mouse
+        if (keysPressed.w || keysPressed.arrowup || keysPressed.s || keysPressed.arrowdown ||
+            keysPressed.a || keysPressed.arrowleft || keysPressed.d || keysPressed.arrowright) {
+            return;
+        }
+        
+        // Check if mouse is over UI elements
+        const gameUI = document.querySelector('.game-ui');
+        if (gameUI && gameUI.contains(e.target)) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        
+        // Convert screen coordinates to world coordinates
+        const worldX = (screenX / camera.zoom) + camera.x;
+        const worldY = (screenY / camera.zoom) + camera.y;
+        
+        // Calculate direction from player to mouse in world space
+        const dx = worldX - playerSnake.x;
+        const dy = worldY - playerSnake.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > 5) {
+            // Normalize direction
+            playerSnake.setDirection(dx / dist, dy / dist);
+        }
+    };
+    
+    canvas.removeEventListener('mousemove', setupInput.mouseHandler);
+    setupInput.mouseHandler = mouseHandler;
+    canvas.addEventListener('mousemove', mouseHandler);
+    
+    // Touch input - for mobile support
+    const touchHandler = (e) => {
+        if (!gameState.gameRunning || !playerSnake) return;
+        
+        // Check if any keyboard keys are pressed - if so, ignore touch
+        if (keysPressed.w || keysPressed.arrowup || keysPressed.s || keysPressed.arrowdown ||
+            keysPressed.a || keysPressed.arrowleft || keysPressed.d || keysPressed.arrowright) {
+            return;
+        }
+        
+        // Check if touch is over UI elements
+        const gameUI = document.querySelector('.game-ui');
+        if (gameUI && gameUI.contains(e.target)) return;
+        
+        if (e.touches.length > 0) {
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const screenX = touch.clientX - rect.left;
+            const screenY = touch.clientY - rect.top;
+            
+            // Convert screen coordinates to world coordinates
+            const worldX = (screenX / camera.zoom) + camera.x;
+            const worldY = (screenY / camera.zoom) + camera.y;
+            
+            // Calculate direction from player to touch in world space
+            const dx = worldX - playerSnake.x;
+            const dy = worldY - playerSnake.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 5) {
+                // Normalize direction
+                playerSnake.setDirection(dx / dist, dy / dist);
+            }
+        }
+    };
+    
+    canvas.removeEventListener('touchmove', setupInput.touchHandler);
+    setupInput.touchHandler = touchHandler;
+    canvas.addEventListener('touchmove', touchHandler, false);
+}
+
+function setupUpgrades() {
+    const sizeBtn = document.getElementById('upgradeSize');
+    const speedBtn = document.getElementById('upgradeSpeed');
+    const multiplierBtn = document.getElementById('upgradeMultiplier');
+    
+    sizeBtn.addEventListener('click', () => {
+        playerSnake.buyUpgrade('size');
+    });
+    speedBtn.addEventListener('click', () => {
+        playerSnake.buyUpgrade('speed');
+    });
+    multiplierBtn.addEventListener('click', () => {
+        playerSnake.buyUpgrade('multiplier');
+    });
 }
 
 function update(currentTime) {
     if (!gameState.gameRunning) return;
-    const dt = currentTime - lastTime;
-    lastTime = currentTime;
-
-    // Update Snakes
-    snakes.forEach(s => {
-        s.update(dt, worldWidth, worldHeight);
-        if(s.isBot) updateBotAI(s);
+    
+    try {
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+    
+    // Update snakes
+    snakes.forEach(snake => {
+        if (snake.alive) {
+            snake.update(deltaTime, worldWidth, worldHeight);
+            
+            // Bot AI
+            if (snake.isBot) {
+                updateBotAI(snake);
+            }
+        }
     });
-
-    // Camera follow player
-    if(playerSnake.alive) {
-        camera.x += (playerSnake.x - canvas.width / camera.zoom / 2 - camera.x) * 0.1;
-        camera.y += (playerSnake.y - canvas.height / camera.zoom / 2 - camera.y) * 0.1;
-        // Clamp camera
-        camera.x = Math.max(0, Math.min(camera.x, worldWidth - canvas.width/camera.zoom));
-        camera.y = Math.max(0, Math.min(camera.y, worldHeight - canvas.height/camera.zoom));
+    
+    // Update camera to follow player
+    if (playerSnake && playerSnake.alive) {
+        // Smooth camera follow
+        const targetX = playerSnake.x - (canvas.width / camera.zoom / 2);
+        const targetY = playerSnake.y - (canvas.height / camera.zoom / 2);
+        
+        camera.x += (targetX - camera.x) * 0.1;
+        camera.y += (targetY - camera.y) * 0.1;
+        
+        // Clamp camera to world bounds
+        camera.x = Math.max(0, Math.min(camera.x, worldWidth - (canvas.width / camera.zoom)));
+        camera.y = Math.max(0, Math.min(camera.y, worldHeight - (canvas.height / camera.zoom)));
     }
-
-    // Check botsingen
+    
+    // Check collisions
     checkCollisions();
-
-    // Collect Money
+    
+    // Check money collection
     checkMoneyCollection();
-
-    // Respawn money & bots
-    const sizeCfg = mapSizes[gameState.mapSize];
-    if(money.length < sizeCfg.moneyAmount) spawnMoney(5);
-    if(snakes.length - 1 < sizeCfg.maxBots && Math.random() < 0.02) spawnBot();
-
-    // RENDER
+    
+    // Spawn new money if needed (keep minimum based on map size)
+    const mapSize = mapSizes[gameState.mapSize];
+    const minMoney = mapSize.moneyAmount;
+    if (money.length < minMoney) {
+        spawnMoney(5);
+    }
+    
+    // Spawn new bots if needed
+    const aliveBots = snakes.filter(s => s.isBot && s.alive).length;
+    if (aliveBots < mapSize.maxBots && Math.random() < 0.01) {
+        let x, y;
+        let attempts = 0;
+        // Find a position that's not too close to existing snakes
+        do {
+            x = Math.random() * worldWidth;
+            y = Math.random() * worldHeight;
+            attempts++;
+        } while (isPositionTooCloseToSnakes(x, y, 200) && attempts < 50);
+        
+        const bot = new Snake(x, y, getRandomColor(), false, getRandomBotName());
+        bot.isBot = true;
+        bot.difficulty = gameState.botDifficulty;
+        snakes.push(bot);
+    }
+    
+    // Render
     render();
     
-    // UI Update
+    // Update UI
     updateGameUI();
-
-    // Game Over Check
+    
+    // Check game over
     if (!playerSnake.alive) {
-        gameState.gameRunning = false;
-        saveToFirebase(playerSnake.greenMoney);
-        setTimeout(() => {
-            gameScreen.classList.remove('active');
-            startScreen.classList.add('active');
-            updateYellowMoneyDisplay();
-        }, 2000);
+        gameOver();
         return;
     }
-
+    
     gameLoop = requestAnimationFrame(update);
+    } catch (error) {
+        console.error('Error in game update:', error);
+        gameState.gameRunning = false;
+    }
 }
 
 function updateBotAI(bot) {
-    if(!bot.alive) return;
+    if (!bot.alive) return;
     
-    // Zoek dichtstbijzijnde geld
-    let nearest = null;
+    // Find nearest money
+    let nearestMoney = null;
     let minDist = Infinity;
     
-    // Bot vision radius (afh. van difficulty)
-    const vision = bot.difficulty === 'hard' ? 600 : 300;
-
     money.forEach(m => {
-        const d = Math.hypot(m.x - bot.x, m.y - bot.y);
-        if(d < minDist && d < vision) {
-            minDist = d;
-            nearest = m;
+        const dx = m.x - bot.x;
+        const dy = m.y - bot.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDist) {
+            minDist = dist;
+            nearestMoney = m;
         }
     });
-
-    if(nearest) {
-        const dx = nearest.x - bot.x;
-        const dy = nearest.y - bot.y;
-        const dist = Math.hypot(dx, dy);
+    
+    // Find nearest threat (other snake head)
+    let nearestThreat = null;
+    let threatDist = Infinity;
+    
+    snakes.forEach(snake => {
+        if (snake !== bot && snake.alive) {
+            const dx = snake.x - bot.x;
+            const dy = snake.y - bot.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < threatDist && dist < 100) {
+                threatDist = dist;
+                nearestThreat = snake;
+            }
+        }
+    });
+    
+    // Bot behavior based on difficulty
+    const difficulty = bot.difficulty;
+    let targetX = bot.x;
+    let targetY = bot.y;
+    
+    if (nearestMoney) {
+        const dx = nearestMoney.x - bot.x;
+        const dy = nearestMoney.y - bot.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         
-        // Simpele sturing
-        const randomness = bot.difficulty === 'easy' ? 0.5 : 0.1;
-        bot.dx += (dx/dist - bot.dx) * 0.1 + (Math.random()-0.5) * randomness;
-        bot.dy += (dy/dist - bot.dy) * 0.1 + (Math.random()-0.5) * randomness;
-        
-        // Normaliseer
-        const len = Math.hypot(bot.dx, bot.dy);
-        bot.dx /= len;
-        bot.dy /= len;
+        if (difficulty === 'easy') {
+            // Easy bots are slower and less accurate
+            if (Math.random() > 0.3) {
+                targetX = nearestMoney.x + (Math.random() - 0.5) * 50;
+                targetY = nearestMoney.y + (Math.random() - 0.5) * 50;
+            }
+        } else if (difficulty === 'normal') {
+            // Normal bots go for money
+            targetX = nearestMoney.x;
+            targetY = nearestMoney.y;
+        } else if (difficulty === 'hard') {
+            // Hard bots avoid threats and go for money
+            if (nearestThreat && threatDist < 80) {
+                // Avoid threat
+                const avoidDx = bot.x - nearestThreat.x;
+                const avoidDy = bot.y - nearestThreat.y;
+                const avoidDist = Math.sqrt(avoidDx * avoidDx + avoidDy * avoidDy);
+                targetX = bot.x + (avoidDx / avoidDist) * 50;
+                targetY = bot.y + (avoidDy / avoidDist) * 50;
+            } else {
+                targetX = nearestMoney.x;
+                targetY = nearestMoney.y;
+            }
+        }
     }
-
-    // Auto upgrade bots
-    if(bot.greenMoney > 100 && Math.random() < 0.01) {
-        if(Math.random() < 0.5) bot.buyUpgrade('size');
-        else bot.buyUpgrade('speed');
+    
+    // Set direction towards target
+    const dx = targetX - bot.x;
+    const dy = targetY - bot.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 5) {
+        bot.setDirection(dx / dist, dy / dist);
     }
+    
+    // Auto-buy upgrades
+    bot.autoBuyUpgrade();
 }
 
 function checkCollisions() {
-    for(let i=0; i<snakes.length; i++) {
-        const s1 = snakes[i];
-        if(!s1.alive) continue;
-
-        for(let j=0; j<snakes.length; j++) {
-            if(i===j) continue;
-            const s2 = snakes[j];
-            if(!s2.alive) continue;
-
-            // Head to Head
-            if(Math.hypot(s1.x - s2.x, s1.y - s2.y) < s1.size + s2.size) {
-                s1.alive = false; s2.alive = false;
-                dropMoney(s1); dropMoney(s2);
+    for (let i = 0; i < snakes.length; i++) {
+        const snake1 = snakes[i];
+        if (!snake1.alive) continue;
+        
+        // Borders wrap around (handled in update function), no wall collision check needed
+        
+        // Check collision with other snakes
+        for (let j = 0; j < snakes.length; j++) {
+            const snake2 = snakes[j];
+            if (!snake2.alive || i === j) continue;
+            
+            // Head to head collision
+            const headDist = Math.sqrt(
+                Math.pow(snake1.x - snake2.x, 2) + 
+                Math.pow(snake1.y - snake2.y, 2)
+            );
+            if (headDist < snake1.size + snake2.size) {
+                // Drop green money when snakes die
+                if (snake1.alive) {
+                    dropGreenMoney(snake1);
+                }
+                if (snake2.alive) {
+                    dropGreenMoney(snake2);
+                }
+                snake1.alive = false;
+                snake2.alive = false;
+                continue;
             }
-            // Head to Body
-            else {
-                for(let k=0; k<s2.body.length; k+=2) { // Check om de 2 segmenten voor performance
-                    if(Math.hypot(s1.x - s2.body[k].x, s1.y - s2.body[k].y) < s1.size) {
-                        s1.alive = false;
-                        dropMoney(s1);
-                        break;
+            
+            // Head to body collision
+            for (let k = 1; k < snake2.body.length; k++) {
+                const segment = snake2.body[k];
+                const dist = Math.sqrt(
+                    Math.pow(snake1.x - segment.x, 2) + 
+                    Math.pow(snake1.y - segment.y, 2)
+                );
+                if (dist < snake1.size) {
+                    // Drop green money when snake dies
+                    if (snake1.alive) {
+                        dropGreenMoney(snake1);
                     }
+                    snake1.alive = false;
+                    break;
                 }
             }
         }
@@ -496,235 +899,567 @@ function checkCollisions() {
 }
 
 function checkMoneyCollection() {
-    for (let i = money.length - 1; i >= 0; i--) {
-        const m = money[i];
-        for(let s of snakes) {
-            if(!s.alive) continue;
-            if (Math.hypot(s.x - m.x, s.y - m.y) < s.size + m.size) {
-                if (m.type === 'yellow' && s.isPlayer) saveYellowMoney(gameState.yellowMoney + 1);
-                if (m.type === 'green') s.greenMoney += m.value * s.multiplier;
+    snakes.forEach(snake => {
+        if (!snake.alive) return;
+        
+        // Use a reverse loop to safely remove items while iterating
+        for (let i = money.length - 1; i >= 0; i--) {
+            const m = money[i];
+            const dx = snake.x - m.x;
+            const dy = snake.y - m.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < snake.size + m.size) {
+                // Collect money - ONLY give yellow money if it's actually a yellow money item
+                if (m.type === 'green') {
+                    // Green money increases by 10 (with multiplier)
+                    snake.greenMoney += 10 * snake.multiplier;
+                } else if (m.type === 'yellow') {
+                    // Yellow money increases by 1 (no multiplier) - ONLY for player
+                    if (snake.isPlayer) {
+                        saveYellowMoney(gameState.yellowMoney + 1);
+                    }
+                    // Don't track yellowMoney per snake, only global
+                }
+                
                 money.splice(i, 1);
-                break; // Munt is weg
             }
         }
+    });
+}
+
+function isPositionTooCloseToSnakes(x, y, minDistance = 200) {
+    return snakes.some(snake => {
+        const dx = snake.x - x;
+        const dy = snake.y - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < minDistance;
+    });
+}
+
+function spawnMoney(count) {
+    for (let i = 0; i < count; i++) {
+        const x = Math.random() * worldWidth;
+        const y = Math.random() * worldHeight;
+        // 20% yellow, 80% green
+        const type = Math.random() < 0.8 ? 'green' : 'yellow';
+        // Value is now just for display/type, actual values are handled in collection
+        const value = type === 'green' ? 10 : 1;
+        money.push(new Money(x, y, type, value));
     }
 }
 
-function dropMoney(snake) {
-    const amount = Math.floor(snake.greenMoney / 2);
-    const count = Math.min(20, Math.ceil(amount / 10));
-    for(let i=0; i<count; i++) {
-        const r = Math.random() * 50;
-        const a = Math.random() * Math.PI * 2;
-        money.push(new Money(
-            snake.x + Math.cos(a)*r, 
-            snake.y + Math.sin(a)*r, 
-            'green', 
-            Math.max(10, Math.floor(amount/count))
-        ));
+function dropGreenMoney(snake) {
+    // Drop all the green money the snake has spent (upgrades) + what they're carrying
+    let totalGreenMoney = snake.greenMoney; // Money they're currently carrying
+    
+    // Add back the money spent on upgrades based on level
+    // Size upgrade costs
+    for (let i = 1; i < snake.sizeLevel; i++) {
+        totalGreenMoney += Math.floor(50 * Math.pow(1.2, i - 1));
+    }
+    
+    // Speed upgrade costs
+    for (let i = 1; i < snake.speedLevel; i++) {
+        totalGreenMoney += Math.floor(40 * Math.pow(1.15, i - 1));
+    }
+    
+    // Multiplier upgrade costs
+    for (let i = 1; i < snake.multiplierLevel; i++) {
+        totalGreenMoney += Math.floor(100 * Math.pow(1.3, i - 1));
+    }
+    
+    // Spawn green money at snake's position (max 20 coins to avoid lag)
+    const coinCount = Math.min(20, Math.ceil(totalGreenMoney / 50));
+    const coinValue = Math.ceil(totalGreenMoney / coinCount);
+    
+    for (let i = 0; i < coinCount; i++) {
+        const angle = (Math.random() * Math.PI * 2);
+        const distance = Math.random() * 100 + 20;
+        const x = snake.x + Math.cos(angle) * distance;
+        const y = snake.y + Math.sin(angle) * distance;
+        money.push(new Money(x, y, 'green', coinValue));
+    }
+}
+
+let starPositions = [];
+
+function generateStars() {
+    starPositions = [];
+    const starCount = Math.floor((worldWidth * worldHeight) / 2000);
+    for (let i = 0; i < starCount; i++) {
+        starPositions.push({
+            x: Math.random() * worldWidth,
+            y: Math.random() * worldHeight,
+            size: Math.random() * 2 + 0.5,
+            brightness: Math.random() * 0.8 + 0.2
+        });
     }
 }
 
 function render() {
-    // Clear & Background
-    ctx.fillStyle = gameState.selectedMap === 'stars' ? '#000' : '#111';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+    // Save context
     ctx.save();
+    
+    // Apply camera transform (zoom and translate)
     ctx.scale(camera.zoom, camera.zoom);
     ctx.translate(-camera.x, -camera.y);
-
-    // Grid / Borders
-    ctx.strokeStyle = '#333';
-    ctx.strokeRect(0, 0, worldWidth, worldHeight);
-
-    // Stars
-    if(gameState.selectedMap === 'stars') {
-        ctx.fillStyle = '#fff';
-        starPositions.forEach(s => {
-            ctx.globalAlpha = Math.random() * 0.5 + 0.5;
-            ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
+    
+    // Calculate visible bounds with some padding
+    const padding = 200;
+    const visibleLeft = camera.x - padding;
+    const visibleRight = camera.x + (canvas.width / camera.zoom) + padding;
+    const visibleTop = camera.y - padding;
+    const visibleBottom = camera.y + (canvas.height / camera.zoom) + padding;
+    
+    // Clear canvas (draw background)
+    if (gameState.selectedMap === 'stars') {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, worldWidth, worldHeight);
+        
+        // Draw stars (with culling)
+        if (starPositions.length === 0) {
+            generateStars();
+        }
+        starPositions.forEach(star => {
+            if (star.x > visibleLeft && star.x < visibleRight && star.y > visibleTop && star.y < visibleBottom) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
         });
-        ctx.globalAlpha = 1;
+    } else if (gameState.selectedMap === 'rainbow') {
+        const time = Date.now() / 1000;
+        const gradient = ctx.createLinearGradient(0, 0, worldWidth, worldHeight);
+        const hue1 = (time * 30) % 360;
+        const hue2 = (hue1 + 60) % 360;
+        const hue3 = (hue2 + 60) % 360;
+        gradient.addColorStop(0, `hsl(${hue1}, 100%, 10%)`);
+        gradient.addColorStop(0.5, `hsl(${hue2}, 100%, 10%)`);
+        gradient.addColorStop(1, `hsl(${hue3}, 100%, 10%)`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, worldWidth, worldHeight);
+    } else {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, worldWidth, worldHeight);
     }
-
-    // Money
-    money.forEach(m => m.draw(ctx));
-
-    // Snakes
-    snakes.forEach(s => s.draw(ctx));
-
+    
+    // Draw world border
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2 / camera.zoom;
+    ctx.strokeRect(0, 0, worldWidth, worldHeight);
+    
+    // Draw money (with culling)
+    money.forEach(m => {
+        if (m.x > visibleLeft && m.x < visibleRight && m.y > visibleTop && m.y < visibleBottom) {
+            m.draw(ctx);
+        }
+    });
+    
+    // Draw snakes (with culling)
+    snakes.forEach(snake => {
+        if (snake.alive) {
+            // Check if snake head is visible or close enough
+            if (snake.x > visibleLeft && snake.x < visibleRight && snake.y > visibleTop && snake.y < visibleBottom) {
+                snake.draw(ctx);
+            }
+        }
+    });
+    
+    // Restore context
     ctx.restore();
 }
 
+
 function updateGameUI() {
-    if(!playerSnake) return;
+    if (!playerSnake) return;
+    
     document.getElementById('greenMoneyCount').textContent = Math.floor(playerSnake.greenMoney);
+    document.getElementById('yellowMoneyCountGame').textContent = gameState.yellowMoney;
     
-    // Update upgrade buttons text
-    const updateBtn = (id, type, level) => {
-        const btn = document.getElementById(id);
-        const costEl = document.getElementById(type + 'Cost');
-        const levelEl = document.getElementById(type + 'Level');
-        if(btn && playerSnake) {
-            const cost = playerSnake.getUpgradeCost(type);
-            if(costEl) costEl.textContent = cost;
-            if(levelEl) levelEl.textContent = level;
-            btn.disabled = playerSnake.greenMoney < cost;
-        }
-    };
+    document.getElementById('sizeLevel').textContent = playerSnake.sizeLevel;
+    document.getElementById('speedLevel').textContent = playerSnake.speedLevel;
+    document.getElementById('multiplierLevel').textContent = playerSnake.multiplierLevel;
     
-    updateBtn('upgradeSize', 'size', playerSnake.sizeLevel);
-    updateBtn('upgradeSpeed', 'speed', playerSnake.speedLevel);
-    updateBtn('upgradeMultiplier', 'multiplier', playerSnake.multiplierLevel);
+    document.getElementById('sizeCost').textContent = playerSnake.getUpgradeCost('size');
+    document.getElementById('speedCost').textContent = playerSnake.getUpgradeCost('speed');
+    document.getElementById('multiplierCost').textContent = playerSnake.getUpgradeCost('multiplier');
+    
+    document.getElementById('upgradeSize').disabled = 
+        playerSnake.sizeLevel >= 20 || playerSnake.greenMoney < playerSnake.getUpgradeCost('size');
+    document.getElementById('upgradeSpeed').disabled = 
+        playerSnake.speedLevel >= 15 || playerSnake.greenMoney < playerSnake.getUpgradeCost('speed');
+    document.getElementById('upgradeMultiplier').disabled = 
+        playerSnake.multiplierLevel >= 20 || playerSnake.greenMoney < playerSnake.getUpgradeCost('multiplier');
 }
 
-function setupInput() {
-    const handleMove = (x, y) => {
-        if(!playerSnake || !playerSnake.alive) return;
-        
-        // Zet scherm coords om naar wereld coords
-        const rect = canvas.getBoundingClientRect();
-        const worldX = (x - rect.left) / camera.zoom + camera.x;
-        const worldY = (y - rect.top) / camera.zoom + camera.y;
-        
-        const angle = Math.atan2(worldY - playerSnake.y, worldX - playerSnake.x);
-        playerSnake.dx = Math.cos(angle);
-        playerSnake.dy = Math.sin(angle);
-    };
-
-    canvas.onmousemove = (e) => handleMove(e.clientX, e.clientY);
-    canvas.ontouchmove = (e) => {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    };
+function gameOver() {
+    gameState.gameRunning = false;
+    cancelAnimationFrame(gameLoop);
+    
+    setTimeout(() => {
+        gameScreen.classList.remove('active');
+        startScreen.classList.add('active');
+        updateYellowMoneyDisplay();
+    }, 2000);
 }
 
-// --- CLASSES ---
+function getRandomColor() {
+    const colors = ['#ff0000', '#00ffff', '#ff00ff', '#ffff00', '#ff8800', '#0088ff'];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function getRandomBotName() {
+    // 0.1% chance for Hog Rider (0.001 chance)
+    if (Math.random() < 0.001) {
+        return 'Hog Rider';
+    }
+    
+    const prefixes = ['Cool', 'Mega', 'Ultra', 'Pro', 'Epic', 'Shadow', 'Ninja', 'Dragon', 'Thunder', 'Cyber'];
+    const middles = ['Gamer', 'Snake', 'Hunter', 'Master', 'King', 'Slayer', 'Beast', 'Player', 'Eater', 'Legend'];
+    const suffixes = ['X', '42', 'Pro', 'Max', 'Elite', 'God', 'Boss', 'Star', 'Ace', 'Supreme'];
+    
+    const nameTypes = Math.random();
+    
+    if (nameTypes < 0.4) {
+        // CoolGamer42 style
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const middle = middles[Math.floor(Math.random() * middles.length)];
+        const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+        return `${prefix}${middle}${suffix}`;
+    } else if (nameTypes < 0.7) {
+        // coolsnakeX style
+        const middle = middles[Math.floor(Math.random() * middles.length)];
+        const number = Math.floor(Math.random() * 999) + 1;
+        return `${middle.toLowerCase()}${number}`;
+    } else {
+        // prefix + middle style
+        const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const middle = middles[Math.floor(Math.random() * middles.length)];
+        return `${prefix}${middle}`;
+    }
+}
+
+// Snake Class
 class Snake {
     constructor(x, y, color, isPlayer, name, skin = null) {
-        this.x = x; this.y = y; this.color = color; this.isPlayer = isPlayer; this.name = name;
-        this.skin = skin;
-        this.size = 15; 
-        this.speed = 150; 
-        this.alive = true; 
-        this.dx = 1; this.dy = 0;
-        this.body = Array.from({length: 10}, () => ({x, y}));
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.isPlayer = isPlayer;
+        this.name = name;
+        this.alive = true;
+        this.isBot = false;
+        this.difficulty = 'easy';
+        this.skin = skin; // Skin object with type and color
+        this.skinColor = skin ? (skin.color || color) : color;
+        
+        this.dx = 1;
+        this.dy = 0;
+        this.size = 15; // Base size (grows slower with upgrades)
+        this.speed = 100; // pixels per second
+        this.body = [{ x, y }];
+        
+        // Money
         this.greenMoney = 0;
+        this.yellowMoney = 0;
         
         // Upgrades
         this.sizeLevel = 1;
         this.speedLevel = 1;
         this.multiplierLevel = 1;
         this.multiplier = 1;
+        
+        // Initialize body to be longer at start
+        for (let i = 1; i < 10; i++) {
+            this.body.push({ x: x - i * 15, y: y });
+        }
     }
     
-    update(dt, w, h) {
+    setDirection(dx, dy, allowReverse = false) {
+        // Normalize direction vector
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length < 0.01) {
+            // If no direction, don't change current direction (allow stopping at borders)
+            return;
+        }
+        
+        const normalizedDx = dx / length;
+        const normalizedDy = dy / length;
+        
+        // Prevent reversing into body only if we have a body (unless this is keyboard input)
+        if (!allowReverse && this.body.length > 1) {
+            const secondSegment = this.body[1];
+            const currentDirX = this.x - secondSegment.x;
+            const currentDirY = this.y - secondSegment.y;
+            const currentLength = Math.sqrt(currentDirX * currentDirX + currentDirY * currentDirY);
+            
+            if (currentLength > 0.1) {
+                const currentNormX = currentDirX / currentLength;
+                const currentNormY = currentDirY / currentLength;
+                
+                // Check if new direction is opposite to current direction
+                const dot = normalizedDx * currentNormX + normalizedDy * currentNormY;
+                if (dot < -0.99) {
+                    return; // Don't reverse (only if nearly exactly 180 degrees)
+                }
+            }
+        }
+        
+        // Always allow direction change - set normalized direction
+        this.dx = normalizedDx;
+        this.dy = normalizedDy;
+    }
+    
+    update(deltaTime, worldWidth, worldHeight) {
         if (!this.alive) return;
         
-        const step = (this.speed * dt) / 1000;
+        const moveDistance = (this.speed * deltaTime) / 1000;
+        let newX = this.x;
+        let newY = this.y;
         
-        // Move head
-        let nextX = this.x + this.dx * step;
-        let nextY = this.y + this.dy * step;
-
-        // Wall collision (Stop or Clamp)
-        if(nextX < 0 || nextX > w) this.dx = 0;
-        if(nextY < 0 || nextY > h) this.dy = 0;
+        // Try to move in X direction
+        if (this.dx !== 0) {
+            newX = this.x + this.dx * moveDistance;
+            // Check if new position would hit border
+            if (newX - this.size < 0) {
+                newX = this.size; // Clamp to border
+                // Only stop if still trying to move in that direction
+                if (this.dx < 0) {
+                    this.dx = 0; // Stop horizontal movement
+                }
+            } else if (newX + this.size > worldWidth) {
+                newX = worldWidth - this.size; // Clamp to border
+                // Only stop if still trying to move in that direction
+                if (this.dx > 0) {
+                    this.dx = 0; // Stop horizontal movement
+                }
+            }
+            this.x = newX;
+        }
         
-        this.x = Math.max(0, Math.min(w, nextX));
-        this.y = Math.max(0, Math.min(h, nextY));
-
+        // Try to move in Y direction
+        if (this.dy !== 0) {
+            newY = this.y + this.dy * moveDistance;
+            // Check if new position would hit border
+            if (newY - this.size < 0) {
+                newY = this.size; // Clamp to border
+                // Only stop if still trying to move in that direction
+                if (this.dy < 0) {
+                    this.dy = 0; // Stop vertical movement
+                }
+            } else if (newY + this.size > worldHeight) {
+                newY = worldHeight - this.size; // Clamp to border
+                // Only stop if still trying to move in that direction
+                if (this.dy > 0) {
+                    this.dy = 0; // Stop vertical movement
+                }
+            }
+            this.y = newY;
+        }
+        
         // Update body
-        this.body.unshift({x: this.x, y: this.y});
+        this.body.unshift({ x: this.x, y: this.y });
         
-        // Body length calc
-        const targetLen = 10 + (this.sizeLevel * 3);
-        while(this.body.length > targetLen) this.body.pop();
+        // Keep body length based on size level (size upgrade affects length)
+        // Start longer (10), and each level adds more length
+        const bodyLength = 10 + this.sizeLevel * 5;
+        if (this.body.length > bodyLength) {
+            this.body.pop();
+        }
     }
     
     draw(ctx) {
-        if(!this.alive) return;
-        const color = this.skin ? this.skin.color : this.color;
+        if (!this.alive) return;
         
-        // Draw Body
-        this.body.forEach((p, i) => {
-            ctx.globalAlpha = 1 - (i / this.body.length) * 0.6;
-            ctx.fillStyle = color;
+        // Determine if this is a ball or vector snake
+        const isBallSkin = !this.skin || this.skin.type === 'ball';
+        const isVectorSkin = this.skin && this.skin.type === 'vector';
+        const drawColor = this.skinColor || this.color;
+        
+        if (isBallSkin) {
+            // Draw body with fade effect
+            ctx.fillStyle = drawColor;
+            this.body.forEach((segment, index) => {
+                const alpha = 1 - (index / this.body.length) * 0.5;
+                ctx.globalAlpha = alpha;
+                ctx.beginPath();
+                ctx.arc(segment.x, segment.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
             
-            // Vector skin is driehoekjes, anders rondjes
-            if(this.skin && this.skin.type === 'vector') {
+            // Draw head
+            ctx.fillStyle = drawColor;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else if (isVectorSkin) {
+            // Draw vector snake - triangular segments
+            ctx.fillStyle = '#FF8C00';
+            this.body.forEach((segment, index) => {
+                const alpha = 1 - (index / this.body.length) * 0.5;
+                ctx.globalAlpha = alpha;
+                
+                // Draw triangle pointing in direction
+                const angle = Math.atan2(this.dy, this.dx);
                 ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(Math.atan2(this.dy, this.dx));
+                ctx.translate(segment.x, segment.y);
+                ctx.rotate(angle);
+                
                 ctx.beginPath();
                 ctx.moveTo(this.size, 0);
-                ctx.lineTo(-this.size/2, this.size/2);
-                ctx.lineTo(-this.size/2, -this.size/2);
+                ctx.lineTo(-this.size * 0.5, -this.size * 0.8);
+                ctx.lineTo(-this.size * 0.5, this.size * 0.8);
+                ctx.closePath();
                 ctx.fill();
+                
                 ctx.restore();
-            } else {
-                ctx.beginPath(); ctx.arc(p.x, p.y, this.size, 0, Math.PI * 2); ctx.fill();
-            }
-        });
+            });
+            ctx.globalAlpha = 1;
+            
+            // Draw head
+            const angle = Math.atan2(this.dy, this.dx);
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+            
+            ctx.fillStyle = '#FF8C00';
+            ctx.beginPath();
+            ctx.moveTo(this.size, 0);
+            ctx.lineTo(-this.size * 0.5, -this.size * 0.8);
+            ctx.lineTo(-this.size * 0.5, this.size * 0.8);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Head outline
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw eye
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(this.size * 0.5, -this.size * 0.3, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
         
-        // Draw Head (Extra detail)
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.stroke();
-
-        // Name
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.name, this.x, this.y - this.size - 10);
+        // Draw name
+        if (this.isPlayer || this.isBot) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.name, this.x, this.y - this.size - 10);
+        }
     }
-
+    
     getUpgradeCost(type) {
-        const base = type === 'multiplier' ? 100 : 50;
-        const lvl = type === 'size' ? this.sizeLevel : (type === 'speed' ? this.speedLevel : this.multiplierLevel);
-        return Math.floor(base * Math.pow(1.5, lvl));
+        if (type === 'size') {
+            return 10 * Math.pow(1.5, this.sizeLevel - 1);
+        } else if (type === 'speed') {
+            return 10 * Math.pow(1.5, this.speedLevel - 1);
+        } else if (type === 'multiplier') {
+            return 15 * Math.pow(2, this.multiplierLevel - 1);
+        }
+        return 0;
     }
-
-    buyUpgrade(type) {
+    
+    buyUpgrade(type, isPlayer = true) {
         const cost = this.getUpgradeCost(type);
-        if(this.greenMoney >= cost) {
+        if (this.greenMoney < cost) return false;
+        
+        if (type === 'size' && this.sizeLevel < 20) {
             this.greenMoney -= cost;
-            if(type === 'size') {
-                this.sizeLevel++;
-                this.size += 1;
-                if(this.isPlayer) camera.zoom = Math.max(0.5, camera.zoom - 0.05);
+            this.sizeLevel++;
+            // Size upgrade makes snake longer (body length) and a bit bigger (radius grows slower)
+            // Radius grows slowly: base 15, +1 per level
+            this.size = 15 + (this.sizeLevel - 1) * 1;
+            // Camera zoom out when size increases (very slightly) - ONLY FOR PLAYER
+            if (isPlayer) {
+                camera.zoom = Math.max(0.5, camera.zoom - 0.03);
             }
-            if(type === 'speed') {
-                this.speedLevel++;
-                this.speed += 20;
-            }
-            if(type === 'multiplier') {
-                this.multiplierLevel++;
-                this.multiplier += 0.5;
-            }
+            return true;
+        } 
+        
+        if (type === 'speed' && this.speedLevel < 15) {
+            this.greenMoney -= cost;
+            this.speedLevel++;
+            this.speed = 100 + (this.speedLevel - 1) * 20;
+            return true;
+        } 
+        
+        if (type === 'multiplier' && this.multiplierLevel < 20) {
+            this.greenMoney -= cost;
+            this.multiplierLevel++;
+            this.multiplier = this.multiplierLevel;
+            return true;
+        }
+        
+        return false;
+    }
+    
+    autoBuyUpgrade() {
+        if (!this.isBot) return;
+        
+        // Bots auto-buy upgrades
+        const upgrades = ['size', 'speed', 'multiplier'];
+        const randomUpgrade = upgrades[Math.floor(Math.random() * upgrades.length)];
+        
+        if (this.greenMoney >= this.getUpgradeCost(randomUpgrade)) {
+            this.buyUpgrade(randomUpgrade, false);  // false = bot purchase, don't zoom
         }
     }
 }
 
+// Money Class
 class Money {
-    constructor(x, y, type, value = 10) {
-        this.x = x; this.y = y; this.type = type;
+    constructor(x, y, type, value) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
         this.value = value;
-        this.size = type === 'yellow' ? 10 : 8;
+        this.size = type === 'green' ? 8 : 10;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.02;
     }
+    
+    update() {
+        this.rotation += this.rotationSpeed;
+    }
+    
     draw(ctx) {
-        ctx.fillStyle = this.type === 'yellow' ? '#FFD700' : '#22c55e';
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        this.update();
+        
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        
+        if (this.type === 'green') {
+            ctx.fillStyle = '#00ff00';
+        } else {
+            ctx.fillStyle = '#FFD700';
+        }
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1;
         ctx.stroke();
         
+        // Draw $ symbol
         ctx.fillStyle = '#000';
-        ctx.font = '10px Arial';
+        ctx.font = `${this.size * 1.2}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('$', this.x, this.y);
+        ctx.fillText('$', 0, 0);
+        
+        ctx.restore();
     }
 }
