@@ -45,38 +45,56 @@ const auth = firebase.auth();
 
 let unityInstance = null;
 
-// --- 2. DE "SAVE" FUNCTIE (VERBETERD) ---
+// --- 2. DE "SAVE" FUNCTIE ---
 async function saveToCloud() {
     const user = auth.currentUser;
-    if (!user) {
-        console.warn("Niet opgeslagen: Gebruiker niet ingelogd.");
-        return;
-    }
+    if (!user) return;
 
-    // Pak alle localStorage data (voor de zekerheid)
     const localData = {};
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        localData[key] = localStorage.getItem(key);
+        // We slaan alleen belangrijke game-data op om conflicten te voorkomen
+        if (!key.startsWith('firebase:')) {
+            localData[key] = localStorage.getItem(key);
+        }
     }
 
     try {
-        // We slaan het op in het pad dat jij wilde
         await db.collection("users").doc(user.uid)
                 .collection("saveData").doc("Ragdoll-Archers")
                 .set({
                     allLocalStorage: localData,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    info: "Auto-save van Unity Game"
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
-        
-        console.log("✅ Succesvol opgeslagen in Firebase!");
+        console.log("✅ Voortgang opgeslagen in Cloud");
     } catch (e) {
-        console.error("❌ Firebase Save Fout:", e);
+        console.error("❌ Save Fout:", e);
     }
 }
 
-// --- 3. GAME LADEN & AUTH ---
+// --- 3. DE "LOAD" FUNCTIE (NIEUW) ---
+async function loadFromCloud() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+        const doc = await db.collection("users").doc(user.uid)
+                           .collection("saveData").doc("Ragdoll-Archers").get();
+        
+        if (doc.exists && doc.data().allLocalStorage) {
+            const cloudData = doc.data().allLocalStorage;
+            // Zet alle items terug in de browser van de gebruiker
+            for (const key in cloudData) {
+                localStorage.setItem(key, cloudData[key]);
+            }
+            console.log("✅ Voortgang hersteld uit Cloud!");
+        }
+    } catch (e) {
+        console.error("❌ Load Fout:", e);
+    }
+}
+
+// --- 4. GAME LADEN & AUTH ---
 const container = document.querySelector("#unity-container");
 const canvas = document.querySelector("#unity-canvas");
 const loadingCover = document.querySelector("#loading-cover");
@@ -92,13 +110,16 @@ const config = {
     productVersion: "0.1",
 };
 
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (!user) {
-        alert("Log eerst in om je voortgang op te slaan!");
+        alert("Log eerst in op Game Paradise om je voortgang te laden!");
         return;
     }
 
-    // Start Unity pas als we weten wie de gebruiker is
+    // STAP 1: Eerst data uit de cloud halen
+    await loadFromCloud();
+
+    // STAP 2: Pas daarna de game opstarten
     const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
     const script = document.createElement("script");
     script.src = loaderUrl;
@@ -108,16 +129,12 @@ auth.onAuthStateChanged((user) => {
         }).then((instance) => {
             unityInstance = instance;
             loadingCover.style.display = "none";
-            
-            // Start de auto-save loop
-            console.log("Auto-save geactiveerd...");
-            setInterval(saveToCloud, 20000); // Elke 20 sec
+            setInterval(saveToCloud, 20000); // Elke 20 sec opslaan
         });
     };
     document.body.appendChild(script);
 });
 
-// Forceer save bij afsluiten
 window.onbeforeunload = () => { saveToCloud(); };
     </script>
 </body>
