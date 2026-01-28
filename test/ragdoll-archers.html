@@ -30,105 +30,95 @@
     </div>
 
     <script>
-        // --- 1. FIREBASE CONFIGURATIE ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-            authDomain: "gameparadise-80490.firebaseapp.com",
-            projectId: "gameparadise-80490",
-            storageBucket: "gameparadise-80490.firebasestorage.app",
-            messagingSenderId: "335620903527",
-            appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+// --- 1. FIREBASE INITIALISATIE ---
+const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
 
-        const config = {
-            dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
-            frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
-            codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
-            streamingAssetsUrl: "StreamingAssets",
-            companyName: "Ericetto",
-            productName: "Ragdoll Archers",
-            productVersion: "0.1",
-        };
+let unityInstance = null;
 
-        const container = document.querySelector("#unity-container");
-        const canvas = document.querySelector("#unity-canvas");
-        const loadingCover = document.querySelector("#loading-cover");
-        const progressBarFull = document.querySelector("#unity-progress-bar-full");
+// --- 2. DE "SAVE" FUNCTIE (VERBETERD) ---
+async function saveToCloud() {
+    const user = auth.currentUser;
+    if (!user) {
+        console.warn("Niet opgeslagen: Gebruiker niet ingelogd.");
+        return;
+    }
 
-        // --- 2. CLOUD SAVING LOGICA ---
+    // Pak alle localStorage data (voor de zekerheid)
+    const localData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        localData[key] = localStorage.getItem(key);
+    }
+
+    try {
+        // We slaan het op in het pad dat jij wilde
+        await db.collection("users").doc(user.uid)
+                .collection("saveData").doc("Ragdoll-Archers")
+                .set({
+                    allLocalStorage: localData,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    info: "Auto-save van Unity Game"
+                }, { merge: true });
         
-        async function saveToCloud() {
-            const user = auth.currentUser;
-            if (!user) return;
+        console.log("✅ Succesvol opgeslagen in Firebase!");
+    } catch (e) {
+        console.error("❌ Firebase Save Fout:", e);
+    }
+}
 
-            // Unity slaat vaak data op in localStorage onder de productnaam
-            // We pakken alles wat met 'Ragdoll' te maken heeft
-            const saveData = {};
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.includes("Ragdoll") || key.includes("Unity")) {
-                    saveData[key] = localStorage.getItem(key);
-                }
-            }
+// --- 3. GAME LADEN & AUTH ---
+const container = document.querySelector("#unity-container");
+const canvas = document.querySelector("#unity-canvas");
+const loadingCover = document.querySelector("#loading-cover");
+const progressBarFull = document.querySelector("#unity-progress-bar-full");
 
-            try {
-                await db.collection("users").doc(user.uid)
-                        .collection("saveData").doc("Ragdoll-Archers")
-                        .set({
-                            data: saveData,
-                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                console.log("Progress saved to Firebase!");
-            } catch (e) {
-                console.error("Error saving to cloud:", e);
-            }
-        }
+const config = {
+    dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
+    frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
+    codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
+    streamingAssetsUrl: "StreamingAssets",
+    companyName: "Ericetto",
+    productName: "Ragdoll Archers",
+    productVersion: "0.1",
+};
 
-        async function loadFromCloud() {
-            const user = auth.currentUser;
-            if (!user) return;
+auth.onAuthStateChanged((user) => {
+    if (!user) {
+        alert("Log eerst in om je voortgang op te slaan!");
+        return;
+    }
 
-            const doc = await db.collection("users").doc(user.uid)
-                               .collection("saveData").doc("Ragdoll-Archers").get();
+    // Start Unity pas als we weten wie de gebruiker is
+    const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
+    const script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+            progressBarFull.style.width = (100 * progress) + "%";
+        }).then((instance) => {
+            unityInstance = instance;
+            loadingCover.style.display = "none";
             
-            if (doc.exists) {
-                const cloudData = doc.data().data;
-                for (const key in cloudData) {
-                    localStorage.setItem(key, cloudData[key]);
-                }
-                console.log("Progress restored from Firebase!");
-            }
-        }
-
-        // --- 3. UNITY LADEN ---
-        const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
-        const unityLoader = document.createElement("script");
-        unityLoader.src = loaderUrl;
-        
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                await loadFromCloud(); // Eerst data ophalen, dan game starten
-            }
-            
-            unityLoader.onload = () => {
-                createUnityInstance(canvas, config, (progress) => {
-                    progressBarFull.style.width = `${100 * progress}%`;
-                }).then((unityInstance) => {
-                    window.unityInstance = unityInstance;
-                    loadingCover.style.display = "none";
-                    
-                    // Elke 30 seconden automatisch opslaan
-                    setInterval(saveToCloud, 30000);
-                });
-            };
-            document.body.appendChild(unityLoader);
+            // Start de auto-save loop
+            console.log("Auto-save geactiveerd...");
+            setInterval(saveToCloud, 20000); // Elke 20 sec
         });
+    };
+    document.body.appendChild(script);
+});
 
-        // Extra save moment als de gebruiker de pagina verlaat
-        window.addEventListener("beforeunload", saveToCloud);
+// Forceer save bij afsluiten
+window.onbeforeunload = () => { saveToCloud(); };
 
     </script>
 </body>
