@@ -30,7 +30,7 @@
     </div>
 
     <script>
-// --- 1. FIREBASE INITIALISATIE (Blijft hetzelfde) ---
+/// --- 1. FIREBASE INITIALISATIE ---
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -43,73 +43,65 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// --- 2. INDEXEDDB HELPER FUNCTIES ---
-// Deze functie haalt de 'echte' save-data uit de verborgen Unity database
+// --- 2. VERBETERDE DATABASE SCRAPER ---
 async function getUnitySaveData() {
-    return new Promise((resolve) => {
-        const request = indexedDB.open("/idbfs"); // De standaard Unity database naam
-        request.onerror = () => resolve({});
-        request.onsuccess = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains("FILE_DATA")) return resolve({});
-            
-            const transaction = db.transaction(["FILE_DATA"], "readonly");
-            const store = transaction.objectStore("FILE_DATA");
-            const getAllRequest = store.getAll();
-            const getAllKeysRequest = store.getAllKeys();
+    return new Promise(async (resolve) => {
+        // We proberen de meest voorkomende namen voor Unity databases
+        const dbNames = ["/idbfs", "UnityCache", "Ragdoll Archers"]; 
+        let foundData = {};
 
-            getAllRequest.onsuccess = () => {
-                const results = {};
-                const keys = getAllKeysRequest.result;
-                const values = getAllRequest.result;
-                keys.forEach((key, i) => {
-                    // We converteren de data naar een leesbaar formaat voor Firebase
-                    results[key.replace(/\//g, '_')] = Array.from(values[i].contents);
+        for (const name of dbNames) {
+            try {
+                const results = await new Promise((res) => {
+                    const req = indexedDB.open(name);
+                    req.onsuccess = (e) => {
+                        const idb = e.target.result;
+                        // Als de database geen 'FILE_DATA' heeft, proberen we de volgende
+                        if (!idb.objectStoreNames.contains("FILE_DATA")) {
+                            idb.close();
+                            return res(null);
+                        }
+                        
+                        const tx = idb.transaction(["FILE_DATA"], "readonly");
+                        const store = tx.objectStore("FILE_DATA");
+                        const getKeys = store.getAllKeys();
+                        const getVals = store.getAll();
+
+                        getVals.onsuccess = () => {
+                            let data = {};
+                            getKeys.result.forEach((key, i) => {
+                                if (getVals.result[i].contents) {
+                                    data[key.replace(/\//g, '_')] = Array.from(getVals.result[i].contents);
+                                }
+                            });
+                            idb.close();
+                            res(data);
+                        };
+                    };
+                    req.onerror = () => res(null);
                 });
-                resolve(results);
-            };
-        };
+                if (results && Object.keys(results).length > 0) {
+                    foundData = results;
+                    console.log(`✅ Data gevonden in database: ${name}`);
+                    break;
+                }
+            } catch (err) { console.log(`Database ${name} niet gevonden.`); }
+        }
+        resolve(foundData);
     });
 }
 
-async function restoreUnitySaveData(data) {
-    return new Promise((resolve) => {
-        const request = indexedDB.open("/idbfs");
-        request.onsuccess = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains("FILE_DATA")) return resolve();
-            
-            const transaction = db.transaction(["FILE_DATA"], "readwrite");
-            const store = transaction.objectStore("FILE_DATA");
-            
-            for (const key in data) {
-                const originalKey = key.replace(/_/g, '/');
-                const uint8Array = new Uint8Array(data[key]);
-                store.put({ contents: uint8Array, timestamp: new Date() }, originalKey);
-            }
-            transaction.oncomplete = () => resolve();
-        };
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            db.createObjectStore("FILE_DATA");
-        };
-    });
-}
-
-// --- 3. AANGEPASTE SAVE & LOAD ---
+// --- 3. SAVE FUNCTIE MET CONSOLE LOGS ---
 async function saveToCloud() {
     const user = auth.currentUser;
     if (!user) return;
 
+    console.log("⏳ Bezig met verzamelen van game data...");
     const gameData = await getUnitySaveData();
-    
-    // Als de gameData leeg is, proberen we als backup toch even localStorage
-    const backupData = {};
+
     if (Object.keys(gameData).length === 0) {
-        for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (!k.startsWith('firebase:')) backupData[k] = localStorage.getItem(k);
-        }
+        console.warn("⚠️ Geen game data gevonden in IndexedDB. Heeft de game al iets opgeslagen?");
+        return;
     }
 
     try {
@@ -117,65 +109,13 @@ async function saveToCloud() {
                 .collection("saveData").doc("Ragdoll-Archers")
                 .set({
                     unityData: gameData,
-                    localBackup: backupData,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
-        console.log("✅ Cloud Save Sync voltooid");
+        console.log("🚀 Firebase is succesvol bijgewerkt!");
     } catch (e) {
-        console.error("❌ Save fout:", e);
+        console.error("❌ Firebase fout:", e);
     }
 }
-
-async function loadFromCloud() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    try {
-        const doc = await db.collection("users").doc(user.uid)
-                           .collection("saveData").doc("Ragdoll-Archers").get();
-        
-        if (doc.exists) {
-            const data = doc.data();
-            if (data.unityData) await restoreUnitySaveData(data.unityData);
-            if (data.localBackup) {
-                for (const key in data.localBackup) localStorage.setItem(key, data.localBackup[key]);
-            }
-            console.log("✅ Cloud Load Sync voltooid");
-        }
-    } catch (e) {
-        console.error("❌ Load fout:", e);
-    }
-}
-
-// --- 4. START LOGICA ---
-auth.onAuthStateChanged(async (user) => {
-    if (!user) return;
-
-    await loadFromCloud();
-
-    const config = {
-        dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
-        frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
-        codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "Ericetto",
-        productName: "Ragdoll Archers",
-        productVersion: "0.1",
-    };
-
-    const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
-    const script = document.createElement("script");
-    script.src = loaderUrl;
-    script.onload = () => {
-        createUnityInstance(document.querySelector("#unity-canvas"), config, (progress) => {
-            document.querySelector("#unity-progress-bar-full").style.width = (100 * progress) + "%";
-        }).then((instance) => {
-            document.querySelector("#loading-cover").style.display = "none";
-            setInterval(saveToCloud, 30000); // Elke 30 seconden synchroniseren
-        });
-    };
-    document.body.appendChild(script);
-});
     </script>
 </body>
 </html>
