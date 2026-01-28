@@ -1,84 +1,135 @@
-<Module>
-
-
-<!-- Ultimate Game Stash file--> 
-<!-- For the regularly updating doc go to https://docs.oogle.com/document/d/1_FmH3BlSBQI7FGgAQL59-ZPe8eCxs35wel6JUyVaG8Q/ -->
-
-
-
-<!DOCTYPE html><html lang="en-us"><head>
-<script src="https://cdn.jsdelivr.net/gh/laparda14/Ragdoll-archers@62504c9570ea720c6367e7debe1e110c68f77c2d/vs/gameloader-helper.js"></script>
-<meta charset="utf-8">
-<script src=""></script>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Ragdoll Archers</title>
-
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/styyyle.css">
-<body>
-  
-</div>
-<div id="unity-container" class="unity-desktop">
-<canvas id="unity-canvas"></canvas>
-</div>
-<div id="loading-cover">
-<div id="unity-loading-bar">
-<div id="unity-logo"><img src="logo.jpeg"></div>
-<div class="progress-spinner-container">
-<div class="spinner-left"><img src="spinner.png"></div>
-<div id="unity-progress-bar-empty">
-<div id="unity-progress-bar-full"></div>
-</div>
-<div class="spinner-right"><img src="spinner.png"></div>
-</div>
-</div>
-</div>
-<script>
-    const buildUrl = "Build";
-    const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
-const config = {
-  dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
-  frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
-  codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
-  streamingAssetsUrl: "StreamingAssets",
-  companyName: "Ericetto",
-  productName: "Ragdoll Archers",
-  productVersion: "0.1",
-};
-
-
-    const container = document.querySelector("#unity-container");
-    const canvas = document.querySelector("#unity-canvas");
-    const loadingCover = document.querySelector("#loading-cover");
-    const progressBarEmpty = document.querySelector("#unity-progress-bar-empty");
-    const progressBarFull = document.querySelector("#unity-progress-bar-full");
-
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      container.className = "unity-mobile";
-    }
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ragdoll Archers - Game Paradise</title>
     
-    loadingCover.style.display = "";
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    const unityLoader = document.createElement("script");
-    unityLoader.src = loaderUrl;
-    unityLoader.onload = () => {
-      createUnityInstance(canvas, config, (progress) => {
-        progressBarEmpty.style.display = "";
-        progressBarFull.style.width = `${100 * progress}%`;
-      }).then((unityInstance) => {
-        window.unityInstance = unityInstance;
-        loadingCover.style.display = "none";
-      }).catch((message) => {
-        alert(message);
-      });
-    };
-    document.body.appendChild(unityLoader);
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/styyyle.css">
+</head>
+<body>
+    <div id="unity-container" class="unity-desktop">
+        <canvas id="unity-canvas"></canvas>
+    </div>
+    <div id="loading-cover">
+        <div id="unity-loading-bar">
+            <div id="unity-logo"><img src="logo.jpeg"></div>
+            <div class="progress-spinner-container">
+                <div class="spinner-left"><img src="spinner.png"></div>
+                <div id="unity-progress-bar-empty">
+                    <div id="unity-progress-bar-full"></div>
+                </div>
+                <div class="spinner-right"><img src="spinner.png"></div>
+            </div>
+        </div>
+    </div>
 
-    document.addEventListener("pointerdown", () => {
-      container.focus();
-      window.focus();
-      canvas.focus();
-    });
+    <script>
+        // --- 1. FIREBASE CONFIGURATIE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+            authDomain: "gameparadise-80490.firebaseapp.com",
+            projectId: "gameparadise-80490",
+            storageBucket: "gameparadise-80490.firebasestorage.app",
+            messagingSenderId: "335620903527",
+            appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
-  </script>
-</body></html>
+        const config = {
+            dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
+            frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
+            codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
+            streamingAssetsUrl: "StreamingAssets",
+            companyName: "Ericetto",
+            productName: "Ragdoll Archers",
+            productVersion: "0.1",
+        };
+
+        const container = document.querySelector("#unity-container");
+        const canvas = document.querySelector("#unity-canvas");
+        const loadingCover = document.querySelector("#loading-cover");
+        const progressBarFull = document.querySelector("#unity-progress-bar-full");
+
+        // --- 2. CLOUD SAVING LOGICA ---
+        
+        async function saveToCloud() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            // Unity slaat vaak data op in localStorage onder de productnaam
+            // We pakken alles wat met 'Ragdoll' te maken heeft
+            const saveData = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.includes("Ragdoll") || key.includes("Unity")) {
+                    saveData[key] = localStorage.getItem(key);
+                }
+            }
+
+            try {
+                await db.collection("users").doc(user.uid)
+                        .collection("saveData").doc("Ragdoll-Archers")
+                        .set({
+                            data: saveData,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                console.log("Progress saved to Firebase!");
+            } catch (e) {
+                console.error("Error saving to cloud:", e);
+            }
+        }
+
+        async function loadFromCloud() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const doc = await db.collection("users").doc(user.uid)
+                               .collection("saveData").doc("Ragdoll-Archers").get();
+            
+            if (doc.exists) {
+                const cloudData = doc.data().data;
+                for (const key in cloudData) {
+                    localStorage.setItem(key, cloudData[key]);
+                }
+                console.log("Progress restored from Firebase!");
+            }
+        }
+
+        // --- 3. UNITY LADEN ---
+        const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
+        const unityLoader = document.createElement("script");
+        unityLoader.src = loaderUrl;
+        
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                await loadFromCloud(); // Eerst data ophalen, dan game starten
+            }
+            
+            unityLoader.onload = () => {
+                createUnityInstance(canvas, config, (progress) => {
+                    progressBarFull.style.width = `${100 * progress}%`;
+                }).then((unityInstance) => {
+                    window.unityInstance = unityInstance;
+                    loadingCover.style.display = "none";
+                    
+                    // Elke 30 seconden automatisch opslaan
+                    setInterval(saveToCloud, 30000);
+                });
+            };
+            document.body.appendChild(unityLoader);
+        });
+
+        // Extra save moment als de gebruiker de pagina verlaat
+        window.addEventListener("beforeunload", saveToCloud);
+
+    </script>
+</body>
+</html>
