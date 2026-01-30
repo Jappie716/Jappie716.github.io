@@ -41,6 +41,7 @@
         <h3>Global Chat</h3>
         <span id="status">Laden...</span>
     </div>
+    <button id="chatAdminBtn" onclick="location.href='admin.html'" style="display:none; margin-left: auto; background: #1e293b; color: white; border: 1px solid #313d45; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">⚙️ Admin</button>
 </div>
 
 <div id="chat-window"></div>
@@ -65,10 +66,18 @@ const auth = firebase.auth();
 
 let currentUser = null;
 
+const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
         document.getElementById('status').innerText = "Ingelogd als " + user.email.split('@')[0];
+        
+        // Check of de gebruiker admin is, zo ja: toon de knop
+        if(ADMIN_EMAILS.includes(user.email)) {
+            document.getElementById('chatAdminBtn').style.display = "block";
+        }
+        
         listenForMessages();
     } else {
         alert("Log eerst in op de homepagina!");
