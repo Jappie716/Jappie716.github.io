@@ -70,6 +70,9 @@
         <div class="card">
             <h2>Welkom Admin</h2>
             <p>Gebruik het linker menu om de website te beheren.</p>
+            <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">
+                Laden statistieken...
+            </div>
         </div>
     </div>
 
@@ -175,7 +178,9 @@ function init() {
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
         list.innerHTML = "";
+        let count = 0;
         s.forEach(doc => {
+            count++;
             const g = doc.data();
             list.innerHTML += `<tr>
                 <td><img src="${g.image}" class="thumb"></td>
@@ -187,6 +192,7 @@ function init() {
                 </td>
             </tr>`;
         });
+        document.getElementById('stats').innerText = `Totaal games: ${count}`;
     });
 
     // Categorieën
