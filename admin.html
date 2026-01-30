@@ -95,7 +95,11 @@
                 <input type="checkbox" id="editHasSave" style="width:auto; margin:0">
                 <span>Slaat voortgang op (💾 icoon tonen)</span>
             </label>
-
+<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+    <input type="checkbox" id="editHasInfo" style="width:auto; margin:0">
+    <span>Heeft extra info (❓ icoon tonen)</span>
+</label>
+<input id="editInfoText" placeholder="Informatie tekst voor de game">
             <button class="btn success" onclick="saveGame()">💾 Opslaan</button>
             <button class="btn" style="width:100%; background:transparent; color:#94a3b8" onclick="resetEditor()">Schoonmaken</button>
         </div>
@@ -231,7 +235,9 @@ function saveGame() {
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
         category: document.getElementById('editCat').value,
-        hasSave: document.getElementById('editHasSave').checked
+        hasSave: document.getElementById('editHasSave').checked,
+        hasInfo: document.getElementById('editHasInfo').checked, // Nieuw
+        infoText: document.getElementById('editInfoText').value // Nieuw
     };
     
     db.collection("games").doc(id).set(data, {merge:true}).then(() => {
@@ -250,6 +256,8 @@ function editGame(id) {
         document.getElementById('editLink').value = g.link;
         document.getElementById('editCat').value = g.category;
         document.getElementById('editHasSave').checked = g.hasSave || false;
+        document.getElementById('editHasInfo').checked = g.hasInfo || false; // Nieuw
+        document.getElementById('editInfoText').value = g.infoText || ""; // Nieuw
         updatePreview(g.image);
         showTab('editor');
     });
@@ -261,6 +269,8 @@ function resetEditor() {
     document.getElementById('editTitle').value = "";
     document.getElementById('editImg').value = "";
     document.getElementById('editHasSave').checked = false;
+    document.getElementById('editHasInfo').checked = false; // Nieuw
+    document.getElementById('editInfoText').value = ""; // Nieuw
     updatePreview("");
 }
 
