@@ -74,12 +74,16 @@
         .star.fav { color: #fbbf24; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
         .save-icon { color: var(--accent); font-size: 12px; margin-right: 5px; opacity: 0.8; }
 
+        /* NIEUW: Info knop stijl */
+        .info-btn { font-size: 18px; color: var(--text-dim); margin-right: 8px; cursor: pointer; transition: 0.2s; }
+        .info-btn:hover { color: white; }
+
         /* --- MODALS & TOASTS --- */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 10000; }
         .modal-box { 
             background: #0f172a; padding: 30px; border-radius: 20px; width: 400px; 
             text-align: center; border: 1px solid #1e293b; 
-            overflow-x: hidden; /* Fix voor scrollbar */
+            overflow-x: hidden;
         }
         .modal-box input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; }
         .modal-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
@@ -118,8 +122,8 @@
 <div id="loginModal" class="modal">
     <div class="modal-box">
         <h2>Welkom Terug</h2>
-        <input id="emailInput" type="email" name="user_email" placeholder="E-mail">
-        <input id="passwordInput" type="password" name="user_password" placeholder="Wachtwoord">
+        <input id="emailInput" type="email" placeholder="E-mail">
+        <input id="passwordInput" type="password" placeholder="Wachtwoord">
         <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
         <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
         <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Annuleren</button>
@@ -139,10 +143,16 @@
 <div id="registerModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
         <h2 style="color: var(--accent);">Account Aanvragen</h2>
-        <div style="width: 100%; overflow: hidden;">
-            <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
-        </div>
+        <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
         <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
+    </div>
+</div>
+
+<div id="infoModal" class="modal">
+    <div class="modal-box">
+        <h2 id="infoTitle" style="color: var(--accent);">Game Info</h2>
+        <p id="infoText" style="color: white; line-height: 1.6; margin: 20px 0; text-align: left;"></p>
+        <button onclick="document.getElementById('infoModal').style.display='none'" style="background: var(--primary); color: white;">Sluiten</button>
     </div>
 </div>
 
@@ -179,9 +189,8 @@ auth.onAuthStateChanged(user => {
     currentUser = user;
     if (user) {
         document.getElementById("authBtn").textContent = "Uitloggen";
-        document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email) ? "inline-block" : "none";
+        document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? "inline-block" : "none";
         loadFavorites();
-        document.getElementById("favModal").style.display = 'none'; // Sluit modal als login lukt
     } else {
         document.getElementById("authBtn").textContent = "Inloggen";
         document.getElementById("adminBtn").style.display = "none";
@@ -219,18 +228,24 @@ document.getElementById("registerSubmit").onclick = () => {
     document.getElementById("registerModal").style.display = "flex";
 };
 
+// NIEUW: Functie om info modal te openen
+function showInfo(id, e) {
+    e.stopPropagation();
+    const g = allGames[id];
+    document.getElementById("infoTitle").innerText = g.title;
+    document.getElementById("infoText").innerText = g.infoText || "Geen extra informatie beschikbaar.";
+    document.getElementById("infoModal").style.display = "flex";
+}
+
 function setFilter(cat, el) {
     if (cat === 'favorites' && !currentUser) {
         document.getElementById("favModal").style.display = "flex";
         return;
     }
-
     currentFilter = cat;
     document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
     el.classList.add('active');
-    
-    let title = el.innerText;
-    document.getElementById("sectionTitle").textContent = title.replace('📁 ', '').replace('⭐ ', '');
+    document.getElementById("sectionTitle").textContent = el.innerText.replace('📁 ', '').replace('⭐ ', '');
     renderGames();
 }
 
@@ -292,11 +307,15 @@ function renderGames() {
 
         const card = document.createElement("div");
         card.className = "game-card";
+        // AANGEPAST: h3 bevat nu de info-btn (❓) als hasInfo true is
         card.innerHTML = `
             <img src="${g.image}">
             <h3>
                 <span>${g.hasSave ? '<span class="save-icon" title="Slaat voortgang op">💾</span>' : ''}${g.title}</span>
-                <span class="star ${isFav ? 'fav' : ''}" onclick="toggleFavorite('${id}', event)">★</span>
+                <div style="display: flex; align-items: center;">
+                    ${g.hasInfo ? `<span class="info-btn" onclick="showInfo('${id}', event)">❓</span>` : ''}
+                    <span class="star ${isFav ? 'fav' : ''}" onclick="toggleFavorite('${id}', event)">★</span>
+                </div>
             </h3>
         `;
         card.onclick = () => location.href = g.link;
@@ -305,7 +324,6 @@ function renderGames() {
 }
 
 document.getElementById("searchInput").oninput = renderGames;
-
 loadGames();
 loadCategories();
 </script>
