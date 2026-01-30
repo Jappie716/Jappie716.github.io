@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Paradise - Chat & Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --bg-hover: #2c2c2c;
+            --primary: #8b5cf6; /* Gaming Paars */
+            --primary-hover: #7c3aed;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border: #333;
+            --incoming: #2a2a2a;
+            --outgoing: #8b5cf6;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body { 
+            margin: 0; 
+            font-family: 'Poppins', sans-serif; 
+            background-color: var(--bg-dark); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            overflow: hidden;
+        }
+        
+        /* Layout */
+        .chat-container { display: flex; width: 100%; height: 100%; }
+        
+        /* Sidebar */
+        .sidebar { 
+            width: 300px; 
+            background: var(--bg-panel); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0;
+        }
+
+        .main-chat { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: var(--bg-dark); 
+            position: relative;
+        }
+
+        /* Sidebar Headers */
+        .header { 
+            background: var(--bg-panel); 
+            padding: 15px; 
+            height: 70px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .user-profile-btn {
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            padding: 5px; border-radius: 8px; transition: 0.2s;
+        }
+        .user-profile-btn:hover { background: var(--bg-hover); }
+
+        .sidebar-title { font-weight: 600; color: var(--primary); letter-spacing: 1px; }
+
+        /* User Lists */
+        .contact-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .section-title { font-size: 12px; color: var(--text-muted); margin: 10px 0 5px 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .contact { 
+            display: flex; align-items: center; padding: 10px; 
+            cursor: pointer; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; 
+        }
+        .contact:hover { background: var(--bg-hover); }
+        .contact.active { background: #333; border-left: 3px solid var(--primary); }
+        
+        .avatar { 
+            width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+            background: #444; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px; border: 2px solid transparent;
+        }
+        .contact.active .avatar { border-color: var(--primary); }
+
+        .contact-info h4 { margin: 0; font-size: 14px; font-weight: 500; }
+        .contact-info p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+
+        /* Chat Window */
+        .chat-window { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+        }
+        
+        .msg { 
+            max-width: 70%; 
+            padding: 10px 15px; 
+            border-radius: 12px; 
+            font-size: 14px; 
+            line-height: 1.5; 
+            position: relative; 
+            word-wrap: break-word;
+        }
+        .msg.received { 
+            background: var(--incoming); 
+            align-self: flex-start; 
+            border-bottom-left-radius: 2px;
+        }
+        .msg.sent { 
+            background: var(--outgoing); 
+            color: white;
+            align-self: flex-end; 
+            border-bottom-right-radius: 2px;
+        }
+        .msg .sender { font-size: 11px; font-weight: bold; color: var(--primary); display: block; margin-bottom: 2px; }
+        .msg.sent .sender { display: none; } /* Verberg eigen naam */
+        .msg .time { font-size: 10px; opacity: 0.7; float: right; margin-top: 5px; margin-left: 10px; }
+        
+        .msg img.msg-avatar {
+            width: 20px; height: 20px; border-radius: 50%; 
+            position: absolute; bottom: -25px; left: -5px;
+        }
+
+        /* Input Area */
+        .input-area { 
+            background: var(--bg-panel); 
+            padding: 15px; 
+            display: flex; 
+            gap: 10px; 
+            border-top: 1px solid var(--border);
+        }
+        #chatInput { 
+            flex: 1; background: var(--bg-dark); border: 1px solid var(--border); 
+            padding: 12px 15px; border-radius: 25px; color: white; outline: none; 
+            font-family: 'Poppins', sans-serif;
+        }
+        #chatInput:focus { border-color: var(--primary); }
+        #sendBtn { 
+            background: var(--primary); border: none; cursor: pointer; 
+            color: white; width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 18px;
+            transition: 0.2s;
+        }
+        #sendBtn:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+        /* Settings Modal */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px;
+            text-align: center; border: 1px solid var(--border); box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        }
+        .modal h2 { margin-top: 0; color: var(--primary); }
+        .modal input[type="text"] {
+            width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid var(--border);
+            background: var(--bg-dark); color: white;
+        }
+        .modal-btn {
+            padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px;
+        }
+        .btn-save { background: var(--primary); color: white; }
+        .btn-close { background: transparent; color: var(--text-muted); }
+
+        /* Preview Image in Modal */
+        #previewImg { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); margin: 10px auto; display: block;}
+
+        /* Mobile Responsive */
+        @media (max-width: 700px) {
+            .sidebar { position: absolute; height: 100%; z-index: 10; transform: translateX(-100%); transition: 0.3s; width: 80%; }
+            .sidebar.open { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
+            .menu-toggle { display: block; margin-right: 15px; cursor: pointer; font-size: 24px; }
+        }
+        @media (min-width: 701px) { .menu-toggle { display: none; } }
+
+    </style>
+</head>
+<body>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h2>Profiel Bewerken</h2>
+        <img id="previewImg" src="https://www.w3schools.com/howto/img_avatar.png">
+        
+        <label for="fileInput" style="cursor: pointer; color: var(--primary); font-size: 13px; display: block; margin-bottom: 10px;">Foto wijzigen (klik hier)</label>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        
+        <input type="text" id="editUsername" placeholder="Je gebruikersnaam">
+        
+        <button class="modal-btn btn-save" onclick="saveProfile()">Opslaan</button>
+        <button class="modal-btn btn-close" onclick="toggleModal(false)">Annuleren</button>
+    </div>
+</div>
+
+<div class="chat-container">
+    <div class="sidebar" id="sidebar">
+        <div class="header">
+            <div class="user-profile-btn" onclick="toggleModal(true)">
+                <img id="myAvatar" class="avatar" src="" style="margin:0;">
+                <div style="font-size: 14px; font-weight: 600;">Instellingen ⚙️</div>
+            </div>
+            <div onclick="location.href='index.html'" style="cursor: pointer; color: var(--text-muted);">⬅</div>
+        </div>
+        
+        <div class="contact-list">
+            <div class="section-title">Algemeen</div>
+            <div class="contact active" onclick="switchChat('global', 'Global Community', '')" id="globalChatLink">
+                <div class="avatar" style="background: var(--primary);">🌍</div>
+                <div class="contact-info">
+                    <h4>Global Community</h4>
+                    <p>Openbare chat room</p>
+                </div>
+            </div>
+
+            <div class="section-title">Beschikbare Leden</div>
+            <div id="usersList">
+                <div style="padding:10px; font-size:12px; color:gray;">Leden laden...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <div class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</div>
+                <img id="currentChatAvatar" class="avatar" src="" style="display:none;"> 
+                <div class="avatar" id="currentChatIcon" style="background: var(--primary);">🌍</div>
+                <div>
+                    <h4 style="margin:0;" id="currentChatName">Global Community</h4>
+                    <span style="font-size:11px; color: var(--primary);" id="typingIndicator"></span>
+                </div>
+            </div>
+            <button id="adminBtn" onclick="location.href='admin.html'" style="display:none; background: #333; border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer;">Admin</button>
+        </div>
+
+        <div id="chat-window" class="chat-window"></div>
+
+        <div class="input-area">
+            <input type="text" id="chatInput" placeholder="Typ een bericht...">
+            <button id="sendBtn">➤</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 1. CONFIGURATIE (Vervang deze met je ECHTE keys als ze anders zijn)
+const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app", // Belangrijk voor foto's!
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+const storage = firebase.storage();
+
+let currentUser = null;
+let currentChatId = "global"; // Standaard chat
+let unsubscribeMessages = null; // Om listeners te stoppen bij wisselen
+
+// Admin lijst
+const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+
+// --- AUTH & INITIALISATIE ---
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        updateUserInterface();
+        updateUserInDatabase(); // Zorg dat user in de 'users' lijst staat
+        loadUsersList(); // Laad andere gebruikers voor privé chats
+        loadMessages("global"); // Start met global chat
+
+        if(ADMIN_EMAILS.includes(user.email)) {
+            document.getElementById('adminBtn').style.display = "block";
+        }
+    } else {
+        window.location.href = "index.html";
+    }
+});
+
+function updateUserInterface() {
+    const avatar = currentUser.photoURL || DEFAULT_AVATAR;
+    document.getElementById('myAvatar').src = avatar;
+    document.getElementById('previewImg').src = avatar;
+    document.getElementById('editUsername').value = currentUser.displayName || currentUser.email.split('@')[0];
+}
+
+// Update user info in de database (zodat anderen hem zien in de lijst)
+function updateUserInDatabase() {
+    db.collection('users').doc(currentUser.uid).set({
+        uid: currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email.split('@')[0],
+        photoURL: currentUser.photoURL || DEFAULT_AVATAR,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+}
+
+// --- CHAT FUNCTIES ---
+
+// Wissel tussen chats
+function switchChat(chatId, chatName, chatAvatar) {
+    if (currentChatId === chatId) return; // Al in deze chat
+    
+    currentChatId = chatId;
+    
+    // UI Update Header
+    document.getElementById('currentChatName').innerText = chatName;
+    const icon = document.getElementById('currentChatIcon');
+    const img = document.getElementById('currentChatAvatar');
+
+    if (chatAvatar && chatAvatar !== "") {
+        img.src = chatAvatar;
+        img.style.display = "block";
+        icon.style.display = "none";
+    } else {
+        img.style.display = "none";
+        icon.style.display = "flex";
+        icon.innerText = chatId === 'global' ? '🌍' : '👤';
+    }
+
+    // Sidebar active state
+    document.querySelectorAll('.contact').forEach(el => el.classList.remove('active'));
+    if(chatId === 'global') {
+        document.getElementById('globalChatLink').classList.add('active');
+    } else {
+        // Zoek het juiste element (beetje hacky, maar werkt)
+        const userEl = document.getElementById(`user-${chatId.replace(currentUser.uid, '').replace('_', '')}`);
+        if(userEl) userEl.classList.add('active');
+    }
+
+    // Sluit mobile menu
+    document.getElementById('sidebar').classList.remove('open');
+
+    // Laad nieuwe berichten
+    loadMessages(chatId);
+}
+
+// Berichten laden (Global of Privé)
+function loadMessages(chatId) {
+    const windowDiv = document.getElementById('chat-window');
+    windowDiv.innerHTML = '<div style="text-align:center; color:gray; margin-top:20px;">Berichten laden...</div>';
+
+    if (unsubscribeMessages) unsubscribeMessages(); // Stop vorige luisteraar
+
+    // We gebruiken 1 grote collectie 'messages' en filteren op 'chatId'
+    // Voor productie is het beter om subcollecties te gebruiken, maar dit is makkelijker in 1 bestand.
+    unsubscribeMessages = db.collection("messages")
+        .where("chatId", "==", chatId)
+        .orderBy("timestamp", "asc")
+        .limitToLast(50)
+        .onSnapshot(snapshot => {
+            windowDiv.innerHTML = ""; // Clear loader
+            
+            if (snapshot.empty) {
+                windowDiv.innerHTML = '<div style="text-align:center; color:gray; margin-top:20px;">Begin het gesprek! 👋</div>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                renderMessage(msg);
+            });
+            windowDiv.scrollTop = windowDiv.scrollHeight;
+        });
+}
+
+function renderMessage(m) {
+    const isMe = m.uid === currentUser.uid;
+    const time = m.timestamp ? new Date(m.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "...";
+    
+    const div = document.createElement('div');
+    div.className = `msg ${isMe ? 'sent' : 'received'}`;
+    
+    // Alleen avatar tonen bij ontvangen berichten
+    const avatarHtml = !isMe ? `<img src="${m.photoURL || DEFAULT_AVATAR}" class="msg-avatar" title="${m.user}">` : '';
+
+    div.innerHTML = `
+        ${avatarHtml}
+        ${!isMe ? `<span class="sender">${m.user}</span>` : ''}
+        ${m.text}
+        <span class="time">${time}</span>
+    `;
+    document.getElementById('chat-window').appendChild(div);
+}
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    db.collection("messages").add({
+        chatId: currentChatId, // 'global' of 'uid1_uid2'
+        text: text,
+        user: currentUser.displayName || "Anoniem",
+        uid: currentUser.uid,
+        photoURL: currentUser.photoURL || DEFAULT_AVATAR,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        participants: currentChatId === 'global' ? ['global'] : currentChatId.split('_') // Handig voor security rules later
+    });
+
+    input.value = "";
+}
+
+// --- GEBRUIKERS LIJST & PRIVÉ CHAT LOGICA ---
+function loadUsersList() {
+    db.collection('users').limit(20).onSnapshot(snap => {
+        const container = document.getElementById('usersList');
+        container.innerHTML = "";
+        
+        snap.forEach(doc => {
+            const u = doc.data();
+            if (u.uid === currentUser.uid) return; // Jezelf niet tonen
+
+            // Maak unieke Chat ID (altijd alfabetisch sorteren zodat A->B en B->A dezelfde ID hebben)
+            const chatPartnerId = u.uid;
+            const chatId = [currentUser.uid, chatPartnerId].sort().join('_');
+
+            const div = document.createElement('div');
+            div.className = "contact";
+            div.id = `user-${chatPartnerId}`;
+            div.onclick = () => switchChat(chatId, u.displayName, u.photoURL);
+            
+            div.innerHTML = `
+                <img class="avatar" src="${u.photoURL || DEFAULT_AVATAR}">
+                <div class="contact-info">
+                    <h4>${u.displayName}</h4>
+                    <p>Klik om te chatten</p>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    });
+}
+
+// --- PROFIEL & BESTAND UPLOADEN ---
+
+function toggleModal(show) {
+    document.getElementById('settingsModal').style.display = show ? 'flex' : 'none';
+}
+
+// Preview foto wanneer geselecteerd
+document.getElementById('fileInput').onchange = function(evt) {
+    const [file] = document.getElementById('fileInput').files;
+    if (file) {
+        document.getElementById('previewImg').src = URL.createObjectURL(file);
+    }
+};
+
+async function saveProfile() {
+    const newName = document.getElementById('editUsername').value;
+    const file = document.getElementById('fileInput').files[0];
+    const btn = document.querySelector('.btn-save');
+    
+    btn.innerText = "Bezig met opslaan...";
+    btn.disabled = true;
+
+    try {
+        let photoURL = currentUser.photoURL;
+
+        // 1. Upload Foto als die er is
+        if (file) {
+            const storageRef = storage.ref();
+            const fileRef = storageRef.child(`avatars/${currentUser.uid}`);
+            await fileRef.put(file);
+            photoURL = await fileRef.getDownloadURL();
+        }
+
+        // 2. Update Auth Profiel
+        await currentUser.updateProfile({
+            displayName: newName,
+            photoURL: photoURL
+        });
+
+        // 3. Update Firestore User Document (zodat anderen de nieuwe foto zien)
+        await db.collection('users').doc(currentUser.uid).update({
+            displayName: newName,
+            photoURL: photoURL
+        });
+
+        alert("Profiel bijgewerkt!");
+        toggleModal(false);
+        updateUserInterface(); // Ververs UI direct
+
+    } catch (error) {
+        console.error(error);
+        alert("Fout bij opslaan: " + error.message);
+    } finally {
+        btn.innerText = "Opslaan";
+        btn.disabled = false;
+    }
+}
+
+// Event Listeners
+document.getElementById('sendBtn').onclick = sendMessage;
+document.getElementById('chatInput').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+</script>
+</body>
+</html>
