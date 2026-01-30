@@ -91,7 +91,7 @@
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
   <div class="search-box">
-    <input id="searchInput" type="text" placeholder="Zoek games..." autocomplete="off">
+    <input id="searchInput" type="search" name="search_query" placeholder="Zoek games..." autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
   </div>
   <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
   <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
@@ -113,8 +113,8 @@
 <div id="loginModal" class="modal">
     <div class="modal-box">
         <h2>Welkom Terug</h2>
-        <input id="emailInput" type="email" placeholder="E-mail">
-        <input id="passwordInput" type="password" placeholder="Wachtwoord">
+        <input id="emailInput" type="email" name="user_email" placeholder="E-mail">
+        <input id="passwordInput" type="password" name="user_password" placeholder="Wachtwoord">
         <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
         <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
         <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Annuleren</button>
@@ -152,6 +152,7 @@ function notify(msg, type = 'success') {
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
     t.className = 'toast';
+    // Hier wordt de randkleur bepaald
     t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
     t.innerHTML = msg;
     container.appendChild(t);
@@ -242,7 +243,8 @@ function toggleFavorite(id, e) {
     if (!currentUser) return notify("Log in om favorieten te bewaren", "danger");
     const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
     if (favorites[id]) {
-        ref.delete().then(() => notify("🗑️ Game verwijderd uit favorieten!"));
+        // AANGEPAST: Hier wordt nu "danger" meegegeven voor de rode rand
+        ref.delete().then(() => notify("🗑️ Game verwijderd uit favorieten!", "danger"));
     } else {
         ref.set(allGames[id]).then(() => notify("⭐ Game aan favorieten toegevoegd!"));
     }
