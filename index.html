@@ -59,8 +59,9 @@
         .game-card {
             background: var(--card-bg); border-radius: 15px; overflow: hidden;
             transition: 0.3s; border: 1px solid #1e293b; cursor: pointer;
+            position: relative;
         }
-        .game-card:hover { transform: translateY(-8px); border-color: var(--primary); }
+        .game-card:hover { transform: translateY(-8px); border-color: var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .game-card img { width: 100%; height: 120px; object-fit: cover; }
         
         .game-card h3 { 
@@ -69,13 +70,17 @@
             background: rgba(0,0,0,0.3);
         }
 
-        .star { font-size: 20px; color: rgba(255,255,255,0.2); transition: 0.2s; }
+        .star { font-size: 20px; color: rgba(255,255,255,0.2); transition: 0.2s; z-index: 2; }
         .star.fav { color: #fbbf24; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
         .save-icon { color: var(--accent); font-size: 12px; margin-right: 5px; opacity: 0.8; }
 
         /* --- MODALS & TOASTS --- */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 10000; }
-        .modal-box { background: #0f172a; padding: 30px; border-radius: 20px; width: 400px; text-align: center; border: 1px solid #1e293b; }
+        .modal-box { 
+            background: #0f172a; padding: 30px; border-radius: 20px; width: 400px; 
+            text-align: center; border: 1px solid #1e293b; 
+            overflow-x: hidden; /* Fix voor scrollbar */
+        }
         .modal-box input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; }
         .modal-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
@@ -121,10 +126,22 @@
     </div>
 </div>
 
+<div id="favModal" class="modal">
+    <div class="modal-box">
+        <div style="font-size: 40px; margin-bottom: 10px;">⭐</div>
+        <h2>Oeps, geen favorieten!</h2>
+        <p style="color: #94a3b8; margin-bottom: 20px;">Je moet ingelogd zijn om favoriete games op te slaan.</p>
+        <button onclick="openLoginFromFav()" style="background: var(--primary); color: white;">Nu Inloggen</button>
+        <button onclick="document.getElementById('favModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Laat maar</button>
+    </div>
+</div>
+
 <div id="registerModal" class="modal">
-    <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
         <h2 style="color: var(--accent);">Account Aanvragen</h2>
-        <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
+        <div style="width: 100%; overflow: hidden;">
+            <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
+        </div>
         <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
     </div>
 </div>
@@ -152,7 +169,6 @@ function notify(msg, type = 'success') {
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
     t.className = 'toast';
-    // Hier wordt de randkleur bepaald
     t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
     t.innerHTML = msg;
     container.appendChild(t);
@@ -165,6 +181,7 @@ auth.onAuthStateChanged(user => {
         document.getElementById("authBtn").textContent = "Uitloggen";
         document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email) ? "inline-block" : "none";
         loadFavorites();
+        document.getElementById("favModal").style.display = 'none'; // Sluit modal als login lukt
     } else {
         document.getElementById("authBtn").textContent = "Inloggen";
         document.getElementById("adminBtn").style.display = "none";
@@ -180,6 +197,11 @@ document.getElementById("authBtn").onclick = () => {
         document.getElementById("loginModal").style.display = "flex";
     }
 };
+
+function openLoginFromFav() {
+    document.getElementById("favModal").style.display = "none";
+    document.getElementById("loginModal").style.display = "flex";
+}
 
 document.getElementById("loginSubmit").onclick = () => {
     const email = document.getElementById("emailInput").value;
@@ -198,6 +220,11 @@ document.getElementById("registerSubmit").onclick = () => {
 };
 
 function setFilter(cat, el) {
+    if (cat === 'favorites' && !currentUser) {
+        document.getElementById("favModal").style.display = "flex";
+        return;
+    }
+
     currentFilter = cat;
     document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
     el.classList.add('active');
@@ -240,10 +267,12 @@ function loadFavorites() {
 
 function toggleFavorite(id, e) {
     e.stopPropagation();
-    if (!currentUser) return notify("Log in om favorieten te bewaren", "danger");
+    if (!currentUser) {
+        document.getElementById("favModal").style.display = "flex";
+        return;
+    }
     const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
     if (favorites[id]) {
-        // AANGEPAST: Hier wordt nu "danger" meegegeven voor de rode rand
         ref.delete().then(() => notify("🗑️ Game verwijderd uit favorieten!", "danger"));
     } else {
         ref.set(allGames[id]).then(() => notify("⭐ Game aan favorieten toegevoegd!"));
