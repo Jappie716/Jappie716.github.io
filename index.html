@@ -242,9 +242,9 @@ function toggleFavorite(id, e) {
     if (!currentUser) return notify("Log in om favorieten te bewaren", "danger");
     const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
     if (favorites[id]) {
-        ref.delete().then(() => notify("Ster verwijderd"));
+        ref.delete().then(() => notify("🗑️ Game verwijderd uit favorieten!"));
     } else {
-        ref.set(allGames[id]).then(() => notify("⭐ Aan favorieten toegevoegd!"));
+        ref.set(allGames[id]).then(() => notify("⭐ Game aan favorieten toegevoegd!"));
     }
 }
 
