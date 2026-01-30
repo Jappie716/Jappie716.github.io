@@ -45,7 +45,6 @@
         .chat-input input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
         .btn { background: var(--primary); border: none; padding: 10px 15px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; }
         
-        /* Emoji Picker */
         #emojiPicker { position: absolute; bottom: 70px; left: 15px; background: #1e293b; border: 1px solid #334155; display: none; grid-template-columns: repeat(5, 1fr); padding: 5px; border-radius: 8px; z-index: 10; }
         #emojiPicker span { cursor: pointer; padding: 5px; font-size: 20px; }
 
@@ -53,7 +52,7 @@
         .modal-content { background: var(--header); padding: 25px; border-radius: 15px; width: 380px; border: 1px solid #1e293b; max-height: 80vh; overflow-y: auto; }
         .modal-content input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #1e293b; background: #020617; color: white; }
         
-        .member-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #020617; margin-top: 5px; border-radius: 5px; }
+        .invite-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: #020617; margin-bottom: 5px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -74,7 +73,7 @@
     </div>
 
     <div class="main-chat">
-        <div class="chat-header" id="chatHeaderUI">
+        <div class="chat-header">
             <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
             <div style="flex:1">
                 <h3 id="activeChatName" style="margin:0">Kies een gesprek</h3>
@@ -109,20 +108,10 @@
     <div class="modal-content">
         <h3>Nieuwe Groep</h3>
         <input type="text" id="groupName" placeholder="Groepsnaam">
-        <button class="btn" onclick="createGroup()" style="width:100%">Maken</button>
+        <p style="font-size:12px; color:gray">Kies leden (alleen vrienden):</p>
+        <div id="friendsInviteList"></div>
+        <button class="btn" onclick="createGroup()" style="width:100%; margin-top:15px">Groep Maken</button>
         <button onclick="closeModal('groupModal')" style="width:100%; background:none; border:none; color:white; margin-top:10px; cursor:pointer">Sluiten</button>
-    </div>
-</div>
-
-<div id="manageGroupModal" class="modal">
-    <div class="modal-content">
-        <h3>Groepsbeheer</h3>
-        <input type="text" id="editGroupName" placeholder="Nieuwe groepsnaam">
-        <label>Groepsfoto:</label>
-        <input type="file" id="groupFileInput" accept="image/*">
-        <div id="memberListArea"></div>
-        <button class="btn" onclick="saveGroupSettings()" style="width:100%; margin-top:15px">Instellingen Opslaan</button>
-        <button onclick="closeModal('manageGroupModal')" style="width:100%; background:none; border:none; color:white; margin-top:10px; cursor:pointer">Sluiten</button>
     </div>
 </div>
 
@@ -143,7 +132,7 @@ let user = null;
 let currentTab = 'chats';
 let activeChatId = null;
 let chatType = 'private'; 
-let currentGroupOwner = null;
+const GLOBAL_IMG = "https://i.imgur.com/C9HtyPv.jpeg";
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkUserInDB(); switchTab('chats', document.querySelector('.tab.active')); }
@@ -173,15 +162,18 @@ async function loadSidebar() {
     list.innerHTML = "";
 
     if (currentTab === 'chats') {
-        list.innerHTML += `<div class="item" onclick="openChat('global', 'Algemeen 🌍', 'https://cdn-icons-png.flaticon.com/512/134/134914.png', 'global')">
-            <img src="https://cdn-icons-png.flaticon.com/512/134/134914.png"><div class="item-info"><h4>Algemeen 🌍</h4><p>Iedereen is hier...</p></div></div>`;
+        list.innerHTML += `<div class="item" onclick="openChat('global', 'Algemeen', '${GLOBAL_IMG}', 'global')">
+            <img src="${GLOBAL_IMG}"><div class="item-info"><h4>Algemeen</h4><p>Iedereen is hier...</p></div></div>`;
         
+        // Alleen groepen tonen waar jij lid van bent (maker of uitgenodigd)
         const gSnap = await db.collection("groups").get();
         gSnap.forEach(doc => {
             const g = doc.data();
-            list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${g.name}', '${g.pic||''}', 'group', '${g.owner}')">
-                ${g.pic ? `<img src="${g.pic}">` : `<div style="width:45px; height:45px; border-radius:50%; background:var(--primary); margin-right:12px; display:flex; align-items:center; justify-content:center">👥</div>`}
-                <div class="item-info"><h4>${g.name}</h4><p>Groepschat</p></div></div>`;
+            if (g.owner === user.uid || (g.members && g.members.includes(user.uid))) {
+                list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${g.name}', '${g.pic||''}', 'group', '${g.owner}')">
+                    ${g.pic ? `<img src="${g.pic}">` : `<div style="width:45px; height:45px; border-radius:50%; background:var(--primary); margin-right:12px; display:flex; align-items:center; justify-content:center">👥</div>`}
+                    <div class="item-info"><h4>${g.name}</h4><p>Groepschat</p></div></div>`;
+            }
         });
 
         const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
@@ -190,31 +182,62 @@ async function loadSidebar() {
             list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${f.name}', '${f.pic}', 'private')">
                 <img src="${f.pic}"><div class="item-info"><h4>${f.name}</h4><p>Privébericht</p></div></div>`;
         });
-    } else if (currentTab === 'discover') {
-        const snap = await db.collection("users").get();
-        snap.forEach(doc => {
-            if (doc.id === user.uid) return;
-            list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" onclick="sendRequest('${doc.id}')">Toevoegen</button></div>`;
-        });
-    } else if (currentTab === 'requests') {
-        const snap = await db.collection("users").doc(user.uid).collection("requests").get();
-        snap.forEach(doc => {
-            list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" style="background:#16a34a" onclick="acceptRequest('${doc.id}')">✓</button></div>`;
-        });
+    } else {
+        // ... (De rest van de sidebar logica voor Discover/Requests blijft gelijk aan vorige versie)
+        if (currentTab === 'discover') {
+            const snap = await db.collection("users").get();
+            snap.forEach(doc => { if (doc.id !== user.uid) list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" onclick="sendRequest('${doc.id}')">Toevoegen</button></div>`; });
+        } else if (currentTab === 'requests') {
+            const snap = await db.collection("users").doc(user.uid).collection("requests").get();
+            snap.forEach(doc => { list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" style="background:#16a34a" onclick="acceptRequest('${doc.id}')">✓</button></div>`; });
+        }
     }
 }
 
+async function openGroupModal() {
+    document.getElementById('groupModal').style.display = 'flex';
+    const inviteList = document.getElementById('friendsInviteList');
+    inviteList.innerHTML = "";
+    
+    const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+    fSnap.forEach(doc => {
+        const f = doc.data();
+        inviteList.innerHTML += `<div class="invite-item">
+            <input type="checkbox" class="friend-checkbox" value="${doc.id}">
+            <img src="${f.pic}" style="width:30px; height:30px; border-radius:50%">
+            <span>${f.name}</span>
+        </div>`;
+    });
+    if (inviteList.innerHTML === "") inviteList.innerHTML = "<p style='color:gray; font-size:12px'>Je hebt nog geen vrienden om uit te nodigen.</p>";
+}
+
+async function createGroup() {
+    const name = document.getElementById('groupName').value;
+    const checkboxes = document.querySelectorAll('.friend-checkbox:checked');
+    const selectedMembers = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (!name) return alert("Geef de groep een naam!");
+    
+    await db.collection("groups").add({
+        name: name,
+        owner: user.uid,
+        members: selectedMembers,
+        pic: "",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    closeModal('groupModal');
+    loadSidebar();
+}
+
+// ... (Rest van de functies: openChat, sendMessage, etc. blijven hetzelfde)
 function openChat(id, name, pic, type, ownerId = null) {
     chatType = type;
     activeChatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
-    currentGroupOwner = ownerId;
-
     document.getElementById('activeChatName').innerText = name;
     document.getElementById('activeChatImg').src = pic || "";
     document.getElementById('activeChatImg').style.display = pic ? "block" : "none";
     document.getElementById('inputArea').style.display = "flex";
-    document.getElementById('groupSettingsBtn').style.display = (type === 'group' && ownerId === user.uid) ? "block" : "none";
-    
     listenToMessages();
 }
 
@@ -242,50 +265,15 @@ async function sendMessage() {
     if (!input.value.trim()) return;
     const my = (await db.collection("users").doc(user.uid).get()).data();
     const msg = { text: input.value, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-    
     if (chatType === 'global') await db.collection("chats").add(msg);
     else if (chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(msg);
     else await db.collection("private_chats").doc(activeChatId).collection("messages").add(msg);
     input.value = "";
-    document.getElementById('emojiPicker').style.display = "none";
 }
 
-async function createGroup() {
-    const name = document.getElementById('groupName').value;
-    if (!name) return;
-    await db.collection("groups").add({ name: name, owner: user.uid, pic: "" });
-    closeModal('groupModal'); loadSidebar();
-}
-
-async function manageGroup() {
-    const doc = await db.collection("groups").doc(activeChatId).get();
-    document.getElementById('editGroupName').value = doc.data().name;
-    document.getElementById('manageGroupModal').style.display = 'flex';
-}
-
-async function saveGroupSettings() {
-    const newName = document.getElementById('editGroupName').value;
-    const file = document.getElementById('groupFileInput').files[0];
-    const ref = db.collection("groups").doc(activeChatId);
-
-    if (file) {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            await ref.update({ name: newName, pic: reader.result });
-            location.reload();
-        };
-        reader.readAsDataURL(file);
-    } else {
-        await ref.update({ name: newName });
-        location.reload();
-    }
-}
-
-// Helpers
 function toggleEmoji() { const p = document.getElementById('emojiPicker'); p.style.display = p.style.display === 'grid' ? 'none' : 'grid'; }
 function addEmoji(emoji) { document.getElementById('messageInput').value += emoji; }
 function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
-function openGroupModal() { document.getElementById('groupModal').style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
 async function saveProfile() {
