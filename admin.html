@@ -2,90 +2,33 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Game Paradise – Admin Panel</title>
+    <title>Admin - Game Paradise</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
-            --bg: #020617;
-            --card-bg: rgba(30, 41, 59, 0.4);
-            --primary: #2563eb;
-            --accent: #60a5fa;
-            --danger: #ef4444;
-            --success: #22c55e;
-            --warning: #f59e0b;
+            --bg: #020617; --card-bg: rgba(30, 41, 59, 0.4);
+            --primary: #2563eb; --accent: #60a5fa; --danger: #ef4444; --success: #22c55e;
         }
-
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg); color: white;
-            display: flex; height: 100vh; overflow: hidden;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            width: 260px; min-width: 260px; background: #010409;
-            padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
-        }
-        .logo { font-weight: bold; font-size: 20px; color: var(--accent); margin-bottom: 30px; text-align: center; }
-
-        .nav-btn {
-            background: transparent; padding: 12px; border-radius: 10px;
-            margin-bottom: 8px; cursor: pointer; border: none; color: #94a3b8;
-            text-align: left; transition: 0.2s; display: flex; align-items: center; gap: 10px; font-size: 14px;
-        }
-        .nav-btn:hover { background: #1e293b; color: white; }
-        .nav-btn.active { background: var(--primary); color: white; font-weight: bold; }
-
-        /* MAIN CONTENT */
-        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
-        .section { display: none; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .card {
-            background: var(--card-bg); backdrop-filter: blur(10px);
-            padding: 25px; border-radius: 15px; border: 1px solid #1e293b;
-            margin-bottom: 25px;
-        }
-
-        /* TABLES & LISTS */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
-        .thumb { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; }
-
-        /* FORMS */
-        input, select {
-            width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px;
-            border: 1px solid #334155; background: #0f172a; color: white; outline: none;
-        }
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; display: inline-block; text-align: center; }
-        .success { background: var(--success); color: white; }
-        .danger { background: var(--danger); color: white; }
-        .warning { background: var(--warning); color: white; }
-
-        /* CHAT BOKS IN ADMIN */
-        .admin-chat-container {
-            background: #000; border-radius: 10px; max-height: 400px; overflow-y: auto;
-            border: 1px solid #334155;
-        }
-        .chat-row {
-            padding: 10px 15px; border-bottom: 1px solid #1e293b;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .chat-row:hover { background: #0f172a; }
-
-        /* TOAST */
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; }
+        .nav-btn { width: 100%; padding: 12px; margin-bottom: 5px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; }
+        .nav-btn.active { background: var(--primary); color: white; }
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .section { display: none; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+        .btn.success { background: var(--success); color: white; }
+        .btn.danger { background: var(--danger); color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 10px; border-bottom: 1px solid #1e293b; text-align: left; }
+        .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .toast {
-            background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px;
-            margin-bottom: 10px; border-left: 5px solid var(--primary);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+        .toast { background: #1e293b; color: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--primary); }
     </style>
 </head>
 <body>
@@ -93,53 +36,43 @@
 <div id="toast-container"></div>
 
 <div class="sidebar">
-    <div class="logo">🎮 Admin Panel</div>
-    <button class="nav-btn active" id="tab-dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
-    <button class="nav-btn" id="tab-editor" onclick="showTab('editor')">✏️ Game Editor</button>
-    <button class="nav-btn" id="tab-games" onclick="showTab('games')">🎮 Game Lijst</button>
-    <button class="nav-btn" id="tab-categories" onclick="showTab('categories')">📂 Categorieën</button>
-    <button class="nav-btn" id="tab-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
-    
-    <div style="margin-top: auto;">
-        <button class="btn" style="width:100%; background:#1e293b; color:white; margin-bottom:10px" onclick="location.href='index.html'">🌐 Bekijk Site</button>
-        <button class="btn danger" style="width:100%" onclick="logout()">🚪 Log uit</button>
-    </div>
+    <h2 style="color: var(--accent)">⚙️ Admin</h2>
+    <button class="nav-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" onclick="showTab('editor')">✏️ Game Editor</button>
+    <button class="nav-btn" onclick="showTab('games')">🎮 Games Lijst</button>
+    <button class="nav-btn" onclick="showTab('categories')">📂 Categorieën</button>
+    <button class="nav-btn" onclick="showTab('chat')">💬 Chat</button>
+    <button class="btn danger" style="width:100%; margin-top: 20px;" onclick="auth.signOut().then(()=>location.href='index.html')">Uitloggen</button>
 </div>
 
 <div class="main">
     <div id="dashboardSection" class="section" style="display:block">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="card">
-                <h3>🛰️ Status</h3>
-                <p>Games: <b id="statGames">0</b></p>
-                <p>Categorieën: <b id="statCategories">0</b></p>
-            </div>
-            <div class="card">
-                <h3>💬 Chat</h3>
-                <p>Berichten: <b id="statChats">0</b></p>
-                <button class="btn warning" onclick="showTab('chat')">Beheer Chat</button>
-            </div>
-        </div>
+        <div class="card"><h3>Welkom Admin</h3><p>Gebruik het menu om games en chats te beheren.</p></div>
     </div>
 
     <div id="editorSection" class="section">
         <div class="card">
-            <h3 id="editorTitle">Nieuwe Game Toevoegen</h3>
-            <input id="editId" placeholder="Game ID (bijv: ragdoll-archers)">
-            <input id="editTitle" placeholder="Titel van de game">
+            <h3 id="editorTitle">Game Toevoegen/Bewerken</h3>
+            <input id="editId" placeholder="Uniek ID (bijv: sub-surf)">
+            <input id="editTitle" placeholder="Naam van de game">
             <input id="editImg" placeholder="Afbeelding URL">
-            <input id="editLink" value="games/" placeholder="Link naar game (index.html)">
+            <input id="editLink" value="games/" placeholder="Link (bijv: games/surf/)">
             <select id="editCat"></select>
-            <button class="btn success" style="width:100%" onclick="saveGame()">💾 Opslaan</button>
-            <button class="btn" style="width:100%; margin-top:10px; background: transparent; color: #64748b;" onclick="resetEditor()">Schoonmaken</button>
+            
+            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
+                <input type="checkbox" id="editHasSave" style="width: auto; margin:0"> 
+                <span>Toon 💾 icoon (Game slaat voortgang op)</span>
+            </label>
+
+            <button class="btn success" onclick="saveGame()">💾 Game Opslaan</button>
+            <button class="btn" onclick="resetEditor()">Schoonmaken</button>
         </div>
     </div>
 
     <div id="gamesSection" class="section">
         <div class="card">
-            <h3>Gepubliceerde Games</h3>
             <table>
-                <thead><tr><th>Beeld</th><th>Titel</th><th>Cat</th><th>Acties</th></tr></thead>
+                <thead><tr><th>Beeld</th><th>Titel</th><th>Save</th><th>Acties</th></tr></thead>
                 <tbody id="gamesList"></tbody>
             </table>
         </div>
@@ -147,28 +80,19 @@
 
     <div id="categoriesSection" class="section">
         <div class="card">
-            <h3>Nieuwe Categorie</h3>
-            <input id="catId" placeholder="ID (bijv: actie)">
-            <input id="catName" placeholder="Naam (bijv: Actie Games)">
+            <input id="catId" placeholder="ID"><input id="catName" placeholder="Naam">
             <button class="btn success" onclick="addCategory()">Toevoegen</button>
         </div>
-        <div class="card" id="categoriesList"></div>
+        <div id="categoriesList"></div>
     </div>
 
     <div id="chatSection" class="section">
-        <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0">💬 Chat Moderaat</h3>
-                <button class="btn danger" onclick="clearAllChat()">🚨 Hele Chat Wissen</button>
-            </div>
-            <div id="adminChatList" class="admin-chat-container">
-                </div>
-        </div>
+        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Alle Chat</button></div>
+        <div id="adminChatList"></div>
     </div>
 </div>
 
 <script>
-// --- CONFIG & INIT ---
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -183,18 +107,12 @@ const auth = firebase.auth();
 const adminEmails = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
 auth.onAuthStateChanged(user => {
-    if (user && adminEmails.includes(user.email)) {
-        init();
-    } else {
-        location.href = "index.html";
-    }
+    if (!user || !adminEmails.includes(user.email)) location.href = "index.html";
+    else init();
 });
 
-function notify(msg, type = 'success') {
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.style.borderLeftColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
-    t.innerText = msg;
+function notify(msg) {
+    const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
     document.getElementById('toast-container').appendChild(t);
     setTimeout(() => t.remove(), 3000);
 }
@@ -203,72 +121,55 @@ function showTab(id) {
     document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id + 'Section').style.display = 'block';
-    document.getElementById('tab-' + id).classList.add('active');
 }
 
-// --- DATA LADEN ---
 function init() {
-    // Games laden
     db.collection("games").onSnapshot(s => {
-        document.getElementById('statGames').innerText = s.size;
         const list = document.getElementById('gamesList');
         list.innerHTML = "";
         s.forEach(doc => {
             const g = doc.data();
             list.innerHTML += `<tr>
                 <td><img src="${g.image}" class="thumb"></td>
-                <td><b>${g.title}</b></td>
-                <td>${g.category}</td>
+                <td>${g.title}</td>
+                <td>${g.hasSave ? '💾' : '-'}</td>
                 <td>
-                    <button class="btn warning" style="padding:5px" onclick="editGame('${doc.id}')">✏️</button>
-                    <button class="btn danger" style="padding:5px" onclick="deleteItem('games','${doc.id}')">🗑️</button>
+                    <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
+                    <button class="btn danger" onclick="deleteItem('games','${doc.id}')">🗑️</button>
                 </td>
             </tr>`;
         });
     });
 
-    // Categorieën laden
     db.collection("categories").onSnapshot(s => {
-        document.getElementById('statCategories').innerText = s.size;
         const list = document.getElementById('categoriesList');
         const select = document.getElementById('editCat');
         list.innerHTML = ""; select.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div class="chat-row"><span>${doc.data().name}</span> <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button></div>`;
+            list.innerHTML += `<div class="card">${doc.data().name} <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button></div>`;
             select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
         });
     });
 
-    // Chat laden voor beheer
-    db.collection("chats").orderBy("timestamp", "desc").limit(50).onSnapshot(s => {
-        document.getElementById('statChats').innerText = s.size;
-        const chatList = document.getElementById('adminChatList');
-        chatList.innerHTML = "";
+    db.collection("chats").orderBy("timestamp", "desc").limit(30).onSnapshot(s => {
+        const list = document.getElementById('adminChatList');
+        list.innerHTML = "";
         s.forEach(doc => {
-            const m = doc.data();
-            chatList.innerHTML += `
-                <div class="chat-row">
-                    <span><b>${m.user}:</b> ${m.text}</span>
-                    <button class="btn danger" style="padding:4px 8px" onclick="deleteItem('chats','${doc.id}')">Verwijder</button>
-                </div>`;
+            list.innerHTML += `<div class="card"><b>${doc.data().user}:</b> ${doc.data().text} <button class="btn danger" onclick="deleteItem('chats','${doc.id}')">X</button></div>`;
         });
     });
 }
 
-// --- ACTIES ---
 function saveGame() {
     const id = document.getElementById('editId').value;
-    if(!id) return notify("ID is verplicht", "danger");
     const data = {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
-        category: document.getElementById('editCat').value
+        category: document.getElementById('editCat').value,
+        hasSave: document.getElementById('editHasSave').checked
     };
-    db.collection("games").doc(id).set(data, {merge:true}).then(() => {
-        notify("Game opgeslagen!");
-        resetEditor();
-    });
+    db.collection("games").doc(id).set(data, {merge:true}).then(() => { notify("Opgeslagen!"); resetEditor(); });
 }
 
 function editGame(id) {
@@ -280,6 +181,7 @@ function editGame(id) {
         document.getElementById('editImg').value = g.image;
         document.getElementById('editLink').value = g.link;
         document.getElementById('editCat').value = g.category;
+        document.getElementById('editHasSave').checked = g.hasSave || false;
         showTab('editor');
     });
 }
@@ -287,36 +189,17 @@ function editGame(id) {
 function resetEditor() {
     document.getElementById('editId').value = "";
     document.getElementById('editId').disabled = false;
-    document.getElementById('editTitle').value = "";
-    document.getElementById('editImg').value = "";
-    document.getElementById('editLink').value = "games/";
+    document.getElementById('editHasSave').checked = false;
 }
 
-function addCategory() {
-    const id = document.getElementById('catId').value;
-    const name = document.getElementById('catName').value;
-    if(!id || !name) return;
-    db.collection("categories").doc(id).set({name}).then(() => notify("Categorie toegevoegd"));
-}
-
-function deleteItem(col, id) {
-    if(confirm("Zeker weten dat je dit wilt verwijderen?")) {
-        db.collection(col).doc(id).delete().then(() => notify("Verwijderd", "danger"));
-    }
-}
+function deleteItem(col, id) { if(confirm("Wissen?")) db.collection(col).doc(id).delete(); }
 
 async function clearAllChat() {
-    if(confirm("PAS OP: Dit verwijdert ALLE chatberichten voor iedereen. Doorgaan?")) {
+    if(confirm("Hele chat wissen?")) {
         const snap = await db.collection("chats").get();
-        const batch = db.batch();
-        snap.forEach(doc => batch.delete(doc.ref));
-        await batch.commit();
-        notify("Chat volledig gewist", "danger");
+        snap.forEach(doc => doc.ref.delete());
     }
 }
-
-function logout() { auth.signOut().then(() => location.href="index.html"); }
 </script>
-
 </body>
 </html>
