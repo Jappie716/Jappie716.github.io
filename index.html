@@ -113,23 +113,24 @@
 <div id="toast-container"></div>
 
 <div class="sidebar">
-    <div class="logo">🎮 Game Paradise</div>
+  <div class="logo">🎮 Game Paradise</div>
 
-    <div class="search-box">
-        <input id="searchInput" type="text" placeholder="Zoek een game...">
-    </div>
+  <div class="search-box">
+    <input 
+      id="searchInput" 
+      type="text" 
+      placeholder="Zoek games..." 
+      autocomplete="new-password"
+      onfocus="this.removeAttribute('readonly');" 
+      readonly
+    >
+  </div>
 
-    <div class="nav-group">
-        <span class="nav-label">Menu</span>
-        <div class="category-btn active" data-cat="all">🏠 Alle Games</div>
-        <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
-        <div class="category-btn chat-btn" onclick="location.href='chat.html'">💬 Global Chat</div>
-    </div>
-
-    <div class="nav-group">
-        <span class="nav-label">Categorieën</span>
-        <div id="categoryList"></div>
-    </div>
+  <div class="category-btn active" data-cat="all">Alle games</div>
+  <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
+  <div id="categoryList"></div>
+  
+  <div class="category-btn" onclick="location.href='chat.html'" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 Global Chat</div>
 </div>
 
 <div class="main">
