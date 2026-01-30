@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Paradise - Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { margin: 0; font-family: system-ui, sans-serif; background: #020617; color: white; display: flex; flex-direction: column; height: 100vh; }
+        .header { padding: 20px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .message { background: #1e293b; padding: 10px 15px; border-radius: 12px; max-width: 70%; align-self: flex-start; }
+        .message.me { background: #2563eb; align-self: flex-end; }
+        .msg-info { font-size: 10px; opacity: 0.7; margin-bottom: 4px; display: block; }
+        .input-area { padding: 20px; background: #0f172a; display: flex; gap: 10px; border-top: 1px solid #1e293b; }
+        input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #1e293b; color: white; }
+        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .back-btn { background: #1e293b; text-decoration: none; color: white; padding: 8px 15px; border-radius: 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="index.html" class="back-btn">⬅ Terug</a>
+    <h2>💬 Global Chat</h2>
+    <div id="userName" style="color: #60a5fa; font-size: 14px;">Laden...</div>
+</div>
+
+<div id="chat-box"></div>
+
+<div class="input-area">
+    <input type="text" id="chatInput" placeholder="Typ een bericht...">
+    <button id="sendBtn">Verstuur</button>
+</div>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let currentUser = null;
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('userName').innerText = user.email.split('@')[0];
+        loadMessages();
+    } else {
+        alert("Log in om te chatten!");
+        location.href = "index.html";
+    }
+});
+
+function loadMessages() {
+    db.collection("chats").orderBy("timestamp", "asc").limitToLast(50)
+    .onSnapshot(snap => {
+        const chatBox = document.getElementById('chat-box');
+        chatBox.innerHTML = "";
+        snap.forEach(doc => {
+            const m = doc.data();
+            const isMe = m.uid === currentUser.uid;
+            const div = document.createElement('div');
+            div.className = `message ${isMe ? 'me' : ''}`;
+            div.innerHTML = `<span class="msg-info">${m.user}</span>${m.text}`;
+            chatBox.appendChild(div);
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
+function sendMessage() {
+    const text = document.getElementById('chatInput').value;
+    if (!text.trim()) return;
+
+    db.collection("chats").add({
+        text: text,
+        user: currentUser.email.split('@')[0],
+        uid: currentUser.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('chatInput').value = "";
+}
+
+document.getElementById('sendBtn').onclick = sendMessage;
+document.getElementById('chatInput').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+</script>
+</body>
+</html>
