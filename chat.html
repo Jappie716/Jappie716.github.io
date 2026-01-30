@@ -9,122 +9,121 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     
     <style>
+        :root {
+            --bg: #020617;
+            --sidebar: #010409;
+            --header: #0f172a;
+            --primary: #2563eb;
+            --accent: #60a5fa;
+            --sent: #1e3a8a;
+            --received: #1e293b;
+        }
+
         * { box-sizing: border-box; }
         body { 
-            margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; 
-            background-color: #0b141a; color: #e9edef; 
-            height: 100vh; display: flex; overflow: hidden;
+            margin: 0; font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: white; height: 100vh; display: flex; overflow: hidden;
         }
-        
-        /* Layout: Sidebar (Links) & Main (Rechts) */
-        .chat-container { display: flex; width: 100%; height: 100%; }
-        
+
+        /* --- LAYOUT --- */
+        .container { display: flex; width: 100%; height: 100%; }
+
+        /* Sidebar */
         .sidebar { 
-            width: 30%; min-width: 280px; max-width: 400px; 
-            background: #111b21; border-right: 1px solid #202c33; 
+            width: 350px; background: var(--sidebar); border-right: 1px solid #1e293b; 
             display: flex; flex-direction: column; 
         }
-
-        .main-chat { 
-            flex: 1; display: flex; flex-direction: column; 
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); 
-            background-color: #0b141a; 
-            position: relative;
-        }
-
-        /* Sidebar Headers */
-        .header { 
-            background: #202c33; padding: 10px 16px; height: 60px; 
-            display: flex; align-items: center; justify-content: space-between; 
-        }
-        .header img { width: 40px; height: 40px; border-radius: 50%; }
-        .back-btn { cursor: pointer; color: #00a884; font-weight: bold; text-decoration: none; }
-
-        /* Search Bar in Sidebar */
-        .search-bar { padding: 8px; border-bottom: 1px solid #202c33; }
-        .search-bar input { 
-            width: 100%; background: #202c33; border: none; padding: 7px 15px; 
-            border-radius: 8px; color: #e9edef; outline: none; font-size: 14px;
-        }
-
-        /* Contact List */
-        .contact-list { flex: 1; overflow-y: auto; }
-        .contact { 
-            display: flex; align-items: center; padding: 12px 15px; 
-            cursor: pointer; border-bottom: 1px solid #202c33; transition: 0.2s; 
-        }
-        .contact:hover { background: #202c33; }
-        .contact.active { background: #2a3942; }
-        .avatar { 
-            width: 45px; height: 45px; background: #6a7f8a; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; margin-right: 15px; 
-        }
-        .contact-info h4 { margin: 0; font-size: 16px; color: #e9edef; font-weight: normal; }
-        .contact-info p { margin: 3px 0 0; font-size: 13px; color: #8696a0; }
-
-        /* Chat Window */
-        .chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-header { padding: 15px; background: var(--header); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; }
+        .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; }
         
-        .msg { max-width: 65%; padding: 6px 10px; border-radius: 8px; font-size: 14px; position: relative; line-height: 1.4; color: #e9edef; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
-        .msg.received { background: #202c33; align-self: flex-start; border-top-left-radius: 0; }
-        .msg.sent { background: #005c4b; align-self: flex-end; border-top-right-radius: 0; }
-        .msg .sender { font-size: 12px; font-weight: bold; color: #53bdeb; display: block; margin-bottom: 2px; }
-        .msg .time { font-size: 10px; color: #8696a0; float: right; margin-top: 4px; margin-left: 8px; }
+        .tabs { display: flex; background: var(--header); border-bottom: 1px solid #1e293b; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 14px; color: #94a3b8; transition: 0.2s; }
+        .tab.active { color: var(--accent); border-bottom: 2px solid var(--primary); background: #1e293b; }
 
-        /* Input Area */
-        .input-area { background: #202c33; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
-        #chatInput { flex: 1; background: #2a3942; border: none; padding: 12px 15px; border-radius: 8px; color: white; outline: none; font-size: 15px; }
-        #sendBtn { background: transparent; border: none; cursor: pointer; color: #8696a0; font-size: 24px; }
-        #sendBtn:hover { color: #00a884; }
+        .search-box { padding: 10px; }
+        .search-box input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #1e293b; background: #0f172a; color: white; outline: none; }
 
+        .list-container { flex: 1; overflow-y: auto; }
+        .item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; transition: 0.2s; }
+        .item:hover { background: #0f172a; }
+        .item img { width: 45px; height: 45px; border-radius: 50%; margin-right: 12px; background: #334155; }
+        .item-info { flex: 1; }
+        .item-info h4 { margin: 0; font-size: 15px; }
+        .item-info p { margin: 2px 0 0; font-size: 12px; color: #94a3b8; }
+        .btn-small { padding: 5px 10px; border-radius: 5px; border: none; font-size: 11px; cursor: pointer; font-weight: bold; }
+
+        /* Main Chat */
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
+        .chat-header { padding: 10px 20px; background: var(--header); display: flex; align-items: center; border-bottom: 1px solid #1e293b; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 14px; position: relative; }
+        .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
+        .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
+        .msg .sender { font-size: 11px; color: var(--accent); font-weight: bold; display: block; margin-bottom: 3px; }
+        .msg .time { font-size: 10px; color: #94a3b8; display: block; text-align: right; margin-top: 5px; }
+
+        .chat-input { padding: 15px; background: var(--header); display: flex; gap: 10px; align-items: center; }
+        .chat-input input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
+        .send-btn { background: var(--primary); border: none; padding: 10px 20px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; }
+
+        /* Modal voor profiel */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--header); padding: 25px; border-radius: 15px; width: 350px; text-align: center; border: 1px solid #1e293b; }
+        .modal-content input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #1e293b; background: #020617; color: white; }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
+<div class="container">
     <div class="sidebar">
-        <div class="header">
-            <div class="avatar" style="width: 40px; height: 40px;">👤</div>
-            <div style="flex:1; margin-left: 10px; font-weight:bold;">Mijn Chats</div>
-            <div onclick="location.href='index.html'" class="back-btn">⬅ Terug</div>
-        </div>
-        <div class="search-bar">
-            <input type="text" placeholder="Zoek of start een nieuwe chat">
-        </div>
-        <div class="contact-list" id="contactList">
-            <div class="contact active">
-                <div class="avatar" style="background: #00a884;">🌍</div>
-                <div class="contact-info">
-                    <h4>Global Community</h4>
-                    <p>Iedereen is hier online...</p>
-                </div>
+        <div class="sidebar-header">
+            <img id="myAvatar" src="" onclick="openProfile()" title="Profiel aanpassen">
+            <div style="flex:1">
+                <b id="myName">Laden...</b>
+                <div style="font-size: 10px; color: var(--accent)">Online</div>
             </div>
-            <div class="contact" onclick="alert('Binnenkort beschikbaar: Privé chats!')">
-                <div class="avatar">+</div>
-                <div class="contact-info">
-                    <h4>Iemand toevoegen</h4>
-                    <p>Start een nieuw gesprek</p>
-                </div>
-            </div>
+            <button onclick="location.href='index.html'" style="background:transparent; border:none; color:white; cursor:pointer">🏠</button>
         </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('chats', this)">Chats</div>
+            <div class="tab" onclick="switchTab('discover', this)">Ontdek</div>
+            <div class="tab" onclick="switchTab('requests', this)" id="reqBadge">Verzoeken</div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="userSearch" placeholder="Zoek gebruikers..." oninput="searchUsers(this.value)">
+        </div>
+
+        <div class="list-container" id="sidebarList">
+            </div>
     </div>
 
     <div class="main-chat">
-        <div class="header" style="border-left: 1px solid #313d45;">
-            <div class="avatar" style="background: #00a884; width:40px; height:40px;">🌍</div>
-            <div style="margin-left: 15px; flex:1;">
-                <h4 style="margin:0;">Global Community</h4>
-                <span style="font-size:12px; color:#8696a0;" id="statusText">Laden...</span>
-            </div>
-            <button id="chatAdminBtn" onclick="location.href='admin.html'" style="display:none; background: #1e293b; color: white; border: 1px solid #313d45; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px;">⚙️ Admin</button>
+        <div class="chat-header" id="activeChatHeader">
+            <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:15px; display:none">
+            <h3 id="activeChatName">Kies een gesprek</h3>
         </div>
 
-        <div id="chat-window" class="chat-window"></div>
-
-        <div class="input-area">
-            <input type="text" id="chatInput" placeholder="Typ een bericht">
-            <button id="sendBtn">➤</button>
+        <div class="chat-messages" id="chatMessages">
+            <div style="text-align:center; color:#94a3b8; margin-top:50px">Selecteer een vriend om te chatten</div>
         </div>
+
+        <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Typ een bericht...">
+            <button class="send-btn" onclick="sendMessage()">Verzend</button>
+        </div>
+    </div>
+</div>
+
+<div id="profileModal" class="modal">
+    <div class="modal-content">
+        <h3>Profiel Aanpassen</h3>
+        <input type="text" id="newName" placeholder="Gebruikersnaam">
+        <input type="text" id="newPic" placeholder="Profielfoto URL">
+        <button class="send-btn" onclick="saveProfile()" style="width:100%">Opslaan</button>
+        <button onclick="closeProfile()" style="background:transparent; color:white; border:none; margin-top:10px; cursor:pointer">Annuleren</button>
     </div>
 </div>
 
@@ -141,99 +140,176 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-let currentUser = null;
-const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+let user = null;
+let currentTab = 'chats';
+let activeChatId = null;
 
-// Vraag toestemming voor notificaties bij laden
-if (Notification.permission !== "granted") {
-    Notification.requestPermission();
-}
-
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('statusText').innerText = "Online als " + user.email.split('@')[0];
-        
-        if(ADMIN_EMAILS.includes(user.email)) {
-            document.getElementById('chatAdminBtn').style.display = "block";
-        }
-        
-        listenForMessages();
-        loadActiveUsers(); // Functie om linker lijst te vullen
+auth.onAuthStateChanged(u => {
+    if (u) {
+        user = u;
+        checkUserInDB();
+        switchTab('chats', document.querySelector('.tab.active'));
     } else {
-        alert("Log eerst in op de homepagina!");
-        location.href = "index.html";
+        location.href = 'index.html';
     }
 });
 
-function listenForMessages() {
-    db.collection("chats").orderBy("timestamp", "asc").limitToLast(50)
-    .onSnapshot(snap => {
-        const window = document.getElementById('chat-window');
-        window.innerHTML = "";
-        
-        snap.docChanges().forEach(change => {
-            if (change.type === "added") {
-                const m = change.doc.data();
-                // Check of we een notificatie moeten sturen (alleen als bericht NIET van mij is)
-                if (currentUser && m.uid !== currentUser.uid) {
-                    sendNotification(m.user, m.text);
-                }
-            }
+// Zorg dat gebruiker in de 'users' collectie staat
+async function checkUserInDB() {
+    const doc = await db.collection("users").doc(user.uid).get();
+    if (!doc.exists) {
+        await db.collection("users").doc(user.uid).set({
+            name: user.email.split('@')[0],
+            pic: "https://ui-avatars.com/api/?name=" + user.email,
+            email: user.email,
+            uid: user.uid
         });
-
-        snap.forEach(doc => {
-            const m = doc.data();
-            const isMe = m.uid === currentUser.uid;
-            const time = m.timestamp ? new Date(m.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
-            
-            const div = document.createElement('div');
-            div.className = `msg ${isMe ? 'sent' : 'received'}`;
-            div.innerHTML = `
-                ${!isMe ? `<span class="sender">${m.user}</span>` : ''}
-                ${m.text}
-                <span class="time">${time}</span>
-            `;
-            window.appendChild(div);
-        });
-        window.scrollTop = window.scrollHeight;
-    });
+    }
+    const data = (await db.collection("users").doc(user.uid).get()).data();
+    document.getElementById('myName').innerText = data.name;
+    document.getElementById('myAvatar').src = data.pic;
 }
 
-// Functie om notificaties te sturen als tabblad verborgen is
-function sendNotification(user, text) {
-    if (document.hidden && Notification.permission === "granted") {
-        new Notification(`Nieuw bericht van ${user}`, {
-            body: text,
-            icon: "https://cdn-icons-png.flaticon.com/512/134/134914.png"
+function switchTab(tab, el) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadSidebar();
+}
+
+async function loadSidebar() {
+    const list = document.getElementById('sidebarList');
+    list.innerHTML = "";
+
+    if (currentTab === 'discover') {
+        const snap = await db.collection("users").limit(20).get();
+        snap.forEach(doc => {
+            if (doc.id === user.uid) return;
+            const u = doc.data();
+            list.innerHTML += `
+                <div class="item">
+                    <img src="${u.pic}">
+                    <div class="item-info">
+                        <h4>${u.name}</h4>
+                        <p>Wil je vrienden worden?</p>
+                    </div>
+                    <button class="btn-small" style="background:var(--primary); color:white" onclick="sendRequest('${doc.id}')">Toevoegen</button>
+                </div>`;
+        });
+    } else if (currentTab === 'requests') {
+        db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
+            list.innerHTML = snap.empty ? "<p style='padding:20px; color:#94a3b8'>Geen verzoeken</p>" : "";
+            snap.forEach(doc => {
+                const r = doc.data();
+                list.innerHTML += `
+                    <div class="item">
+                        <img src="${r.pic}">
+                        <div class="item-info"><h4>${r.name}</h4></div>
+                        <button class="btn-small" style="background:#16a34a; color:white; margin-right:5px" onclick="acceptRequest('${doc.id}')">✓</button>
+                        <button class="btn-small" style="background:#ef4444; color:white" onclick="deleteRequest('${doc.id}')">X</button>
+                    </div>`;
+            });
+        });
+    } else if (currentTab === 'chats') {
+        // Laadt vrienden om mee te chatten
+        db.collection("users").doc(user.uid).collection("friends").onSnapshot(snap => {
+            list.innerHTML = snap.empty ? "<p style='padding:20px; color:#94a3b8'>Nog geen vrienden. Ga naar 'Ontdek'!</p>" : "";
+            snap.forEach(doc => {
+                const f = doc.data();
+                list.innerHTML += `
+                    <div class="item" onclick="openChat('${doc.id}', '${f.name}', '${f.pic}')">
+                        <img src="${f.pic}">
+                        <div class="item-info">
+                            <h4>${f.name}</h4>
+                            <p>Klik om te chatten</p>
+                        </div>
+                    </div>`;
+            });
         });
     }
 }
 
-// Simpele functie om lijst links te vullen met recente chatters
-function loadActiveUsers() {
-    const list = document.getElementById('contactList');
-    // In een echte app zou je hier een 'users' collectie laden
-    // Nu laten we de Global Chat als de actieve 'Room' zien
+// VRIENDSCHAP LOGICA
+async function sendRequest(targetId) {
+    const myData = (await db.collection("users").doc(user.uid).get()).data();
+    await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set(myData);
+    alert("Verzoek verstuurd!");
 }
 
-function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text) return;
+async function acceptRequest(friendId) {
+    const friendData = (await db.collection("users").doc(user.uid).collection("requests").doc(friendId).get()).data();
+    const myData = (await db.collection("users").doc(user.uid).get()).data();
+    
+    // Voeg toe aan elkaars vriendenlijst
+    await db.collection("users").doc(user.uid).collection("friends").doc(friendId).set(friendData);
+    await db.collection("users").doc(friendId).collection("friends").doc(user.uid).set(myData);
+    
+    // Verwijder verzoek
+    await deleteRequest(friendId);
+    loadSidebar();
+}
 
-    db.collection("chats").add({
-        text: text,
-        user: currentUser.email.split('@')[0],
-        uid: currentUser.uid,
+async function deleteRequest(id) {
+    await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
+}
+
+// CHAT LOGICA
+function openChat(id, name, pic) {
+    activeChatId = [user.uid, id].sort().join("_"); // Uniek ID voor chat tussen 2 personen
+    document.getElementById('activeChatName').innerText = name;
+    const img = document.getElementById('activeChatImg');
+    img.src = pic; img.style.display = "block";
+    
+    listenToMessages();
+}
+
+function listenToMessages() {
+    db.collection("private_chats").doc(activeChatId).collection("messages")
+    .orderBy("timestamp", "asc")
+    .onSnapshot(snap => {
+        const box = document.getElementById('chatMessages');
+        box.innerHTML = "";
+        snap.forEach(doc => {
+            const m = doc.data();
+            const isMe = m.senderId === user.uid;
+            box.innerHTML += `
+                <div class="msg ${isMe ? 'sent' : 'received'}">
+                    <span class="sender">${m.senderName}</span>
+                    ${m.text}
+                </div>`;
+        });
+        box.scrollTop = box.scrollHeight;
+    });
+}
+
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    if (!input.value || !activeChatId) return;
+    
+    const myData = (await db.collection("users").doc(user.uid).get()).data();
+    
+    await db.collection("private_chats").doc(activeChatId).collection("messages").add({
+        text: input.value,
+        senderId: user.uid,
+        senderName: myData.name,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(e => console.error("Fout bij verzenden:", e));
-
+    });
     input.value = "";
 }
 
-document.getElementById('sendBtn').onclick = sendMessage;
-document.getElementById('chatInput').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+// PROFIEL FUNCTIES
+function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
+function closeProfile() { document.getElementById('profileModal').style.display = 'none'; }
+async function saveProfile() {
+    const name = document.getElementById('newName').value;
+    const pic = document.getElementById('newPic').value;
+    const updates = {};
+    if(name) updates.name = name;
+    if(pic) updates.pic = pic;
+    
+    await db.collection("users").doc(user.uid).update(updates);
+    location.reload();
+}
 </script>
 </body>
 </html>
