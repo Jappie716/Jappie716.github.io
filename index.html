@@ -264,7 +264,7 @@ function loadCategories() {
         snap.forEach(doc => {
             const btn = document.createElement("div");
             btn.className = "category-btn";
-            btn.innerHTML = `📁 ${doc.data().name}`;
+            btn.innerHTML = ` ${doc.data().name}`;
             btn.onclick = () => setFilter(doc.id, btn);
             list.appendChild(btn);
         });
