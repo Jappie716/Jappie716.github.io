@@ -13,22 +13,38 @@
             --bg: #020617; --card-bg: rgba(30, 41, 59, 0.4);
             --primary: #2563eb; --accent: #60a5fa; --danger: #ef4444; --success: #22c55e;
         }
-        body { margin: 0; font-family: sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; }
-        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; }
-        .nav-btn { width: 100%; padding: 12px; margin-bottom: 5px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        .logo { color: var(--accent); font-size: 20px; font-weight: bold; margin-bottom: 30px; text-align: center; }
+        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; transition: 0.2s; }
+        .nav-btn:hover { background: #1e293b; color: white; }
         .nav-btn.active { background: var(--primary); color: white; }
-        .main { flex: 1; padding: 30px; overflow-y: auto; }
-        .section { display: none; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid #1e293b; margin-bottom: 20px; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
-        .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
-        .btn.success { background: var(--success); color: white; }
-        .btn.danger { background: var(--danger); color: white; }
+
+        /* Main Area */
+        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
+        .section { display: none; animation: fadeIn 0.3s ease; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 25px; }
+        
+        /* Form & Preview */
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .success { background: var(--success); color: white; width: 100%; margin-bottom: 10px; }
+        .danger { background: var(--danger); color: white; }
+
+        /* De Preview Afbeelding */
+        .preview-container { text-align: center; margin-bottom: 15px; background: #020617; border-radius: 10px; padding: 10px; border: 1px dashed #334155; }
+        #editPreview { max-width: 100%; max-height: 150px; border-radius: 8px; display: none; margin: 0 auto; }
+        #previewPlaceholder { color: #475569; font-size: 14px; padding: 20px; }
+
+        /* Tables */
         table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 10px; border-bottom: 1px solid #1e293b; text-align: left; }
-        .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+        td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
+        .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; }
+
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .toast { background: #1e293b; color: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--primary); }
+        .toast { background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -36,36 +52,49 @@
 <div id="toast-container"></div>
 
 <div class="sidebar">
-    <h2 style="color: var(--accent)">⚙️ Admin</h2>
-    <button class="nav-btn active" onclick="showTab('dashboard')">📊 Dashboard</button>
-    <button class="nav-btn" onclick="showTab('editor')">✏️ Game Editor</button>
-    <button class="nav-btn" onclick="showTab('games')">🎮 Games Lijst</button>
-    <button class="nav-btn" onclick="showTab('categories')">📂 Categorieën</button>
-    <button class="nav-btn" onclick="showTab('chat')">💬 Chat</button>
-    <button class="btn danger" style="width:100%; margin-top: 20px;" onclick="auth.signOut().then(()=>location.href='index.html')">Uitloggen</button>
+    <div class="logo">🎮 Admin Panel</div>
+    <button class="nav-btn active" id="btn-dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" id="btn-editor" onclick="showTab('editor')">✏️ Game Editor</button>
+    <button class="nav-btn" id="btn-games" onclick="showTab('games')">🎮 Games Lijst</button>
+    <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
+    <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
+    
+    <div style="margin-top: auto;">
+        <button class="btn" style="width:100%; background:#1e293b; color:white; margin-bottom:10px" onclick="location.href='index.html'">🌐 Bekijk Site</button>
+        <button class="btn danger" style="width:100%" onclick="auth.signOut()">🚪 Uitloggen</button>
+    </div>
 </div>
 
 <div class="main">
     <div id="dashboardSection" class="section" style="display:block">
-        <div class="card"><h3>Welkom Admin</h3><p>Gebruik het menu om games en chats te beheren.</p></div>
+        <div class="card">
+            <h2>Welkom Admin</h2>
+            <p>Gebruik het linker menu om de website te beheren.</p>
+        </div>
     </div>
 
     <div id="editorSection" class="section">
         <div class="card">
-            <h3 id="editorTitle">Game Toevoegen/Bewerken</h3>
-            <input id="editId" placeholder="Uniek ID (bijv: sub-surf)">
-            <input id="editTitle" placeholder="Naam van de game">
-            <input id="editImg" placeholder="Afbeelding URL">
-            <input id="editLink" value="games/" placeholder="Link (bijv: games/surf/)">
+            <h3 id="editorTitle">Nieuwe Game Toevoegen</h3>
+            
+            <div class="preview-container">
+                <div id="previewPlaceholder">Afbeelding preview verschijnt hier...</div>
+                <img id="editPreview" src="" alt="Preview">
+            </div>
+
+            <input id="editId" placeholder="Uniek ID (bijv: subway-surfers)">
+            <input id="editTitle" placeholder="Titel van de game">
+            <input id="editImg" placeholder="Afbeelding URL" oninput="updatePreview(this.value)">
+            <input id="editLink" value="games/" placeholder="Link naar game map">
             <select id="editCat"></select>
             
-            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; cursor: pointer;">
-                <input type="checkbox" id="editHasSave" style="width: auto; margin:0"> 
-                <span>Toon 💾 icoon (Game slaat voortgang op)</span>
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;">
+                <input type="checkbox" id="editHasSave" style="width:auto; margin:0">
+                <span>Slaat voortgang op (💾 icoon tonen)</span>
             </label>
 
-            <button class="btn success" onclick="saveGame()">💾 Game Opslaan</button>
-            <button class="btn" onclick="resetEditor()">Schoonmaken</button>
+            <button class="btn success" onclick="saveGame()">💾 Opslaan</button>
+            <button class="btn" style="width:100%; background:transparent; color:#94a3b8" onclick="resetEditor()">Schoonmaken</button>
         </div>
     </div>
 
@@ -80,14 +109,14 @@
 
     <div id="categoriesSection" class="section">
         <div class="card">
-            <input id="catId" placeholder="ID"><input id="catName" placeholder="Naam">
+            <input id="catId" placeholder="ID (bijv: actie)"><input id="catName" placeholder="Naam (bijv: Actie Games)">
             <button class="btn success" onclick="addCategory()">Toevoegen</button>
         </div>
         <div id="categoriesList"></div>
     </div>
 
     <div id="chatSection" class="section">
-        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Alle Chat</button></div>
+        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Hele Chat</button></div>
         <div id="adminChatList"></div>
     </div>
 </div>
@@ -104,11 +133,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const adminEmails = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
 auth.onAuthStateChanged(user => {
-    if (!user || !adminEmails.includes(user.email)) location.href = "index.html";
-    else init();
+    if (user && ADMINS.includes(user.email.toLowerCase())) {
+        init();
+    } else {
+        alert("Geen toegang! Log in met een admin account.");
+        location.href = "index.html";
+    }
 });
 
 function notify(msg) {
@@ -121,9 +154,24 @@ function showTab(id) {
     document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id + 'Section').style.display = 'block';
+    document.getElementById('btn-' + id).classList.add('active');
+}
+
+function updatePreview(url) {
+    const img = document.getElementById('editPreview');
+    const placeholder = document.getElementById('previewPlaceholder');
+    if (url.length > 5) {
+        img.src = url;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+    }
 }
 
 function init() {
+    // Games laden
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
         list.innerHTML = "";
@@ -131,7 +179,7 @@ function init() {
             const g = doc.data();
             list.innerHTML += `<tr>
                 <td><img src="${g.image}" class="thumb"></td>
-                <td>${g.title}</td>
+                <td><b>${g.title}</b></td>
                 <td>${g.hasSave ? '💾' : '-'}</td>
                 <td>
                     <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
@@ -141,27 +189,37 @@ function init() {
         });
     });
 
+    // Categorieën
     db.collection("categories").onSnapshot(s => {
         const list = document.getElementById('categoriesList');
         const select = document.getElementById('editCat');
         list.innerHTML = ""; select.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div class="card">${doc.data().name} <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button></div>`;
+            list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>${doc.data().name}</span>
+                <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button>
+            </div>`;
             select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
         });
     });
 
+    // Chat
     db.collection("chats").orderBy("timestamp", "desc").limit(30).onSnapshot(s => {
         const list = document.getElementById('adminChatList');
         list.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div class="card"><b>${doc.data().user}:</b> ${doc.data().text} <button class="btn danger" onclick="deleteItem('chats','${doc.id}')">X</button></div>`;
+            list.innerHTML += `<div class="card">
+                <b>${doc.data().user}:</b> ${doc.data().text} 
+                <button class="btn danger" style="float:right; padding:5px" onclick="deleteItem('chats','${doc.id}')">X</button>
+            </div>`;
         });
     });
 }
 
 function saveGame() {
     const id = document.getElementById('editId').value;
+    if(!id) return notify("ID is verplicht!");
+    
     const data = {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
@@ -169,7 +227,11 @@ function saveGame() {
         category: document.getElementById('editCat').value,
         hasSave: document.getElementById('editHasSave').checked
     };
-    db.collection("games").doc(id).set(data, {merge:true}).then(() => { notify("Opgeslagen!"); resetEditor(); });
+    
+    db.collection("games").doc(id).set(data, {merge:true}).then(() => {
+        notify("Game succesvol opgeslagen!");
+        resetEditor();
+    });
 }
 
 function editGame(id) {
@@ -182,6 +244,7 @@ function editGame(id) {
         document.getElementById('editLink').value = g.link;
         document.getElementById('editCat').value = g.category;
         document.getElementById('editHasSave').checked = g.hasSave || false;
+        updatePreview(g.image);
         showTab('editor');
     });
 }
@@ -189,15 +252,27 @@ function editGame(id) {
 function resetEditor() {
     document.getElementById('editId').value = "";
     document.getElementById('editId').disabled = false;
+    document.getElementById('editTitle').value = "";
+    document.getElementById('editImg').value = "";
     document.getElementById('editHasSave').checked = false;
+    updatePreview("");
 }
 
-function deleteItem(col, id) { if(confirm("Wissen?")) db.collection(col).doc(id).delete(); }
+function addCategory() {
+    const id = document.getElementById('catId').value;
+    const name = document.getElementById('catName').value;
+    if(id && name) db.collection("categories").doc(id).set({name});
+}
+
+function deleteItem(col, id) {
+    if(confirm("Zeker weten?")) db.collection(col).doc(id).delete().then(() => notify("Item verwijderd."));
+}
 
 async function clearAllChat() {
-    if(confirm("Hele chat wissen?")) {
+    if(confirm("Hele chat wissen? Dit kan niet ongedaan worden gemaakt!")) {
         const snap = await db.collection("chats").get();
         snap.forEach(doc => doc.ref.delete());
+        notify("Chat leeggemaakt.");
     }
 }
 </script>
