@@ -16,9 +16,8 @@
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; height: 100vh; display: flex; overflow: hidden; }
         
-        /* Toast Systeem van Home */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
-        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; min-width: 250px; }
+        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; min-width: 250px; border-right: 1px solid #334155; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
         .container { display: flex; width: 100%; height: 100%; }
@@ -33,16 +32,17 @@
 
         .list-container { flex: 1; overflow-y: auto; }
         .item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; }
+        .item:hover { background: #0f172a; }
         .item img { width: 45px; height: 45px; border-radius: 50%; margin-right: 12px; object-fit: cover; background: #334155; }
         .item-info { flex: 1; }
         .item-info h4 { margin: 0; font-size: 15px; }
-        .unread-dot { width: 10px; height: 10px; background: var(--primary); border-radius: 50%; margin-left: 10px; }
+        .item-info p { margin: 2px 0 0; font-size: 12px; color: #94a3b8; }
 
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
         .chat-header { padding: 10px 20px; background: var(--header); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 60px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         
-        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 14px; }
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 14px; position: relative; }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
         .msg .sender { font-size: 11px; color: var(--accent); font-weight: bold; display: block; margin-bottom: 3px; }
@@ -50,13 +50,11 @@
         .chat-input { padding: 15px; background: var(--header); display: flex; gap: 10px; align-items: center; }
         .chat-input input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
         .btn { background: var(--primary); border: none; padding: 10px 15px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; }
-        .btn-danger { background: #ef4444; }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: var(--header); padding: 25px; border-radius: 15px; width: 400px; border: 1px solid #1e293b; max-height: 80vh; overflow-y: auto; }
+        .modal-box { background: var(--header); padding: 25px; border-radius: 15px; width: 400px; border: 1px solid #1e293b; max-height: 85vh; overflow-y: auto; }
         .modal-box input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #1e293b; background: #020617; color: white; }
-        
-        .member-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #020617; margin-bottom: 5px; border-radius: 8px; }
+        .member-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #020617; margin-bottom: 5px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -95,18 +93,18 @@
 <div id="groupModal" class="modal"><div class="modal-box">
     <h3>Nieuwe Groep</h3>
     <input type="text" id="groupName" placeholder="Groepsnaam">
-    <p style="font-size:12px; color:gray">Kies vrienden:</p>
+    <p style="font-size:12px; color:gray">Kies je vrienden:</p>
     <div id="friendsInviteList"></div>
     <button class="btn" onclick="createGroup()" style="width:100%; margin-top:15px">Groep Maken</button>
-    <button onclick="closeModal('groupModal')" style="width:100%; background:none; border:none; color:white; cursor:pointer; margin-top:10px">Sluiten</button>
+    <button onclick="closeModal('groupModal')" style="width:100%; background:none; border:none; color:white; cursor:pointer; margin-top:10px">Annuleren</button>
 </div></div>
 
 <div id="manageGroupModal" class="modal"><div class="modal-box">
     <h3>Groepsinstellingen</h3>
     <input type="text" id="editGName">
-    <label>Groepsfoto wijzigen:</label>
+    <label style="font-size: 12px; color: gray;">Nieuwe foto uploaden:</label>
     <input type="file" id="editGPic" accept="image/*">
-    <p style="font-size:12px; color:gray">Leden:</p>
+    <p style="font-size:12px; color:gray">Leden beheren:</p>
     <div id="currentMembersList"></div>
     <button class="btn" onclick="updateGroup()" style="width:100%; margin-top:15px">Opslaan</button>
     <button onclick="closeModal('manageGroupModal')" style="width:100%; background:none; border:none; color:white; cursor:pointer; margin-top:10px">Sluiten</button>
@@ -144,7 +142,7 @@ function notify(msg, type = 'success') {
     t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
     t.innerHTML = msg;
     container.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 4000);
 }
 
 auth.onAuthStateChanged(u => {
@@ -157,18 +155,25 @@ auth.onAuthStateChanged(u => {
 });
 
 async function setupUser() {
-    const ref = db.collection("users").doc(user.uid);
-    ref.onSnapshot(d => {
+    db.collection("users").doc(user.uid).onSnapshot(d => {
         const data = d.data();
         document.getElementById('myName').innerText = data.name;
         document.getElementById('myAvatar').src = data.pic;
         document.getElementById('pName').value = data.name;
     });
-    // Badge voor verzoeken
+
+    // Verzoeken Badge + PC Notificatie voor verzoeken
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(s => {
         const b = document.getElementById('reqTab');
         b.querySelectorAll('.badge').forEach(x => x.remove());
-        if(s.size > 0) b.innerHTML += `<span class="badge">${s.size}</span>`;
+        if(s.size > 0) {
+            b.innerHTML += `<span class="badge">${s.size}</span>`;
+            s.docChanges().forEach(change => {
+                if (change.type === "added" && document.hidden) {
+                    new Notification("Nieuw vriendschapsverzoek!", { body: change.doc.data().name + " wil je toevoegen.", icon: change.doc.data().pic });
+                }
+            });
+        }
     });
 }
 
@@ -178,45 +183,45 @@ async function loadSidebar() {
     list.innerHTML = "";
 
     if (currentTab === 'Chats') {
-        // Algemeen ALTIJD bovenaan
         list.innerHTML += `<div class="item" onclick="openChat('global', 'Algemeen', '${GLOBAL_IMG}', 'global')">
-            <img src="${GLOBAL_IMG}"><div class="item-info"><h4>Algemeen</h4><p>De community chat</p></div></div>`;
+            <img src="${GLOBAL_IMG}"><div class="item-info"><h4>Algemeen</h4><p>Iedereen chat hier</p></div></div>`;
         
-        // Andere chats laden en sorteren op tijd
-        let otherChats = [];
+        // Groepen
         const gSnap = await db.collection("groups").get();
         gSnap.forEach(doc => {
             const g = doc.data();
             if(g.owner === user.uid || (g.members && g.members.includes(user.uid))) {
-                otherChats.push({...g, id: doc.id, type: 'group'});
+                list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${g.name}', '${g.pic||''}', 'group', '${g.owner}')">
+                    <img src="${g.pic || 'https://ui-avatars.com/api/?name='+g.name}">
+                    <div class="item-info"><h4>${g.name}</h4><p>Groepschat</p></div></div>`;
             }
         });
 
+        // Vrienden
         const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
         fSnap.forEach(doc => {
-            otherChats.push({...doc.data(), id: doc.id, type: 'private'});
-        });
-
-        // Sorteren op laatste bericht (versimpeld op basis van id voor nu, of timestamp indien aanwezig)
-        otherChats.forEach(c => {
-            list.innerHTML += `<div class="item" onclick="openChat('${c.id}', '${c.name}', '${c.pic||''}', '${c.type}', '${c.owner}')">
-                <img src="${c.pic || 'https://ui-avatars.com/api/?name='+c.name}">
-                <div class="item-info"><h4>${c.name}</h4></div>
-            </div>`;
+            const f = doc.data();
+            list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${f.name}', '${f.pic}', 'private')">
+                <img src="${f.pic}">
+                <div class="item-info"><h4>${f.name}</h4><p>Privégesprek</p></div></div>`;
         });
     } else if (currentTab === 'Ontdek') {
-        const snap = await db.collection("users").get();
+        const allUsers = await db.collection("users").get();
         const myFriends = (await db.collection("users").doc(user.uid).collection("friends").get()).docs.map(d => d.id);
-        snap.forEach(doc => {
-            if(doc.id !== user.uid && !myFriends.includes(doc.id)) {
-                list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" onclick="sendRequest('${doc.id}')">Toevoegen</button></div>`;
+        const myRequests = (await db.collection("users").doc(user.uid).collection("requests").get()).docs.map(d => d.id);
+        
+        allUsers.forEach(doc => {
+            if(doc.id !== user.uid && !myFriends.includes(doc.id) && !myRequests.includes(doc.id)) {
+                list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4><p>Nieuwe speler</p></div><button class="btn" onclick="sendRequest('${doc.id}')">Toevoegen</button></div>`;
             }
         });
+        if(list.innerHTML === "") list.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>Geen nieuwe mensen gevonden.</p>";
     } else {
         const snap = await db.collection("users").doc(user.uid).collection("requests").get();
         snap.forEach(doc => {
-            list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" style="background:#16a34a" onclick="acceptRequest('${doc.id}')">✓</button></div>`;
+            list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4><p>Wilt je toevoegen</p></div><button class="btn" style="background:#16a34a" onclick="acceptRequest('${doc.id}')">✓</button></div>`;
         });
+        if(list.innerHTML === "") list.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>Geen inkomende verzoeken.</p>";
     }
 }
 
@@ -224,7 +229,7 @@ function openChat(id, name, pic, type, ownerId = null) {
     activeChatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
     chatType = type;
     document.getElementById('activeChatName').innerText = name;
-    document.getElementById('activeChatImg').src = pic;
+    document.getElementById('activeChatImg').src = pic || "https://ui-avatars.com/api/?name=" + name;
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('groupSettingsBtn').style.display = (type === 'group' && ownerId === user.uid) ? "block" : "none";
@@ -245,8 +250,6 @@ function listenToMessages() {
             const m = doc.data();
             const isMe = m.uid === user.uid;
             box.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}"><span class="sender">${isMe ? 'Jij' : m.user}</span>${m.text}</div>`;
-            
-            // Desktop Notificatie Fix: Gebruik foto van de verzender
             if(!isMe && document.hidden) {
                 new Notification(m.user, { body: m.text, icon: m.userPic || GLOBAL_IMG });
             }
@@ -259,46 +262,37 @@ async function sendMessage() {
     const input = document.getElementById('messageInput');
     if(!input.value.trim()) return;
     const my = (await db.collection("users").doc(user.uid).get()).data();
-    const msg = { 
-        text: input.value, 
-        user: my.name, 
-        uid: user.uid, 
-        userPic: my.pic,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
-    };
-    
+    const msg = { text: input.value, user: my.name, uid: user.uid, userPic: my.pic, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
     if (chatType === 'global') await db.collection("chats").add(msg);
     else if (chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(msg);
     else await db.collection("private_chats").doc(activeChatId).collection("messages").add(msg);
     input.value = "";
 }
 
-// GROEPS FUNCTIES
 async function openGroupModal() {
     document.getElementById('groupModal').style.display = 'flex';
     const list = document.getElementById('friendsInviteList'); list.innerHTML = "";
     const snap = await db.collection("users").doc(user.uid).collection("friends").get();
     snap.forEach(doc => {
-        list.innerHTML += `<div class="member-row"><label>${doc.data().name}</label><input type="checkbox" class="g-invite" value="${doc.id}"></div>`;
+        list.innerHTML += `<div class="member-row"><span>${doc.data().name}</span><input type="checkbox" class="g-invite" value="${doc.id}"></div>`;
     });
 }
 
 async function createGroup() {
     const name = document.getElementById('groupName').value;
     const members = Array.from(document.querySelectorAll('.g-invite:checked')).map(i => i.value);
-    if(!name) return notify("Vul een naam in", "danger");
+    if(!name) return notify("Groepsnaam is verplicht!", "danger");
     await db.collection("groups").add({ name, owner: user.uid, members, pic: "" });
-    closeModal('groupModal'); notify("Groep gemaakt!"); loadSidebar();
+    closeModal('groupModal'); notify("Groep '"+name+"' aangemaakt!"); loadSidebar();
 }
 
 async function manageGroup() {
     const g = (await db.collection("groups").doc(activeChatId).get()).data();
     document.getElementById('editGName').value = g.name;
     const list = document.getElementById('currentMembersList'); list.innerHTML = "";
-    
     for(let mId of g.members) {
         const u = (await db.collection("users").doc(mId).get()).data();
-        list.innerHTML += `<div class="member-row"><span>${u.name}</span><button class="btn btn-danger" style="padding:2px 8px" onclick="removeMember('${mId}')">X</button></div>`;
+        list.innerHTML += `<div class="member-row"><span>${u.name}</span><button class="btn" style="background:red; padding:2px 8px" onclick="removeMember('${mId}')">X</button></div>`;
     }
     document.getElementById('manageGroupModal').style.display = 'flex';
 }
@@ -306,43 +300,35 @@ async function manageGroup() {
 async function removeMember(mId) {
     const ref = db.collection("groups").doc(activeChatId);
     const g = (await ref.get()).data();
-    const newMembers = g.members.filter(id => id !== mId);
-    await ref.update({ members: newMembers });
-    manageGroup(); // refresh list
+    await ref.update({ members: g.members.filter(id => id !== mId) });
+    manageGroup();
 }
 
 async function updateGroup() {
     const name = document.getElementById('editGName').value;
     const file = document.getElementById('editGPic').files[0];
     const ref = db.collection("groups").doc(activeChatId);
-    
     if(file) {
         const reader = new FileReader();
-        reader.onloadend = async () => {
-            await ref.update({ name, pic: reader.result });
-            location.reload();
-        };
+        reader.onloadend = async () => { await ref.update({ name, pic: reader.result }); location.reload(); };
         reader.readAsDataURL(file);
     } else {
-        await ref.update({ name });
-        closeModal('manageGroupModal');
-        notify("Groep bijgewerkt!");
-        loadSidebar();
+        await ref.update({ name }); closeModal('manageGroupModal'); notify("Groep bijgewerkt!"); loadSidebar();
     }
 }
 
-// REST
 async function sendRequest(id) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(id).collection("requests").doc(user.uid).set(me);
-    notify("✅ Verzoek verstuurd!");
+    notify("✅ Verzoek gestuurd naar " + me.name);
+    loadSidebar();
 }
 
 async function acceptRequest(id) {
     const meRef = db.collection("users").doc(user.uid);
     const frRef = db.collection("users").doc(id);
-    const meData = (await meRef.get()).data();
     const frData = (await frRef.get()).data();
+    const meData = (await meRef.get()).data();
     await meRef.collection("friends").doc(id).set(frData);
     await frRef.collection("friends").doc(user.uid).set(meData);
     await meRef.collection("requests").doc(id).delete();
@@ -357,21 +343,15 @@ function switchTab(t, el) {
 }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
-
 async function saveProfile() {
     const name = document.getElementById('pName').value;
     const file = document.getElementById('pPic').files[0];
     if(file) {
         const reader = new FileReader();
-        reader.onloadend = async () => {
-            await db.collection("users").doc(user.uid).update({ name, pic: reader.result });
-            location.reload();
-        };
+        reader.onloadend = async () => { await db.collection("users").doc(user.uid).update({ name, pic: reader.result }); location.reload(); };
         reader.readAsDataURL(file);
     } else {
-        await db.collection("users").doc(user.uid).update({ name });
-        notify("Profiel opgeslagen!");
-        closeModal('profileModal');
+        await db.collection("users").doc(user.uid).update({ name }); notify("Profiel opgeslagen!"); closeModal('profileModal');
     }
 }
 </script>
