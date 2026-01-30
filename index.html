@@ -8,7 +8,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://elfsightcdn.com/platform.js" async></script>
 
     <style>
@@ -40,9 +39,6 @@
             background: #0f172a; color: white; margin-bottom: 20px; outline: none;
         }
 
-        .nav-group { margin-bottom: 20px; }
-        .nav-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; }
-
         .category-btn {
             padding: 12px; border-radius: 10px; margin-bottom: 5px; cursor: pointer;
             transition: 0.2s; display: flex; align-items: center; gap: 10px; color: var(--text-dim);
@@ -50,62 +46,42 @@
         .category-btn:hover { background: #1e293b; color: white; }
         .category-btn.active { background: var(--primary); color: white; font-weight: bold; }
         
-        /* CHAT KNOP STIJL */
-        .chat-btn {
-            background: rgba(37, 99, 235, 0.1); border: 1px solid var(--primary);
-            color: var(--accent) !important; margin-top: 10px;
-        }
-        .chat-btn:hover { background: var(--primary); color: white !important; }
-
         /* --- MAIN CONTENT --- */
         .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         .section-title { font-size: 24px; margin: 0; color: white; }
 
-        .auth-btn {
-            background: var(--primary); border: none; padding: 10px 18px;
-            border-radius: 10px; color: white; cursor: pointer; font-weight: bold;
-            transition: 0.2s;
-        }
-        .auth-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
-        .admin-btn { background: #1e293b; margin-right: 10px; border: 1px solid #334155; }
+        .auth-btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; }
+        .admin-btn { background: #1e293b; margin-right: 10px; border: 1px solid #334155; color: white; }
 
         /* --- GAME GRID --- */
-        .game-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px;
-        }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
         .game-card {
             background: var(--card-bg); border-radius: 15px; overflow: hidden;
-            position: relative; transition: 0.3s; border: 1px solid #1e293b; cursor: pointer;
+            transition: 0.3s; border: 1px solid #1e293b; cursor: pointer;
         }
-        .game-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.6); border-color: var(--primary); }
+        .game-card:hover { transform: translateY(-8px); border-color: var(--primary); }
         .game-card img { width: 100%; height: 120px; object-fit: cover; }
-        .game-card h3 { margin: 0; padding: 15px; text-align: center; font-size: 15px; }
-
-        .star { position: absolute; top: 10px; right: 10px; font-size: 22px; color: rgba(255,255,255,0.3); transition: 0.2s; z-index: 5; }
-        .star.fav { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
-        .star:hover { transform: scale(1.2); color: #fbbf24; }
-
-        /* --- MODALS --- */
-        .modal {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
-            display: none; justify-content: center; align-items: center; z-index: 10000;
+        
+        /* HIER IS DE STER VERPLAATST */
+        .game-card h3 { 
+            margin: 0; padding: 12px; font-size: 14px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            background: rgba(0,0,0,0.3);
         }
+
+        .star { font-size: 20px; color: rgba(255,255,255,0.2); transition: 0.2s; }
+        .star.fav { color: #fbbf24; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
+        .save-icon { color: var(--accent); font-size: 12px; margin-right: 5px; opacity: 0.8; }
+
+        /* --- MODALS & TOASTS --- */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 10000; }
         .modal-box { background: #0f172a; padding: 30px; border-radius: 20px; width: 350px; text-align: center; border: 1px solid #1e293b; }
         .modal-box input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; }
         .modal-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
-
-        /* --- TOASTS --- */
+        
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
-        .toast {
-            background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px;
-            margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-        .loader { text-align: center; padding: 50px; color: var(--accent); font-size: 18px; }
-        .empty-state { text-align: center; grid-column: 1/-1; padding: 60px; color: var(--text-dim); }
+        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); }
     </style>
 </head>
 <body>
@@ -114,22 +90,12 @@
 
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
-
   <div class="search-box">
-    <input 
-      id="searchInput" 
-      type="text" 
-      placeholder="Zoek games..." 
-      autocomplete="new-password"
-      onfocus="this.removeAttribute('readonly');" 
-      readonly
-    >
+    <input id="searchInput" type="text" placeholder="Zoek games..." autocomplete="off">
   </div>
-
   <div class="category-btn active" data-cat="all">Alle games</div>
   <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
   <div id="categoryList"></div>
-  
   <div class="category-btn" onclick="location.href='chat.html'" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 Global Chat</div>
 </div>
 
@@ -141,14 +107,12 @@
             <button id="authBtn" class="auth-btn">Inloggen</button>
         </div>
     </div>
-
-    <div id="loader" class="loader">🚀 Games aan het laden...</div>
     <div id="gameGrid" class="game-grid"></div>
 </div>
 
 <div id="loginModal" class="modal">
     <div class="modal-box">
-        <h2 id="modalTitle">Welkom Terug</h2>
+        <h2>Welkom Terug</h2>
         <input id="emailInput" type="email" placeholder="E-mail">
         <input id="passwordInput" type="password" placeholder="Wachtwoord">
         <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
@@ -157,17 +121,7 @@
     </div>
 </div>
 
-<div id="registerModal" class="modal">
-    <div class="modal-box" style="width: 500px;">
-        <h2 style="color: var(--accent);">Account Aanvragen</h2>
-        <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 20px;">Vul het formulier in om toegang te krijgen.</p>
-        <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
-        <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
-    </div>
-</div>
-
 <script>
-// --- CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -186,18 +140,15 @@ let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 
-// --- NOTIFICATIE ---
 function notify(msg, type = 'success') {
-    const container = document.getElementById('toast-container');
     const t = document.createElement('div');
     t.className = 'toast';
     t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
     t.innerHTML = msg;
-    container.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
+    document.getElementById('toast-container').appendChild(t);
+    setTimeout(() => t.remove(), 3000);
 }
 
-// --- AUTH ---
 auth.onAuthStateChanged(user => {
     currentUser = user;
     if (user) {
@@ -218,24 +169,15 @@ document.getElementById("authBtn").onclick = () => {
 };
 
 document.getElementById("loginSubmit").onclick = () => {
-    const email = document.getElementById("emailInput").value;
-    const pass = document.getElementById("passwordInput").value;
-    auth.signInWithEmailAndPassword(email, pass)
-        .then(() => { notify("✅ Ingelogd!"); document.getElementById("loginModal").style.display = "none"; })
-        .catch(() => notify("❌ Fout: Controleer gegevens", "danger"));
+    auth.signInWithEmailAndPassword(document.getElementById("emailInput").value, document.getElementById("passwordInput").value)
+    .then(() => { document.getElementById("loginModal").style.display = "none"; notify("Ingelogd!"); })
+    .catch(() => notify("Fout bij inloggen", "danger"));
 };
 
-document.getElementById("registerSubmit").onclick = () => {
-    document.getElementById("loginModal").style.display = "none";
-    document.getElementById("registerModal").style.display = "flex";
-};
-
-// --- DATA ---
 function loadGames() {
     db.collection("games").onSnapshot(snap => {
         allGames = {};
         snap.forEach(doc => allGames[doc.id] = doc.data());
-        document.getElementById("loader").style.display = "none";
         renderGames();
     });
 }
@@ -248,9 +190,8 @@ function loadCategories() {
             const btn = document.createElement("div");
             btn.className = "category-btn";
             btn.innerHTML = `📁 ${doc.data().name}`;
-            btn.onclick = () => {
-                setActiveBtn(btn);
-                currentFilter = doc.id;
+            btn.onclick = () => { 
+                currentFilter = doc.id; 
                 document.getElementById("sectionTitle").textContent = doc.data().name;
                 renderGames();
             };
@@ -260,7 +201,6 @@ function loadCategories() {
 }
 
 function loadFavorites() {
-    if (!currentUser) return;
     db.collection("users").doc(currentUser.uid).collection("favorites").onSnapshot(snap => {
         favorites = {};
         snap.forEach(doc => favorites[doc.id] = true);
@@ -270,66 +210,43 @@ function loadFavorites() {
 
 function toggleFavorite(id, e) {
     e.stopPropagation();
-    if (!currentUser) return notify("Log in om favorieten te bewaren", "danger");
-    
+    if (!currentUser) return notify("Log eerst in!", "danger");
     const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
-    if (favorites[id]) {
-        ref.delete();
-        notify("⭐ Verwijderd uit favorieten");
-    } else {
-        ref.set(allGames[id]);
-        notify("⭐ Toegevoegd aan favorieten!");
-    }
+    if (favorites[id]) ref.delete(); else ref.set(allGames[id]);
 }
 
-// --- RENDERING ---
 function renderGames() {
     const grid = document.getElementById("gameGrid");
     const search = document.getElementById("searchInput").value.toLowerCase();
     grid.innerHTML = "";
     
-    let count = 0;
     Object.entries(allGames).forEach(([id, g]) => {
         const isFav = favorites[id];
         if (currentFilter === "favorites" && !isFav) return;
         if (currentFilter !== "all" && currentFilter !== "favorites" && g.category !== currentFilter) return;
         if (search && !g.title.toLowerCase().includes(search)) return;
 
-        count++;
         const card = document.createElement("div");
         card.className = "game-card";
         card.innerHTML = `
-            <div class="star ${isFav ? 'fav' : ''}" onclick="toggleFavorite('${id}', event)">★</div>
             <img src="${g.image}">
-            <h3>${g.title}</h3>
+            <h3>
+                <span>${g.hasSave ? '<span class="save-icon">💾</span>' : ''}${g.title}</span>
+                <span class="star ${isFav ? 'fav' : ''}" onclick="toggleFavorite('${id}', event)">★</span>
+            </h3>
         `;
         card.onclick = () => location.href = g.link;
         grid.appendChild(card);
     });
-
-    if (count === 0) grid.innerHTML = `<div class="empty-state">Geen games gevonden...</div>`;
 }
 
-function setActiveBtn(el) {
-    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
-    el.classList.add("active");
-}
-
-document.querySelectorAll(".category-btn[data-cat]").forEach(btn => {
-    btn.onclick = () => {
-        setActiveBtn(btn);
-        currentFilter = btn.dataset.cat;
-        document.getElementById("sectionTitle").textContent = btn.innerText.replace('🏠 ', '').replace('⭐ ', '');
-        renderGames();
-    };
+document.getElementById("searchInput").oninput = renderGames;
+document.querySelectorAll(".category-btn[data-cat]").forEach(b => {
+    b.onclick = () => { currentFilter = b.dataset.cat; renderGames(); };
 });
 
-document.getElementById("searchInput").oninput = () => renderGames();
-
-// Start de boel
 loadGames();
 loadCategories();
 </script>
-
 </body>
 </html>
