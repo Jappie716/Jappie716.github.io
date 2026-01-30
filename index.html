@@ -1,428 +1,334 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<title>Game Paradise - home</title>
-  <script src="https://elfsightcdn.com/platform.js" async></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Game Paradise - Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <script src="https://elfsightcdn.com/platform.js" async></script>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --bg: #020617;
+            --sidebar-bg: #010409;
+            --card-bg: #0f172a;
+            --primary: #2563eb;
+            --accent: #60a5fa;
+            --text-dim: #94a3b8;
+        }
 
-<style>
-* { box-sizing: border-box; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg); color: white;
+            display: flex; height: 100vh; overflow: hidden;
+        }
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-  background: linear-gradient(180deg, #020617, #0b0f19);
-  color: white;
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-}
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px; min-width: 260px; background: var(--sidebar-bg);
+            padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
+        }
+        .logo { font-size: 22px; font-weight: bold; color: var(--accent); margin-bottom: 25px; text-align: center; }
 
-/* --- TOAST MELDINGEN --- */
-#toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 99999;
-}
+        .search-box input {
+            width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #1e293b;
+            background: #0f172a; color: white; margin-bottom: 20px; outline: none;
+        }
 
-.toast {
-  background: #1e293b;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  border-left: 5px solid #2563eb;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  animation: slideIn 0.3s ease forwards;
-  font-size: 14px;
-  min-width: 220px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+        .nav-group { margin-bottom: 20px; }
+        .nav-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: block; }
 
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
+        .category-btn {
+            padding: 12px; border-radius: 10px; margin-bottom: 5px; cursor: pointer;
+            transition: 0.2s; display: flex; align-items: center; gap: 10px; color: var(--text-dim);
+        }
+        .category-btn:hover { background: #1e293b; color: white; }
+        .category-btn.active { background: var(--primary); color: white; font-weight: bold; }
+        
+        /* CHAT KNOP STIJL */
+        .chat-btn {
+            background: rgba(37, 99, 235, 0.1); border: 1px solid var(--primary);
+            color: var(--accent) !important; margin-top: 10px;
+        }
+        .chat-btn:hover { background: var(--primary); color: white !important; }
 
-/* SIDEBAR */
-.sidebar {
-  width: 240px;
-  min-width: 240px;
-  background: #020617;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #1e293b;
-}
+        /* --- MAIN CONTENT --- */
+        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .section-title { font-size: 24px; margin: 0; color: white; }
 
-.logo {
-  text-align: center; font-size: 22px; font-weight: bold;
-  color: #60a5fa; margin-bottom: 15px;
-}
+        .auth-btn {
+            background: var(--primary); border: none; padding: 10px 18px;
+            border-radius: 10px; color: white; cursor: pointer; font-weight: bold;
+            transition: 0.2s;
+        }
+        .auth-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .admin-btn { background: #1e293b; margin-right: 10px; border: 1px solid #334155; }
 
-.search-box input {
-  width: 100%; padding: 8px; border-radius: 8px; border: none;
-  background: #1e293b; color: white; margin-bottom: 15px;
-}
+        /* --- GAME GRID --- */
+        .game-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px;
+        }
+        .game-card {
+            background: var(--card-bg); border-radius: 15px; overflow: hidden;
+            position: relative; transition: 0.3s; border: 1px solid #1e293b; cursor: pointer;
+        }
+        .game-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.6); border-color: var(--primary); }
+        .game-card img { width: 100%; height: 120px; object-fit: cover; }
+        .game-card h3 { margin: 0; padding: 15px; text-align: center; font-size: 15px; }
 
-/* CATEGORIES */
-.category-btn {
-  background: #020617; padding: 10px; border-radius: 8px;
-  margin-bottom: 6px; cursor: pointer; transition: background 0.2s;
-}
-.category-btn:hover { background: #1e293b; }
-.category-btn.active { background: #2563eb; }
-<div class="category-btn" onclick="location.href='chat.html'" style="margin-top: 20px; border: 1px solid #2563eb;">💬 Global Chat</div>
-/* MAIN */
-.main { flex: 1; padding: 20px; overflow-y: auto; }
-.topbar { display: flex; justify-content: space-between; align-items: center; }
-.auth-btn {
-  background: #2563eb; border: none; padding: 8px 14px;
-  border-radius: 8px; color: white; cursor: pointer; margin-left: 6px;
-}
+        .star { position: absolute; top: 10px; right: 10px; font-size: 22px; color: rgba(255,255,255,0.3); transition: 0.2s; z-index: 5; }
+        .star.fav { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+        .star:hover { transform: scale(1.2); color: #fbbf24; }
 
-.section-title { color: #60a5fa; margin: 15px 0; }
-.loader { display: none; text-align: center; margin-top: 40px; color: #60a5fa; font-size: 18px; }
+        /* --- MODALS --- */
+        .modal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .modal-box { background: #0f172a; padding: 30px; border-radius: 20px; width: 350px; text-align: center; border: 1px solid #1e293b; }
+        .modal-box input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; }
+        .modal-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
 
-/* GAMES GRID */
-.game-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 15px;
-}
+        /* --- TOASTS --- */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
+        .toast {
+            background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px;
+            margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-.game-card {
-  background: #020617; border-radius: 12px; overflow: hidden;
-  position: relative; transition: transform .2s, box-shadow .2s;
-  box-shadow: 0 10px 20px rgba(0,0,0,.3);
-}
-.game-card:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 20px 40px rgba(0,0,0,.5); }
-.game-card img { width: 100%; height: 110px; object-fit: cover; }
-.game-card h3 { margin: 0; padding: 8px; text-align: center; font-size: 14px; }
-
-.star { position: absolute; top: 8px; right: 10px; cursor: pointer; font-size: 20px; color: #444; z-index: 3; transition: transform 0.2s; }
-.star:hover { transform: scale(1.2); }
-.star.fav { color: gold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-
-.play-overlay {
-  position: absolute; inset: 0; background: rgba(0,0,0,0.6);
-  display: flex; justify-content: center; align-items: center;
-  opacity: 0; transition: opacity .2s; pointer-events: none;
-}
-.game-card:hover .play-overlay { opacity: 1; }
-.play-overlay span { background: #2563eb; padding: 8px 20px; border-radius: 20px; font-weight: bold; }
-
-/* LOGIN MODAL */
-.modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
-  display: none; justify-content: center; align-items: center; z-index: 10000;
-}
-.modal-box { background: #0f172a; padding: 25px; border-radius: 12px; width: 320px; text-align: center; border: 1px solid #1e293b; }
-.modal-box input, .modal-box button { width: 100%; margin-top: 10px; padding: 10px; border-radius: 8px; border: none; }
-.modal-box input { background: #1e293b; color: white; }
-.modal-box button { background: #2563eb; color: white; cursor: pointer; font-weight: bold; }
-
-.empty-state { 
-  grid-column: 1 / -1; 
-  text-align: center; 
-  padding: 80px 20px; 
-  color: #94a3b8; 
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.empty-state h3 { font-size: 24px; color: #60a5fa; margin-bottom: 10px; }
-.empty-state p { font-size: 16px; max-width: 500px; line-height: 1.6; margin-bottom: 25px; }
-.empty-state .btn-row { display: flex; gap: 10px; }
-.secondary-btn { background: #1e293b; border: none; padding: 10px 18px; border-radius: 8px; color: white; cursor: pointer; }
-</style>
+        .loader { text-align: center; padding: 50px; color: var(--accent); font-size: 18px; }
+        .empty-state { text-align: center; grid-column: 1/-1; padding: 60px; color: var(--text-dim); }
+    </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 
 <div class="sidebar">
-  <div class="logo">🎮 Game Paradise</div>
+    <div class="logo">🎮 Game Paradise</div>
 
-  <div class="search-box">
-    <input 
-      id="searchInput" 
-      type="text" 
-      placeholder="Zoek games..." 
-      autocomplete="new-password"
-      onfocus="this.removeAttribute('readonly');" 
-      readonly
-    >
-  </div>
+    <div class="search-box">
+        <input id="searchInput" type="text" placeholder="Zoek een game...">
+    </div>
 
-  <div class="category-btn active" data-cat="all">Alle games</div>
-  <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
-  <div id="categoryList"></div>
+    <div class="nav-group">
+        <span class="nav-label">Menu</span>
+        <div class="category-btn active" data-cat="all">🏠 Alle Games</div>
+        <div class="category-btn" data-cat="favorites">⭐ Favorieten</div>
+        <div class="category-btn chat-btn" onclick="location.href='chat.html'">💬 Global Chat</div>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-label">Categorieën</span>
+        <div id="categoryList"></div>
+    </div>
 </div>
 
 <div class="main">
-  <div class="topbar">
-    <h2 id="sectionTitle" class="section-title">Alle games</h2>
-    <div>
-      <button id="adminBtn" class="auth-btn" style="display:none" onclick="location.href='admin.html'">Admin</button>
-      <button id="authBtn" class="auth-btn">Inloggen</button>
+    <div class="topbar">
+        <h2 id="sectionTitle" class="section-title">Alle Games</h2>
+        <div>
+            <button id="adminBtn" class="auth-btn admin-btn" style="display:none" onclick="location.href='admin.html'">⚙️ Admin</button>
+            <button id="authBtn" class="auth-btn">Inloggen</button>
+        </div>
     </div>
-  </div>
 
-  <div id="loader" class="loader">⏳ Games laden...</div>
-  <div id="gameGrid" class="game-grid"></div>
+    <div id="loader" class="loader">🚀 Games aan het laden...</div>
+    <div id="gameGrid" class="game-grid"></div>
 </div>
 
 <div id="loginModal" class="modal">
-  <div class="modal-box">
-    <h2 id="modalTitle">Inloggen</h2>
-    <p id="modalSub" style="font-size: 13px; color: #94a3b8; display: none;">Log in om je favorieten op te slaan!</p>
-    <input id="emailInput" type="email" placeholder="E-mail">
-    <input id="passwordInput" type="password" placeholder="Wachtwoord">
-    <button id="loginSubmit">Inloggen</button>
-    <button id="registerSubmit" style="background:#16a34a;">Account maken</button>
-    <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: #64748b; font-size: 12px;">Annuleren</button>
-  </div>
+    <div class="modal-box">
+        <h2 id="modalTitle">Welkom Terug</h2>
+        <input id="emailInput" type="email" placeholder="E-mail">
+        <input id="passwordInput" type="password" placeholder="Wachtwoord">
+        <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
+        <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
+        <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Annuleren</button>
+    </div>
 </div>
+
 <div id="registerModal" class="modal">
-  <div class="modal-box" style="width: 500px; max-width: 95%;">
-    <h2 style="color: #60a5fa; margin-bottom: 5px;">Account Aanvragen</h2>
-    <p style="font-size: 14px; color: #94a3b8; margin-bottom: 20px;">Niet iedereen kan zomaar een account maken. Vul dit formulier in om toegang te krijgen.</p>
-    
-  <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
-
-    <button onclick="document.getElementById('registerModal').style.display='none'" style="background:transparent; color: #64748b; font-size: 12px; margin-top: 20px;">Terug naar home</button>
-  </div>
+    <div class="modal-box" style="width: 500px;">
+        <h2 style="color: var(--accent);">Account Aanvragen</h2>
+        <p style="color: var(--text-dim); font-size: 14px; margin-bottom: 20px;">Vul het formulier in om toegang te krijgen.</p>
+        <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
+        <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
+    </div>
 </div>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
-  authDomain: "gameparadise-80490.firebaseapp.com",
-  projectId: "gameparadise-80490",
-  storageBucket: "gameparadise-80490.firebasestorage.app",
-  messagingSenderId: "335620903527",
-  appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
-};
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+<script>
+// --- CONFIG ---
+const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
-const authBtn = document.getElementById("authBtn");
-const adminBtn = document.getElementById("adminBtn");
-const modal = document.getElementById("loginModal");
-const gameGrid = document.getElementById("gameGrid");
-const searchInput = document.getElementById("searchInput");
-
 let currentUser = null;
 let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 
-/* --- NOTIFICATIE FUNCTIE --- */
+// --- NOTIFICATIE ---
 function notify(msg, type = 'success') {
-  const container = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = 'toast';
-  // Gebruik de kleuren van je admin paneel
-  t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
-  
-  // Voeg een icoontje toe voor de extra touch
-  const icon = type === 'success' ? '✅' : '🗑️';
-  t.innerHTML = `<span>${icon}</span> ${msg}`;
-  
-  container.appendChild(t);
-  
-  // Verwijder na 3 seconden met een kleine fade-out
-  setTimeout(() => {
-    t.style.opacity = '0';
-    t.style.transform = 'translateX(20px)';
-    t.style.transition = '0.3s';
-    setTimeout(() => t.remove(), 300);
-  }, 3000);
+    const container = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
+    t.innerHTML = msg;
+    container.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
 }
 
-function showLogin(reason = false) {
-    document.getElementById('modalSub').style.display = reason ? 'block' : 'none';
-    modal.style.display = "flex";
-}
+// --- AUTH ---
+auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+        document.getElementById("authBtn").textContent = "Uitloggen";
+        document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email) ? "inline-block" : "none";
+        loadFavorites();
+    } else {
+        document.getElementById("authBtn").textContent = "Inloggen";
+        document.getElementById("adminBtn").style.display = "none";
+        favorites = {};
+        renderGames();
+    }
+});
 
-function resetToAllGames() {
-    const allBtn = document.querySelector(".category-btn[data-cat='all']");
-    if (allBtn) allBtn.click();
-}
-
-/* AUTH LOGIC */
-authBtn.onclick = () => currentUser ? auth.signOut() : showLogin();
+document.getElementById("authBtn").onclick = () => {
+    if (currentUser) auth.signOut();
+    else document.getElementById("loginModal").style.display = "flex";
+};
 
 document.getElementById("loginSubmit").onclick = () => {
-    auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
-        .then(() => notify("Succesvol ingelogd!"))
-        .catch(e => {
-            // Geen vage Engelse codes meer, maar gewoon dit:
-            notify("Wachtwoord of e-mail onjuist", 'danger');
-        });
+    const email = document.getElementById("emailInput").value;
+    const pass = document.getElementById("passwordInput").value;
+    auth.signInWithEmailAndPassword(email, pass)
+        .then(() => { notify("✅ Ingelogd!"); document.getElementById("loginModal").style.display = "none"; })
+        .catch(() => notify("❌ Fout: Controleer gegevens", "danger"));
 };
 
 document.getElementById("registerSubmit").onclick = () => {
-    // Sluit het inlogvenster
-    document.getElementById('loginModal').style.display = 'none';
-    // Open het aanvraagformulier
-    document.getElementById('registerModal').style.display = 'flex';
+    document.getElementById("loginModal").style.display = "none";
+    document.getElementById("registerModal").style.display = "flex";
 };
 
-auth.onAuthStateChanged(user => {
-  currentUser = user;
-  favorites = {};
-  if (user) {
-    authBtn.textContent = "Uitloggen";
-    modal.style.display = "none";
-    adminBtn.style.display = (user && ADMIN_EMAILS.includes(user.email)) ? "inline-block" : "none";
-    loadFavorites();
-  } else {
-    authBtn.textContent = "Inloggen";
-    adminBtn.style.display = "none";
-    renderGames();
-  }
-  loadCategories();
-  loadGames();
-});
-
-/* FAVORITES LOGIC */
-function loadFavorites() {
-  if (!currentUser) return;
-  db.collection("users").doc(currentUser.uid).collection("favorites").get().then(snap => {
-      snap.forEach(doc => favorites[doc.id] = doc.data());
-      renderGames();
-  });
-}
-
-function toggleFavorite(id) {
-  if (!currentUser) {
-    showLogin(true);
-    return;
-  }
-  const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
-  const gameName = allGames[id].title;
-
-  if (favorites[id]) {
-    delete favorites[id];
-    ref.delete();
-    notify(`"${gameName}" verwijderd uit favorieten`, 'danger');
-  } else {
-    favorites[id] = allGames[id];
-    ref.set(allGames[id]);
-    notify(`"${gameName}" toegevoegd aan favorieten!`, 'success');
-  }
-  renderGames();
-}
-
-/* RENDERING */
-function renderGames() {
-  const search = searchInput.value.toLowerCase();
-  gameGrid.innerHTML = "";
-
-  if (currentFilter === "favorites" && !currentUser) {
-      gameGrid.innerHTML = `
-        <div class="empty-state">
-            <h3>⭐ Favorieten</h3>
-            <p>Wil je je favoriete games bewaren en altijd snel terugvinden? Log dan in of maak een account aan om je favorieten te beheren.</p>
-            <div class="btn-row">
-                <button class="auth-btn" onclick="showLogin(true)">Nu Inloggen</button>
-                <button class="secondary-btn" onclick="resetToAllGames()">Terug naar alle games</button>
-            </div>
-        </div>`;
-      return;
-  }
-
-  let count = 0;
-  Object.entries(allGames).forEach(([id, g]) => {
-    const fav = favorites[id];
-    if (currentFilter === "favorites" && !fav) return;
-    if (currentFilter !== "all" && currentFilter !== "favorites" && g.category !== currentFilter) return;
-    if (search && !g.title.toLowerCase().includes(search)) return;
-
-    count++;
-    const div = document.createElement("div");
-    div.className = "game-card";
-    div.innerHTML = `
-      <div class="star ${fav ? 'fav' : ''}">★</div>
-      <img src="${g.image || ''}">
-      <h3>${g.title || 'Laden...'}</h3>
-      <div class="play-overlay"><span>▶ Play</span></div>
-    `;
-
-    div.onclick = (e) => {
-        if (e.target.classList.contains("star")) {
-            toggleFavorite(id);
-        } else {
-            location.href = g.link;
-        }
-    };
-    gameGrid.appendChild(div);
-  });
-
-  if (count === 0 && !document.querySelector('.empty-state')) {
-      gameGrid.innerHTML = `<div class="empty-state"><p>Geen games gevonden...</p></div>`;
-  }
-}
-
+// --- DATA ---
 function loadGames() {
-  document.getElementById("loader").style.display = "block";
-  db.collection("games").get().then(snap => {
-    allGames = {};
-    snap.forEach(doc => allGames[doc.id] = doc.data());
-    document.getElementById("loader").style.display = "none";
-    renderGames();
-  });
+    db.collection("games").onSnapshot(snap => {
+        allGames = {};
+        snap.forEach(doc => allGames[doc.id] = doc.data());
+        document.getElementById("loader").style.display = "none";
+        renderGames();
+    });
 }
 
 function loadCategories() {
-  const catList = document.getElementById("categoryList");
-  const currentActiveId = currentFilter;
-  catList.innerHTML = "";
-  db.collection("categories").get().then(snap => {
-    snap.forEach(doc => {
-      const btn = document.createElement("div");
-      btn.className = "category-btn" + (currentActiveId === doc.id ? " active" : "");
-      btn.textContent = doc.data().name;
-      btn.onclick = () => {
-        document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentFilter = doc.id;
-        document.getElementById("sectionTitle").textContent = doc.data().name;
-        renderGames();
-      };
-      catList.appendChild(btn);
+    db.collection("categories").onSnapshot(snap => {
+        const list = document.getElementById("categoryList");
+        list.innerHTML = "";
+        snap.forEach(doc => {
+            const btn = document.createElement("div");
+            btn.className = "category-btn";
+            btn.innerHTML = `📁 ${doc.data().name}`;
+            btn.onclick = () => {
+                setActiveBtn(btn);
+                currentFilter = doc.id;
+                document.getElementById("sectionTitle").textContent = doc.data().name;
+                renderGames();
+            };
+            list.appendChild(btn);
+        });
     });
-  });
+}
+
+function loadFavorites() {
+    if (!currentUser) return;
+    db.collection("users").doc(currentUser.uid).collection("favorites").onSnapshot(snap => {
+        favorites = {};
+        snap.forEach(doc => favorites[doc.id] = true);
+        renderGames();
+    });
+}
+
+function toggleFavorite(id, e) {
+    e.stopPropagation();
+    if (!currentUser) return notify("Log in om favorieten te bewaren", "danger");
+    
+    const ref = db.collection("users").doc(currentUser.uid).collection("favorites").doc(id);
+    if (favorites[id]) {
+        ref.delete();
+        notify("⭐ Verwijderd uit favorieten");
+    } else {
+        ref.set(allGames[id]);
+        notify("⭐ Toegevoegd aan favorieten!");
+    }
+}
+
+// --- RENDERING ---
+function renderGames() {
+    const grid = document.getElementById("gameGrid");
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    grid.innerHTML = "";
+    
+    let count = 0;
+    Object.entries(allGames).forEach(([id, g]) => {
+        const isFav = favorites[id];
+        if (currentFilter === "favorites" && !isFav) return;
+        if (currentFilter !== "all" && currentFilter !== "favorites" && g.category !== currentFilter) return;
+        if (search && !g.title.toLowerCase().includes(search)) return;
+
+        count++;
+        const card = document.createElement("div");
+        card.className = "game-card";
+        card.innerHTML = `
+            <div class="star ${isFav ? 'fav' : ''}" onclick="toggleFavorite('${id}', event)">★</div>
+            <img src="${g.image}">
+            <h3>${g.title}</h3>
+        `;
+        card.onclick = () => location.href = g.link;
+        grid.appendChild(card);
+    });
+
+    if (count === 0) grid.innerHTML = `<div class="empty-state">Geen games gevonden...</div>`;
+}
+
+function setActiveBtn(el) {
+    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
+    el.classList.add("active");
 }
 
 document.querySelectorAll(".category-btn[data-cat]").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".category-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    currentFilter = btn.dataset.cat;
-    document.getElementById("sectionTitle").textContent = btn.textContent;
-    renderGames();
-  };
+    btn.onclick = () => {
+        setActiveBtn(btn);
+        currentFilter = btn.dataset.cat;
+        document.getElementById("sectionTitle").textContent = btn.innerText.replace('🏠 ', '').replace('⭐ ', '');
+        renderGames();
+    };
 });
 
-searchInput.oninput = () => renderGames();
-window.onload = () => { 
-    searchInput.value = ""; 
-    renderGames();
-};
+document.getElementById("searchInput").oninput = () => renderGames();
+
+// Start de boel
+loadGames();
+loadCategories();
 </script>
+
 </body>
 </html>
