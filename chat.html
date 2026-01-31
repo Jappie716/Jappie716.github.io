@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Game Paradise - Ultimate</title>
+    <title>Game Paradise - Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -138,11 +138,14 @@
             <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
         </div>
         <div class="chat-input" id="inputArea" style="display:none">
-            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()">📷</button>
-            <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
-            <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
-        </div>
+    <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()" style="padding: 5px; width: 50px; height: 44px;">
+        <img src="https://i.imgur.com/CeRZ8na.png" style="width: 100%; height: 100%; object-fit: contain;">
+    </button>
+    
+    <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
+    <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
+    <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
+</div>
     </div>
 </div>
 
