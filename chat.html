@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -12,7 +13,7 @@
         :root {
             --bg: #020617; --sidebar-bg: #010409; --card-bg: #0f172a;
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
-            --sent: #1e3a8a; --received: #1e293b; --danger: #ef4444; --success: #22c55e;
+            --sent: #1e3a8a; --received: #1e293b; --danger: #ef4444;
         }
 
         * { box-sizing: border-box; }
@@ -21,51 +22,87 @@
             background: var(--bg); color: white; height: 100vh; 
             display: flex; overflow: hidden; 
         }
-        
-        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 100000; }
-        .toast { background: var(--card-bg); color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+
+        /* --- NOTIFICATIES --- */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
+        .toast { 
+            background: var(--card-bg); color: white; padding: 15px 20px; 
+            border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); 
+            animation: slideIn 0.3s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer;
+        }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-        /* --- SETUP OVERLAY --- */
-        #setupOverlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .setup-card { background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid #1e293b; width: 100%; max-width: 400px; text-align: center; }
-        .setup-card img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); margin-bottom: 15px; }
-
         .container { display: flex; width: 100%; height: 100%; }
+
+        /* --- SIDEBAR --- */
         .sidebar { width: 350px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; background: var(--card-bg); display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #1e293b; }
         .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary); }
         
         .tabs { display: flex; background: var(--sidebar-bg); border-bottom: 1px solid #1e293b; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: var(--text-dim); position: relative; }
-        .tab.active { color: var(--accent); border-bottom: 2px solid var(--primary); background: #1e3a8a22; }
-        .tab-dot { position: absolute; top: 12px; right: 15px; width: 10px; height: 10px; background: var(--danger); border-radius: 50%; display: none; }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: var(--text-dim); position: relative; transition: 0.2s; }
+        .tab:hover { background: #1e293b; }
+        .tab.active { color: var(--accent); border-bottom: 3px solid var(--primary); background: #1e3a8a22; font-weight: bold; }
+        .tab-dot { position: absolute; top: 10px; right: 15px; width: 10px; height: 10px; background: var(--danger); border-radius: 50%; display: none; border: 2px solid var(--sidebar-bg); }
 
         .list-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .item { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; }
+        
+        /* --- CHAT ITEMS --- */
+        .item { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; transition: 0.2s; }
         .item:hover { background: #0f172a; }
+        
+        /* DUIDELIJKE ACTIEVE SELECTIE */
+        .item.active-chat { 
+            background: #1e3a8a !important; 
+            border-left: 6px solid #60a5fa;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+        }
+        .item.active-chat h4 { color: white !important; font-weight: bold; }
+
         .item img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; background: #334155; }
         .item-info { flex: 1; overflow: hidden; }
-        .item-info h4 { margin: 0; font-size: 15px; }
-        .unread-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; margin-left: 10px; box-shadow: 0 0 10px var(--primary); }
+        .item-info h4 { margin: 0; font-size: 15px; color: #e2e8f0; }
+        .item-info p { margin: 2px 0 0; font-size: 12px; color: var(--text-dim); }
 
+        .unread-badge { 
+            background: var(--danger); color: white; font-size: 10px; font-weight: bold; 
+            padding: 2px 6px; border-radius: 10px; margin-left: 10px; box-shadow: 0 0 8px var(--danger);
+            display: none; /* Standaard verborgen */
+        }
+        .unread-badge.show { display: block; }
+
+        /* --- MAIN CHAT --- */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
         .chat-header { padding: 15px 25px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; min-height: 75px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 12px; }
         
-        .msg { max-width: 65%; padding: 12px 16px; border-radius: 15px; font-size: 14px; position: relative; }
+        .msg { max-width: 65%; padding: 12px 16px; border-radius: 15px; font-size: 14px; position: relative; word-wrap: break-word; }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
         .msg .sender { font-size: 11px; color: var(--accent); font-weight: bold; margin-bottom: 4px; display: block; }
 
-        .chat-input { padding: 20px; background: var(--card-bg); display: flex; gap: 12px; }
-        .chat-input input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
+        /* --- INPUT AREA --- */
+        .chat-input { 
+            padding: 20px; background: var(--card-bg); display: flex; gap: 12px; 
+            align-items: center; /* Zorgt dat knoppen niet 'hoog' zijn */
+            border-top: 1px solid #1e293b;
+        }
+        .chat-input input { 
+            flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; 
+            background: var(--bg); color: white; outline: none; 
+        }
         
-        .btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn { 
+            background: var(--primary); border: none; padding: 12px 20px; border-radius: 10px; 
+            color: white; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;
+            font-size: 14px; height: 48px; white-space: nowrap;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn-sm { padding: 6px 12px; height: auto; font-size: 12px; }
+        .btn-icon { padding: 12px; width: 48px; justify-content: center; background: #334155; }
 
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        /* --- MODALS --- */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-box { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 100%; max-width: 450px; border: 1px solid #1e293b; }
         input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #1e293b; background: #020617; color: white; }
     </style>
@@ -74,15 +111,15 @@
 
 <div id="toast-container"></div>
 
-<div id="setupOverlay">
-    <div class="setup-card">
-        <h2>Nieuw Profiel</h2>
-        <img id="setupPreview" src="https://ui-avatars.com/api/?name=Guest">
+<div id="setupOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+    <div class="modal-box">
+        <h2>Welkom! Wie ben jij?</h2>
+        <img id="setupPreview" src="https://ui-avatars.com/api/?name=User" style="width:100px; height:100px; border-radius:50%; margin-bottom:15px; border:2px solid var(--primary);">
         <br>
-        <button class="btn btn-sm btn-outline" onclick="document.getElementById('setupFile').click()">Kies nieuwe profielfoto</button>
+        <button class="btn btn-sm" onclick="document.getElementById('setupFile').click()" style="margin: 0 auto; display:block;">Upload Foto</button>
         <input type="file" id="setupFile" hidden accept="image/*" onchange="previewImage(this, 'setupPreview')">
-        <input type="text" id="setupName" placeholder="Voer je naam in...">
-        <button class="btn" style="width:100%; margin-top:20px;" onclick="completeSetup()">Account Aanmaken</button>
+        <input type="text" id="setupName" placeholder="Kies je naam...">
+        <button class="btn" style="width:100%; justify-content:center; margin-top:20px;" onclick="completeSetup()">Start ➤</button>
     </div>
 </div>
 
@@ -90,7 +127,7 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <img id="myAvatar" src="" onclick="openProfile()">
-            <div style="flex:1"><b id="myName">...</b></div>
+            <div style="flex:1; margin-left:10px;"><b id="myName">Laden...</b></div>
             <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
         </div>
         <div class="tabs">
@@ -104,32 +141,41 @@
     <div class="main-chat">
         <div class="chat-header">
             <img id="activeChatImg" src="" style="width:45px; height:45px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
-            <div style="flex:1"><h3 id="activeChatName" style="margin:0">Selecteer een chat</h3></div>
-            <button id="groupSettingsBtn" class="btn" style="display:none; background:none; font-size:22px;" onclick="manageGroup()">⚙️</button>
+            <div style="flex:1"><h3 id="activeChatName" style="margin:0">Game Paradise</h3></div>
+            <button id="groupSettingsBtn" class="btn btn-sm" style="display:none; background:none; font-size:20px;" onclick="manageGroup()">⚙️</button>
         </div>
-        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-messages" id="chatMessages">
+            <p style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat om te beginnen...</p>
+        </div>
         <div class="chat-input" id="inputArea" style="display:none">
+            <button class="btn btn-icon" onclick="document.getElementById('imageUpload').click()">📷</button>
+            <input type="file" id="imageUpload" hidden accept="image/*" onchange="handleImageUpload(this)">
             <input type="text" id="messageInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">Verstuur ➤</button>
+            <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
         </div>
     </div>
 </div>
 
 <div id="profileModal" class="modal"><div class="modal-box">
     <h3>Profiel Bewerken</h3>
-    <div style="text-align:center; margin-bottom: 15px;">
-        <img id="editPreview" src="" style="width:100px; height:100px; border-radius:50%; object-fit: cover; border:2px solid var(--primary)">
-        <br>
-        <button class="btn btn-sm btn-outline" style="margin-top:10px;" onclick="document.getElementById('editFile').click()">Upload nieuwe foto</button>
-    </div>
+    <div style="text-align:center"><img id="editPreview" src="" style="width:100px; height:100px; border-radius:50%; object-fit:cover;"></div>
+    <button class="btn btn-sm" onclick="document.getElementById('editFile').click()" style="margin:10px auto; display:block;">Nieuwe Foto</button>
     <input type="file" id="editFile" hidden accept="image/*" onchange="previewImage(this, 'editPreview')">
-    <label>Gebruikersnaam</label>
     <input type="text" id="editName">
-    <button class="btn" onclick="saveProfile()" style="width:100%; margin-top:10px;">Opslaan</button>
-    <button class="btn" onclick="closeModal('profileModal')" style="width:100%; margin-top:5px; background:#334155;">Annuleren</button>
+    <button class="btn" onclick="saveProfile()" style="width:100%">Opslaan</button>
+    <button class="btn" onclick="closeModal('profileModal')" style="width:100%; background:#334155; margin-top:5px;">Sluiten</button>
+</div></div>
+
+<div id="groupModal" class="modal"><div class="modal-box">
+    <h3>Nieuwe Groep</h3>
+    <input type="text" id="groupName" placeholder="Naam van de groep">
+    <div id="friendsInviteList" style="max-height:150px; overflow-y:auto; margin:10px 0;"></div>
+    <button class="btn" onclick="createGroup()" style="width:100%">Aanmaken</button>
+    <button class="btn" onclick="closeModal('groupModal')" style="width:100%; background:#334155; margin-top:5px;">Annuleren</button>
 </div></div>
 
 <script>
+// --- CONFIGURATIE ---
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -142,17 +188,26 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+// --- VARIABELEN ---
 let user = null;
 let activeChatId = null;
-let chatType = 'private';
-let unreadMap = {};
-let chatActivity = {};
+let chatType = null;
 let currentBase64 = null;
-let activeNotifications = {};
 
+// Slaat timestamps op van laatste bericht per chat
+let chatDataMap = new Map(); 
+// Houdt bij of we al een listener hebben draaien op een chat (om dubbele te voorkomen)
+let activeListeners = new Set();
+
+// --- OPSTARTEN ---
 auth.onAuthStateChanged(u => {
-    if (u) { user = u; checkUser(); }
-    else { location.href = 'index.html'; }
+    if (u) { 
+        user = u; 
+        Notification.requestPermission(); // Vraag permissie voor bureaublad meldingen
+        checkUser(); 
+    } else { 
+        location.href = 'index.html'; 
+    }
 });
 
 async function checkUser() {
@@ -161,221 +216,313 @@ async function checkUser() {
         document.getElementById('setupOverlay').style.display = 'flex';
     } else {
         document.getElementById('setupOverlay').style.display = 'none';
-        startApp();
+        initApp();
     }
 }
 
-function startApp() {
-    // Systeem notificatie permissie
-    if (Notification.permission === "default") Notification.requestPermission();
-
-    // Luister naar eigen profiel
+function initApp() {
+    // 1. Laad eigen profiel
     db.collection("users").doc(user.uid).onSnapshot(d => {
-        const data = d.data();
-        document.getElementById('myName').innerText = data.name;
-        document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
+        document.getElementById('myName').innerText = d.data().name;
+        document.getElementById('myAvatar').src = d.data().pic || `https://ui-avatars.com/api/?name=${d.data().name}`;
     });
 
-    // Luister naar inkomende verzoeken
+    // 2. Laad Verzoeken (voor rode stip op tab)
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
     });
 
-    // Luister naar algemene chat voor sortering/notificatie
-    db.collection("chats").orderBy("timestamp", "desc").limit(1).onSnapshot(snap => {
-        if(!snap.empty) {
-            const m = snap.docs[0].data();
-            chatActivity['global'] = m.timestamp?.toMillis() || Date.now();
-            if(activeChatId !== 'global' && m.uid !== user.uid) {
-                unreadMap['global'] = true;
-                showNotif("Algemeen", m.text || "📷 Foto", 'global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global');
-            }
-            loadSidebar();
-        }
-    });
-
-    loadSidebar();
+    // 3. START ALLES-LUISTERAAR (Cruciaal voor meldingen)
+    subscribeToAllChats();
 }
 
-function showNotif(title, body, chatId, name, pic, type) {
-    if (document.hidden && Notification.permission === "granted") {
-        const n = new Notification(title, { body, icon: pic });
-        activeNotifications[chatId] = n;
-        n.onclick = () => { window.focus(); openChat(chatId, name, pic, type); n.close(); };
-    } else {
-        notify(`<b>${name}</b>: ${body}`);
+// --- DE MAGIE: LUISTER NAAR ALLES ---
+async function subscribeToAllChats() {
+    // A. Algemeen
+    setupChatListener('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global', db.collection("chats"));
+
+    // B. Vrienden (Private Chats)
+    const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+    fSnap.forEach(doc => {
+        const friendId = doc.id;
+        const chatId = [user.uid, friendId].sort().join("_");
+        setupChatListener(friendId, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
+    });
+
+    // C. Groepen
+    const gSnap = await db.collection("groups").where("members", "array-contains", user.uid).get();
+    gSnap.forEach(doc => {
+        setupChatListener(doc.id, doc.data().name, doc.data().pic, 'group', db.collection("groups").doc(doc.id).collection("messages"));
+    });
+}
+
+function setupChatListener(id, name, pic, type, collectionRef) {
+    if(activeListeners.has(id)) return; // Voorkom dubbele listeners
+    activeListeners.add(id);
+
+    // Initial data opslaan voor sorteren
+    if(!chatDataMap.has(id)) {
+        chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false });
+    }
+
+    // Luister naar laatste bericht
+    collectionRef.orderBy("timestamp", "desc").limit(1).onSnapshot(snap => {
+        if(snap.empty) return;
+        const m = snap.docs[0].data();
+        const time = m.timestamp ? m.timestamp.toMillis() : Date.now();
+        
+        const chatData = chatDataMap.get(id);
+        
+        // Update tijd
+        chatData.timestamp = time;
+
+        // Check of het een nieuw bericht is (voor meldingen)
+        if (activeChatId !== id && m.uid !== user.uid) {
+            chatData.unread = true;
+            sendDesktopNotification(name, m.text || "📷 Afbeelding", id, pic, type);
+        } else if (activeChatId === id) {
+            chatData.unread = false; // Als we erin zitten, is het gelezen
+        }
+
+        chatDataMap.set(id, chatData);
+        renderSidebar(); // Ververs sidebar zodat chat omhoog springt en bolletje toont
+    });
+}
+
+// --- SIDEBAR RENDEREN ---
+function renderSidebar() {
+    const list = document.getElementById('sidebarList');
+    const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
+
+    list.innerHTML = "";
+
+    if (activeTab === 'Chats') {
+        // Converteer Map naar Array en sorteer
+        let chats = Array.from(chatDataMap.values());
+        
+        // Sorteer: Algemeen (global) altijd eerst, daarna op tijd (nieuwste boven)
+        chats.sort((a, b) => {
+            if (a.type === 'global') return -1;
+            if (b.type === 'global') return 1;
+            return b.timestamp - a.timestamp;
+        });
+
+        chats.forEach(c => {
+            const isActive = activeChatId === c.id;
+            const item = document.createElement('div');
+            // Hier voegen we de 'active-chat' class toe voor de blauwe selectie
+            item.className = `item ${isActive ? 'active-chat' : ''}`;
+            item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
+            
+            item.innerHTML = `
+                <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
+                <div class="item-info">
+                    <h4>${c.name}</h4>
+                    <p>${c.type === 'private' ? 'Privé' : c.type === 'group' ? 'Groep' : 'Community'}</p>
+                </div>
+                <div class="unread-badge ${c.unread ? 'show' : ''}">!</div>
+            `;
+            list.appendChild(item);
+        });
+    } 
+    else if (activeTab === 'Ontdek') {
+        db.collection("users").limit(10).get().then(snap => {
+            snap.forEach(doc => {
+                if(doc.id === user.uid) return;
+                list.innerHTML += `<div class="item"><img src="${doc.data().pic || `https://ui-avatars.com/api/?name=${doc.data().name}`}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn btn-sm" onclick="sendRequest('${doc.id}', '${doc.data().name}')">Add</button></div>`;
+            });
+        });
+    }
+    else if (activeTab === 'Verzoeken') {
+        db.collection("users").doc(user.uid).collection("requests").get().then(snap => {
+            snap.forEach(doc => {
+                list.innerHTML += `<div class="item"><img src="${doc.data().pic}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn btn-sm" onclick="acceptRequest('${doc.id}', '${doc.data().name}', '${doc.data().pic}')">Accepteer</button></div>`;
+            });
+        });
     }
 }
 
-async function loadSidebar() {
-    const list = document.getElementById('sidebarList');
-    const tab = document.querySelector('.tab.active').innerText.split(' ')[0];
-    list.innerHTML = "";
-
-    if (tab === 'Ontdek') return renderDiscover();
-    if (tab === 'Verzoeken') return renderRequests();
-
-    let chats = [];
-    chats.push({ id: 'global', name: 'Algemeen', pic: 'https://i.imgur.com/C9HtyPv.jpeg', type: 'global', pinned: true });
-
-    const gSnap = await db.collection("groups").where("members", "array-contains", user.uid).get();
-    gSnap.forEach(doc => chats.push({ id: doc.id, ...doc.data(), type: 'group' }));
-
-    const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
-    fSnap.forEach(doc => chats.push({ id: doc.id, ...doc.data(), type: 'private' }));
-
-    chats.sort((a,b) => {
-        if(a.pinned) return -1; if(b.pinned) return 1;
-        return (chatActivity[b.id] || 0) - (chatActivity[a.id] || 0);
-    });
-
-    chats.forEach(c => {
-        const item = document.createElement('div');
-        item.className = 'item';
-        item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
-        item.innerHTML = `
-            <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
-            <div class="item-info"><h4>${c.name}</h4><p style="font-size:10px;color:gray">${c.type}</p></div>
-            ${unreadMap[c.id] ? '<div class="unread-dot"></div>' : ''}
-        `;
-        list.appendChild(item);
-    });
-}
-
-async function renderDiscover() {
-    const list = document.getElementById('sidebarList');
-    const snap = await db.collection("users").limit(20).get();
-    snap.forEach(doc => {
-        if(doc.id === user.uid) return;
-        list.innerHTML += `<div class="item"><img src="${doc.data().pic || `https://ui-avatars.com/api/?name=${doc.data().name}`}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn btn-sm" onclick="sendRequest('${doc.id}', '${doc.data().name}')">Add</button></div>`;
-    });
-}
-
-async function renderRequests() {
-    const list = document.getElementById('sidebarList');
-    const snap = await db.collection("users").doc(user.uid).collection("requests").get();
-    snap.forEach(doc => {
-        list.innerHTML += `<div class="item"><img src="${doc.data().pic || `https://ui-avatars.com/api/?name=${doc.data().name}`}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn btn-sm" onclick="acceptFriend('${doc.id}', '${doc.data().name}', '${doc.data().pic}')">Accepteer</button></div>`;
-    });
-}
-
+// --- CHAT FUNCTIES ---
 function openChat(id, name, pic, type) {
     activeChatId = id;
     chatType = type;
-    unreadMap[id] = false;
-    if(activeNotifications[id]) { activeNotifications[id].close(); delete activeNotifications[id]; }
+    
+    // Markeer als gelezen
+    if(chatDataMap.has(id)) {
+        chatDataMap.get(id).unread = false;
+    }
 
+    // UI Updates
     document.getElementById('activeChatName').innerText = name;
     document.getElementById('activeChatImg').src = pic || `https://ui-avatars.com/api/?name=${name}`;
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     
-    listenToMessages();
-    loadSidebar();
+    renderSidebar(); // Update de active state (blauwe balk)
+    listenToMessages(id, type);
 }
 
 let msgUnsub = null;
-function listenToMessages() {
-    if(msgUnsub) msgUnsub();
-    const col = chatType === 'global' ? db.collection("chats") : 
-                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
-                db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+function listenToMessages(id, type) {
+    if(msgUnsub) msgUnsub(); // Stop vorige listener
+    
+    let colRef;
+    if (type === 'global') colRef = db.collection("chats");
+    else if (type === 'group') colRef = db.collection("groups").doc(id).collection("messages");
+    else {
+        const chatId = [user.uid, id].sort().join("_");
+        colRef = db.collection("private_chats").doc(chatId).collection("messages");
+    }
 
-    msgUnsub = col.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
+    msgUnsub = colRef.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
         const box = document.getElementById('chatMessages');
         box.innerHTML = "";
         snap.forEach(doc => {
             const m = doc.data();
             const isMe = m.uid === user.uid;
-            box.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}"><span class="sender">${m.user}</span>${m.text}</div>`;
+            
+            let content = m.text;
+            if(m.image) content = `<img src="${m.image}" style="max-width:100%; border-radius:10px; cursor:pointer;" onclick="window.open('${m.image}')">`;
+
+            box.innerHTML += `
+                <div class="msg ${isMe ? 'sent' : 'received'}">
+                    <span class="sender">${m.user}</span>
+                    ${content}
+                </div>`;
         });
         box.scrollTop = box.scrollHeight;
     });
 }
 
-async function sendMessage() {
-    const input = document.getElementById('messageInput');
-    if(!input.value.trim()) return;
-    const text = input.value; input.value = "";
-    const my = (await db.collection("users").doc(user.uid).get()).data();
-    
-    const col = chatType === 'global' ? db.collection("chats") : 
-                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
-                db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
-
-    await col.add({ text, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-}
-
-// --- PROFILE & SETUP ---
-function previewImage(input, previewId) {
+// --- AFBEELDINGEN & BERICHTEN ---
+async function handleImageUpload(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result; // Base64 string van afbeelding
+            sendToDB({ image: base64 });
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = "";
+    sendToDB({ text: text });
+}
+
+async function sendToDB(payload) {
+    const myName = document.getElementById('myName').innerText;
+    const msgData = {
+        ...payload,
+        user: myName,
+        uid: user.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (chatType === 'global') await db.collection("chats").add(msgData);
+    else if (chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(msgData);
+    else {
+        const chatId = [user.uid, activeChatId].sort().join("_");
+        await db.collection("private_chats").doc(chatId).collection("messages").add(msgData);
+    }
+}
+
+// --- NOTIFICATIES ---
+function sendDesktopNotification(title, body, id, pic, type) {
+    // 1. In-app Toast
+    const container = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<b>${title}</b><br>${body}`;
+    t.onclick = () => openChat(id, title, pic, type);
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+
+    // 2. Browser/OS Melding
+    if (document.hidden && Notification.permission === "granted") {
+        const n = new Notification(title, { body: body, icon: pic });
+        n.onclick = () => { window.focus(); openChat(id, title, pic, type); n.close(); };
+    }
+}
+
+// --- SETUP & PROFIEL ---
+function previewImage(input, elementId) {
+    if(input.files[0]) {
+        const reader = new FileReader();
         reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 200; canvas.height = 200;
-                ctx.drawImage(img, 0, 0, 200, 200);
-                currentBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                document.getElementById(previewId).src = currentBase64;
-            };
-            img.src = e.target.result;
+            document.getElementById(elementId).src = e.target.result;
+            currentBase64 = e.target.result;
         };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
 async function completeSetup() {
-    const name = document.getElementById('setupName').value.trim();
-    if(!name) return alert("Naam verplicht!");
+    const name = document.getElementById('setupName').value;
+    if(!name) return;
     await db.collection("users").doc(user.uid).set({ name, pic: currentBase64 || "", email: user.email });
     location.reload();
 }
 
 async function saveProfile() {
-    const name = document.getElementById('editName').value.trim();
+    const name = document.getElementById('editName').value;
     const update = { name };
     if(currentBase64) update.pic = currentBase64;
     await db.collection("users").doc(user.uid).update(update);
     closeModal('profileModal');
-    notify("Profiel opgeslagen!");
 }
 
-// --- SOCIAL ---
+// --- GROEPEN & VRIENDEN ---
+function openGroupModal() {
+    document.getElementById('groupModal').style.display = 'flex';
+    db.collection("users").doc(user.uid).collection("friends").get().then(snap => {
+        const list = document.getElementById('friendsInviteList');
+        list.innerHTML = "<b>Uitnodigen:</b>";
+        snap.forEach(doc => {
+            list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px;"><span>${doc.data().name}</span><input type="checkbox" class="g-inv" value="${doc.id}"></div>`;
+        });
+    });
+}
+
+async function createGroup() {
+    const name = document.getElementById('groupName').value;
+    const members = [user.uid, ...Array.from(document.querySelectorAll('.g-inv:checked')).map(c => c.value)];
+    const docRef = await db.collection("groups").add({ name, owner: user.uid, members, pic: "" });
+    closeModal('groupModal');
+    setupChatListener(docRef.id, name, "", 'group', db.collection("groups").doc(docRef.id).collection("messages"));
+}
+
 async function sendRequest(id, name) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
-    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-    notify(`Verzoek gestuurd naar ${name}`);
+    db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
 }
 
-async function acceptFriend(id, name, pic) {
+async function acceptRequest(id, name, pic) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
     await db.collection("users").doc(id).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
     await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
-    loadSidebar();
+    
+    // Direct toevoegen aan lijst
+    setupChatListener(id, name, pic, 'private', db.collection("private_chats").doc([user.uid, id].sort().join("_")).collection("messages"));
+    renderSidebar();
 }
 
 function switchTab(t, el) {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    el.classList.add('active'); loadSidebar();
-}
-function notify(msg) {
-    const container = document.getElementById('toast-container');
-    const t = document.createElement('div');
-    t.className = 'toast'; t.innerHTML = msg;
-    container.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
-}
-function openProfile() { 
-    const name = document.getElementById('myName').innerText;
-    const pic = document.getElementById('myAvatar').src;
-    document.getElementById('editName').value = name;
-    document.getElementById('editPreview').src = pic;
-    document.getElementById('profileModal').style.display = 'flex'; 
+    el.classList.add('active');
+    renderSidebar();
 }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openProfile() { 
+    document.getElementById('editName').value = document.getElementById('myName').innerText;
+    document.getElementById('editPreview').src = document.getElementById('myAvatar').src;
+    document.getElementById('profileModal').style.display = 'flex'; 
+}
 </script>
 </body>
 </html>
