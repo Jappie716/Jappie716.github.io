@@ -117,14 +117,10 @@
             <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
             <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
             <div class="sidebar">
-    <div id="sidebarList" class="list-container"></div>
-
-    <div class="sidebar-footer" style="padding: 15px; border-top: 1px solid #1e293b; background: var(--card-bg);">
-        <button class="btn" style="width: 100%; background: #475569;" onclick="location.href='index.html'">
-            Terug naar games pagina
-        </button>
-    </div>
-</div>
+        <div class="sidebar-header">
+            <img id="myAvatar" src="" onclick="openProfile()">
+            <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
+            <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
         </div>
         <div class="search-box">
             <input type="text" id="searchBar" placeholder="🔍 Zoeken..." onkeyup="renderSidebar()">
@@ -134,7 +130,14 @@
             <div class="tab" onclick="switchTab('discover', this)">Ontdek</div>
             <div class="tab" onclick="switchTab('requests', this)">Verzoeken <div class="tab-dot" id="reqDot"></div></div>
         </div>
-        <div id="sidebarList" class="list-container"></div>
+        
+        <div id="sidebarList" class="list-container" style="flex: 1; overflow-y: auto;"></div>
+
+        <div class="sidebar-footer" style="padding: 15px; border-top: 1px solid #1e293b; background: var(--card-bg);">
+            <button class="btn" style="width: 100%; background: #334155; gap: 10px;" onclick="location.href='index.html'">
+                <span>←</span> Ga terug naar Games
+            </button>
+        </div>
     </div>
 
     <div class="main-chat">
