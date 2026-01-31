@@ -218,7 +218,7 @@ document.getElementById("loginSubmit").onclick = () => {
     auth.signInWithEmailAndPassword(email, pass)
     .then(() => { 
         document.getElementById("loginModal").style.display = "none"; 
-        notify("✅ Welkom terug!"); 
+        notify("✅ Succesvol ingelogd!!"); 
     })
     .catch(() => notify("❌ Fout: Controleer je gegevens", "danger"));
 };
