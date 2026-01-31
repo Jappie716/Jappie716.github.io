@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Game Paradise - Chat</title>
+    <title>Game Paradise - Chat v4</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -11,47 +11,54 @@
     <style>
         :root {
             --bg: #020617; --sidebar-bg: #010409; --card-bg: #0f172a;
-            --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
-            --sent: #1e3a8a; --received: #1e293b; --online: #22c55e;
+            --primary: #2563eb; --accent: #60a5fa; --sent: #1e3a8a; --received: #1e293b; --online: #22c55e;
         }
 
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
 
         /* SIDEBAR */
-        .sidebar { width: 300px; min-width: 300px; background: var(--sidebar-bg); display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
-        .sidebar-header { padding: 20px; background: var(--card-bg); display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #1e293b; }
-        .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary); }
+        .sidebar { width: 320px; min-width: 320px; background: var(--sidebar-bg); display: flex; flex-direction: column; border-right: 1px solid #1e293b; }
+        .sidebar-header { padding: 15px; background: var(--card-bg); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; }
+        .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary); }
 
         .tabs { display: flex; background: #010409; border-bottom: 1px solid #1e293b; }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: var(--text-dim); position: relative; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 13px; color: #94a3b8; position: relative; }
         .tab.active { color: white; border-bottom: 2px solid var(--primary); background: #1e3a8a33; }
-        .badge { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: none; }
 
-        .list-container { flex: 1; overflow-y: auto; padding: 10px; }
-        .item { display: flex; align-items: center; padding: 12px; border-radius: 12px; margin-bottom: 5px; cursor: pointer; transition: 0.2s; position: relative; }
-        .item:hover { background: var(--card-bg); }
-        .item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; background: #334155; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--sidebar-bg); position: absolute; left: 42px; bottom: 12px; background: gray; }
+        .list-container { flex: 1; overflow-y: auto; }
+        .item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; transition: 0.2s; }
+        .item:hover { background: #0f172a; }
+        
+        /* AVATAR & STATUS */
+        .img-container { position: relative; width: 45px; height: 45px; margin-right: 12px; }
+        .img-container img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #334155; }
+        .status-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--sidebar-bg); background: #4b5563; }
         .status-dot.online { background: var(--online); }
 
-        /* MAIN CHAT */
-        .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at top right, #0f172a, #020617); }
-        .chat-header { padding: 15px 25px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 75px; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 65%; padding: 12px 16px; border-radius: 15px; font-size: 14px; position: relative; }
-        .msg.sent { align-self: flex-end; background: var(--primary); border-bottom-right-radius: 2px; }
-        .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
+        .item-info { flex: 1; min-width: 0; }
+        .item-info h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-info p { margin: 2px 0 0; font-size: 11px; color: #94a3b8; }
 
-        .chat-input { padding: 20px; background: var(--sidebar-bg); display: flex; gap: 12px; align-items: center; }
-        .chat-input input { flex: 1; padding: 12px 20px; border-radius: 25px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
+        /* MAIN CHAT */
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
+        .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; min-height: 65px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         
-        .btn { background: var(--primary); border: none; padding: 8px 16px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; }
+        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; font-size: 14px; position: relative; }
+        .msg.sent { align-self: flex-end; background: var(--sent); }
+        .msg.received { align-self: flex-start; background: var(--received); }
+        .msg .sender { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 3px; display: block; }
+
+        .chat-input { padding: 15px; background: var(--sidebar-bg); display: flex; gap: 10px; align-items: center; }
+        .chat-input input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
+        
+        .btn { background: var(--primary); border: none; padding: 8px 15px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 400px; border: 1px solid #1e293b; text-align: center; }
+        .modal-box { background: var(--card-bg); padding: 25px; border-radius: 15px; width: 400px; border: 1px solid #1e293b; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
-        .toast { background: var(--card-bg); color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 15px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; }
+        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
@@ -63,36 +70,49 @@
     <div class="sidebar-header">
         <img id="myAvatar" src="" onclick="openProfile()">
         <div style="flex:1"><b id="myName">Laden...</b></div>
-        <button class="btn" style="font-size: 11px;" onclick="openGroupModal()">+ Groep</button>
+        <button class="btn" style="font-size:11px" onclick="openGroupModal()">+ Groep</button>
     </div>
     <div class="tabs">
         <div class="tab active" onclick="switchTab('chats', this)">Chats</div>
         <div class="tab" onclick="switchTab('discover', this)">Ontdek</div>
-        <div id="reqTab" class="tab" onclick="switchTab('requests', this)">Verzoeken <div id="reqBadge" class="badge"></div></div>
+        <div id="reqTab" class="tab" onclick="switchTab('requests', this)">Verzoeken</div>
     </div>
     <div id="sidebarList" class="list-container"></div>
 </div>
 
 <div class="main-chat">
     <div class="chat-header">
-        <img id="activeChatImg" src="" style="width:45px; height:45px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
-        <div style="flex:1"><h3 id="activeChatName" style="margin:0">Paradise Chat</h3></div>
+        <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
+        <div style="flex:1"><h3 id="activeChatName" style="margin:0">Kies een chat</h3></div>
+        <button id="groupSettingsBtn" class="btn" style="display:none; background:none; font-size:20px;" onclick="manageGroup()">⚙️</button>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
     <div class="chat-input" id="inputArea" style="display:none">
+        <button class="btn" style="background:#334155" onclick="document.getElementById('imageUpload').click()">📷</button>
+        <input type="file" id="imageUpload" hidden accept="image/*" onchange="handleImageUpload(this)">
         <input type="text" id="messageInput" placeholder="Typ een bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
         <button class="btn" onclick="sendMessage()">➤</button>
     </div>
 </div>
 
 <div id="profileModal" class="modal"><div class="modal-box">
-    <h3>Profiel Aanpassen</h3>
-    <input type="text" id="pName" placeholder="Naam" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; background:#020617; border:1px solid #1e293b; color:white;">
+    <h3>Profiel</h3>
+    <input type="text" id="pName" placeholder="Naam" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; background:#020617; color:white; border:1px solid #334155;">
+    <input type="file" id="pPic" accept="image/*" style="margin-bottom:15px;">
     <button class="btn" onclick="saveProfile()" style="width:100%">Opslaan</button>
-    <button onclick="closeModal('profileModal')" style="background:none; border:none; color:gray; cursor:pointer; margin-top:10px">Annuleren</button>
+    <button onclick="closeModal('profileModal')" style="width:100%; background:none; color:gray; border:none; margin-top:10px; cursor:pointer;">Sluiten</button>
+</div></div>
+
+<div id="groupModal" class="modal"><div class="modal-box">
+    <h3>Nieuwe Groep</h3>
+    <input type="text" id="groupName" placeholder="Groepsnaam" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; background:#020617; color:white; border:1px solid #334155;">
+    <div id="friendsInviteList" style="max-height:150px; overflow-y:auto; margin:10px 0;"></div>
+    <button class="btn" onclick="createGroup()" style="width:100%">Maken</button>
+    <button onclick="closeModal('groupModal')" style="width:100%; background:none; color:gray; border:none; margin-top:10px; cursor:pointer;">Annuleren</button>
 </div></div>
 
 <script>
+// FIREBASE CONFIG
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -110,57 +130,59 @@ let activeChatId = null;
 let chatType = 'private';
 let sessionStartTime = Date.now();
 
-function notify(msg, type = 'success') {
+// NOTIFICATIE PERMISSIE
+if (Notification.permission !== "granted") Notification.requestPermission();
+
+function notify(title, body = "") {
+    // Toast melding
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
-    t.className = 'toast'; t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
-    t.innerHTML = msg; container.appendChild(t);
+    t.className = 'toast';
+    t.innerHTML = `<b>${title}</b><br>${body}`;
+    container.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 4000);
+
+    // Desktop melding (als tab niet actief is)
+    if (document.hidden && Notification.permission === "granted") {
+        new Notification(title, { body: body, icon: 'https://i.imgur.com/C9HtyPv.jpeg' });
+    }
 }
 
 auth.onAuthStateChanged(u => {
     if (u) { 
         user = u; 
         setupUser(); 
-        setStatus('online');
+        db.collection("users").doc(u.uid).update({ status: 'online' });
         switchTab('chats', document.querySelector('.tab')); 
-    } else { 
-        window.location.href = 'index.html'; 
-    }
+    } else { window.location.href = 'index.html'; }
 });
 
-// STATUS FUNCTIE
-function setStatus(s) {
-    if(!user) return;
-    db.collection("users").doc(user.uid).update({ status: s, lastSeen: Date.now() });
-}
-window.onbeforeunload = () => setStatus('offline');
-
 async function setupUser() {
-    // Luister naar profiel & Status
     db.collection("users").doc(user.uid).onSnapshot(d => {
         if(d.exists) {
             document.getElementById('myName').innerText = d.data().name;
             document.getElementById('myAvatar').src = d.data().pic || "https://ui-avatars.com/api/?name="+d.data().name;
+            document.getElementById('pName').value = d.data().name;
         }
     });
 
-    // MELDING: Luister naar nieuwe vriendschapsverzoeken
+    // Luister naar verzoeken voor de badge
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
-        snap.docChanges().forEach(change => {
-            if (change.type === "added" && (Date.now() - sessionStartTime > 3000)) {
-                notify(`📩 <b>${change.doc.data().name}</b> stuurde je een vriendschapsverzoek!`);
-                document.getElementById('reqBadge').style.display = 'block';
-            }
-        });
+        const badge = document.getElementById('reqTab');
+        if(!snap.empty) {
+            badge.style.color = "var(--accent)";
+            if(Date.now() - sessionStartTime > 3000) notify("Nieuw Verzoek", "Iemand wil vrienden worden!");
+        } else {
+            badge.style.color = "#94a3b8";
+        }
         loadSidebar();
     });
 
-    // MELDING: Luister naar acceptaties (als iemand JOU accepteert)
+    // Luister naar nieuwe vrienden (acceptaties)
     db.collection("users").doc(user.uid).collection("friends").onSnapshot(snap => {
         snap.docChanges().forEach(change => {
-            if (change.type === "added" && (Date.now() - sessionStartTime > 3000)) {
-                notify(`🤝 <b>${change.doc.data().name}</b> heeft je verzoek geaccepteerd!`);
+            if (change.type === "added" && Date.now() - sessionStartTime > 3000) {
+                notify("Verzoek geaccepteerd", `${change.doc.data().name} is nu je vriend!`);
             }
         });
         loadSidebar();
@@ -169,76 +191,78 @@ async function setupUser() {
 
 async function loadSidebar() {
     const list = document.getElementById('sidebarList');
-    const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
-    list.innerHTML = "";
+    const activeTab = document.querySelector('.tab.active').innerText;
+    list.innerHTML = ""; // BELANGRIJK: Maak lijst leeg tegen duplicaten
 
     if (activeTab === 'Chats') {
         // Algemeen
-        list.innerHTML += `<div class="item" onclick="openChat('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global')">
-            <img src="https://i.imgur.com/C9HtyPv.jpeg"><div class="item-info"><h4>Algemeen</h4><p>Iedereen is hier</p></div></div>`;
+        renderItem('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'Iedereen', 'global', true);
         
-        // Vrienden met Online Status
+        // Groepen
+        const gSnap = await db.collection("groups").get();
+        gSnap.forEach(doc => {
+            const g = doc.data();
+            if(g.owner === user.uid || (g.members && g.members.includes(user.uid))) {
+                renderItem(doc.id, g.name, g.pic, 'Groep', 'group', false, g.owner);
+            }
+        });
+
+        // Vrienden
         const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
         fSnap.forEach(async doc => {
             const f = doc.data();
-            const uDoc = await db.collection("users").doc(doc.id).get();
-            const isOnline = uDoc.data()?.status === 'online';
-            
-            list.innerHTML += `<div class="item" onclick="openChat('${doc.id}', '${f.name}', '${f.pic}', 'private')">
-                <img src="${f.pic || 'https://ui-avatars.com/api/?name='+f.name}">
-                <div class="status-dot ${isOnline ? 'online' : ''}"></div>
-                <div class="item-info"><h4>${f.name}</h4><p>${isOnline ? 'Online' : 'Offline'}</p></div>
-            </div>`;
+            const uStatus = (await db.collection("users").doc(doc.id).get()).data()?.status;
+            renderItem(doc.id, f.name, f.pic, uStatus === 'online' ? 'Online' : 'Offline', 'private', uStatus === 'online');
+        });
+
+    } else if (activeTab === 'Ontdek') {
+        const uSnap = await db.collection("users").limit(15).get();
+        uSnap.forEach(doc => {
+            if(doc.id !== user.uid) {
+                list.innerHTML += `<div class="item">
+                    <div class="img-container"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"></div>
+                    <div class="item-info"><h4>${doc.data().name}</h4></div>
+                    <button class="btn" style="padding:5px 10px" onclick="sendRequest('${doc.id}')">Toevoegen</button>
+                </div>`;
+            }
         });
     } else if (activeTab === 'Verzoeken') {
-        document.getElementById('reqBadge').style.display = 'none';
         const rSnap = await db.collection("users").doc(user.uid).collection("requests").get();
         rSnap.forEach(doc => {
-            const r = doc.data();
             list.innerHTML += `<div class="item">
-                <img src="${r.pic || 'https://ui-avatars.com/api/?name='+r.name}">
-                <div class="item-info"><h4>${r.name}</h4></div>
-                <button class="btn" style="padding:5px" onclick="acceptFriend('${doc.id}', '${r.name}', '${r.pic}')">OK</button>
+                <div class="img-container"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"></div>
+                <div class="item-info"><h4>${doc.data().name}</h4></div>
+                <button class="btn" onclick="acceptFriend('${doc.id}', '${doc.data().name}', '${doc.data().pic}')">OK</button>
             </div>`;
-        });
-    } else if (activeTab === 'Ontdek') {
-        const allUsers = await db.collection("users").limit(20).get();
-        allUsers.forEach(doc => {
-            if(doc.id !== user.uid) {
-                list.innerHTML += `<div class="item"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" onclick="sendRequest('${doc.id}')">Add</button></div>`;
-            }
         });
     }
 }
 
-async function sendRequest(targetId) {
-    const me = (await db.collection("users").doc(user.uid).get()).data();
-    await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({
-        name: me.name, pic: me.pic || "", uid: user.uid
-    });
-    notify("Verzoek verstuurd naar " + targetId);
+function renderItem(id, name, pic, sub, type, online, owner = null) {
+    const list = document.getElementById('sidebarList');
+    const img = pic || "https://ui-avatars.com/api/?name="+name;
+    const html = `
+        <div class="item" onclick="openChat('${id}', '${name}', '${img}', '${type}', '${owner}')">
+            <div class="img-container">
+                <img src="${img}">
+                <div class="status-dot ${online ? 'online' : ''}"></div>
+            </div>
+            <div class="item-info">
+                <h4>${name}</h4>
+                <p>${sub}</p>
+            </div>
+        </div>`;
+    list.innerHTML += html;
 }
 
-async function acceptFriend(id, name, pic) {
-    const batch = db.batch();
-    const me = (await db.collection("users").doc(user.uid).get()).data();
-
-    batch.set(db.collection("users").doc(user.uid).collection("friends").doc(id), { name, pic, uid: id });
-    batch.set(db.collection("users").doc(id).collection("friends").doc(user.uid), { name: me.name, pic: me.pic || "", uid: user.uid });
-    batch.delete(db.collection("users").doc(user.uid).collection("requests").doc(id));
-
-    await batch.commit();
-    notify("Vriend toegevoegd!");
-    loadSidebar();
-}
-
-function openChat(id, name, pic, type) {
+function openChat(id, name, pic, type, ownerId = null) {
     activeChatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
     chatType = type;
     document.getElementById('activeChatName').innerText = name;
-    document.getElementById('activeChatImg').src = pic || "https://ui-avatars.com/api/?name="+name;
+    document.getElementById('activeChatImg').src = pic;
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
+    document.getElementById('groupSettingsBtn').style.display = (type==='group' && ownerId===user.uid) ? "block" : "none";
     listenToMessages();
 }
 
@@ -246,6 +270,7 @@ let msgUnsub = null;
 function listenToMessages() {
     if(msgUnsub) msgUnsub();
     const col = chatType === 'global' ? db.collection("chats") : 
+                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
                 db.collection("private_chats").doc(activeChatId).collection("messages");
 
     msgUnsub = col.orderBy("timestamp", "asc").onSnapshot(snap => {
@@ -254,7 +279,15 @@ function listenToMessages() {
         snap.forEach(doc => {
             const m = doc.data();
             const isMe = m.uid === user.uid;
-            box.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}">${m.text}</div>`;
+            box.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}">
+                <span class="sender">${isMe ? 'Jij' : (m.user || 'Onbekend')}</span>
+                ${m.image ? `<img src="${m.image}" style="width:100%; border-radius:8px;">` : m.text}
+            </div>`;
+            
+            // Melding voor nieuw bericht
+            if(!isMe && Date.now() - sessionStartTime > 3000) {
+                notify("Nieuw bericht", `${m.user}: ${m.text || '📷 Foto'}`);
+            }
         });
         box.scrollTop = box.scrollHeight;
     });
@@ -263,11 +296,72 @@ function listenToMessages() {
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     if(!input.value.trim()) return;
-    const col = chatType === 'global' ? db.collection("chats") : db.collection("private_chats").doc(activeChatId).collection("messages");
-    await col.add({ text: input.value, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    const my = (await db.collection("users").doc(user.uid).get()).data();
+    const col = chatType === 'global' ? db.collection("chats") : 
+                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
+                db.collection("private_chats").doc(activeChatId).collection("messages");
+    
+    await col.add({ text: input.value, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     input.value = "";
 }
 
+// IMAGE RESIZE
+async function resizeImage(file, maxWidth = 400) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width; let height = img.height;
+                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                canvas.width = width; canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.6));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleImageUpload(input) {
+    if(!input.files[0]) return;
+    const base64 = await resizeImage(input.files[0]);
+    const my = (await db.collection("users").doc(user.uid).get()).data();
+    const col = chatType === 'global' ? db.collection("chats") : 
+                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
+                db.collection("private_chats").doc(activeChatId).collection("messages");
+    await col.add({ image: base64, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+async function saveProfile() {
+    const name = document.getElementById('pName').value;
+    const file = document.getElementById('pPic').files[0];
+    let data = { name };
+    if(file) data.pic = await resizeImage(file, 200);
+    await db.collection("users").doc(user.uid).update(data);
+    closeModal('profileModal');
+    notify("Profiel opgeslagen");
+}
+
+async function sendRequest(id) {
+    const me = (await db.collection("users").doc(user.uid).get()).data();
+    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
+    notify("Verzoek verstuurd");
+}
+
+async function acceptFriend(id, name, pic) {
+    const me = (await db.collection("users").doc(user.uid).get()).data();
+    const batch = db.batch();
+    batch.set(db.collection("users").doc(user.uid).collection("friends").doc(id), { name, pic: pic || "" });
+    batch.set(db.collection("users").doc(id).collection("friends").doc(user.uid), { name: me.name, pic: me.pic || "" });
+    batch.delete(db.collection("users").doc(user.uid).collection("requests").doc(id));
+    await batch.commit();
+    loadSidebar();
+}
+
+// UI HELPERS
 function switchTab(t, el) {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
@@ -275,11 +369,24 @@ function switchTab(t, el) {
 }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
-async function saveProfile() {
-    const name = document.getElementById('pName').value;
-    await db.collection("users").doc(user.uid).update({ name });
-    closeModal('profileModal');
-    notify("Naam gewijzigd!");
+function openGroupModal() {
+    document.getElementById('groupModal').style.display = 'flex';
+    db.collection("users").doc(user.uid).collection("friends").get().then(snap => {
+        const list = document.getElementById('friendsInviteList'); list.innerHTML = "";
+        snap.forEach(doc => {
+            list.innerHTML += `<div style="padding:5px; border-bottom:1px solid #1e293b;">
+                <input type="checkbox" class="g-inv" value="${doc.id}"> ${doc.data().name}
+            </div>`;
+        });
+    });
+}
+async function createGroup() {
+    const name = document.getElementById('groupName').value;
+    const members = Array.from(document.querySelectorAll('.g-inv:checked')).map(i => i.value);
+    if(!name) return;
+    await db.collection("groups").add({ name, owner: user.uid, members, pic: "" });
+    closeModal('groupModal');
+    loadSidebar();
 }
 </script>
 </body>
