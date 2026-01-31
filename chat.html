@@ -138,7 +138,7 @@
             <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
         </div>
         <div class="chat-input" id="inputArea" style="display:none">
-            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()">Afbeelding uploaden</button>
+            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()">📷</button>
             <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
             <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
             <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
@@ -483,7 +483,7 @@ async function openChatSettings() {
                 <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                     <img id="groupEditPreview" src="${gData.pic}" style="width:40px; height:40px; border-radius:50%">
                     <input type="file" id="groupEditFile" hidden onchange="previewImage(this, 'groupEditPreview')">
-                    <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">Foto uploaden</button>
+                    <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">📷</button>
                     <input type="text" id="groupEditName" value="${gData.name}" style="margin:0">
                     <button class="btn btn-sm" onclick="updateGroupInfo()">💾</button>
                 </div>
