@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Game Paradise - Chat</title>
+    <title>Game Paradise - Ultimate</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -116,11 +116,6 @@
             <img id="myAvatar" src="" onclick="openProfile()">
             <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
             <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
-            <div class="sidebar">
-        <div class="sidebar-header">
-            <img id="myAvatar" src="" onclick="openProfile()">
-            <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
-            <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
         </div>
         <div class="search-box">
             <input type="text" id="searchBar" placeholder="🔍 Zoeken..." onkeyup="renderSidebar()">
@@ -130,14 +125,7 @@
             <div class="tab" onclick="switchTab('discover', this)">Ontdek</div>
             <div class="tab" onclick="switchTab('requests', this)">Verzoeken <div class="tab-dot" id="reqDot"></div></div>
         </div>
-        
-        <div id="sidebarList" class="list-container" style="flex: 1; overflow-y: auto;"></div>
-
-        <div class="sidebar-footer" style="padding: 15px; border-top: 1px solid #1e293b; background: var(--card-bg);">
-            <button class="btn" style="width: 100%; background: #334155; gap: 10px;" onclick="location.href='index.html'">
-                <span>←</span> Ga terug naar Games
-            </button>
-        </div>
+        <div id="sidebarList" class="list-container"></div>
     </div>
 
     <div class="main-chat">
@@ -150,7 +138,7 @@
             <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
         </div>
         <div class="chat-input" id="inputArea" style="display:none">
-            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()">Upload afbeelding</button>
+            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()">📷</button>
             <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
             <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
             <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
@@ -495,7 +483,7 @@ async function openChatSettings() {
                 <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
                     <img id="groupEditPreview" src="${gData.pic}" style="width:40px; height:40px; border-radius:50%">
                     <input type="file" id="groupEditFile" hidden onchange="previewImage(this, 'groupEditPreview')">
-                    <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">Kies Groepsfoto</button>
+                    <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">📷</button>
                     <input type="text" id="groupEditName" value="${gData.name}" style="margin:0">
                     <button class="btn btn-sm" onclick="updateGroupInfo()">💾</button>
                 </div>
