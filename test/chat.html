@@ -181,12 +181,42 @@ auth.onAuthStateChanged(u => {
 });
 
 async function setupUser() {
+    // 1. Luister naar eigen profiel wijzigingen
     db.collection("users").doc(user.uid).onSnapshot(d => {
         if(d.exists) {
             document.getElementById('myName').innerText = d.data().name;
             document.getElementById('myAvatar').src = d.data().pic || "https://ui-avatars.com/api/?name="+d.data().name;
             document.getElementById('pName').value = d.data().name;
         }
+    });
+
+    // 2. MELDING: Luister naar binnenkomende vriendschapsverzoeken
+    db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
+        if (!snap.empty && !snap.metadata.hasPendingWrites) {
+            const lastReq = snap.docs[snap.docs.length - 1].data();
+            notify(`🔔 Nieuw vriendschapsverzoek van <b>${lastReq.name}</b>!`, "success");
+            
+            // Update het rode bolletje op de tab (optioneel)
+            document.getElementById('reqTab').style.color = "var(--accent)";
+            loadSidebar(); // Ververs lijst direct
+        }
+    });
+
+    // 3. MELDING: Luister of iemand JOU heeft geaccepteerd
+    // We kijken of er een nieuwe vriend bijkomt die we niet zelf hebben toegevoegd
+    db.collection("users").doc(user.uid).collection("friends").onSnapshot(snap => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "added") {
+                const newFriend = change.doc.data();
+                // Alleen melden als het scherm al even open staat (voorkom melding bij inloggen)
+                if (Date.now() - sessionStartTime > 5000) {
+                    notify(`🤝 <b>${newFriend.name}</b> heeft je verzoek geaccepteerd!`, "success");
+                    loadSidebar();
+                }
+            }
+        });
+    });
+}
     });
 }
 
