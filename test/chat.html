@@ -26,7 +26,7 @@
         .toast { 
             background: var(--card-bg); color: white; padding: 15px 20px; 
             border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); 
-            animation: slideIn 0.3s ease; min-width: 250px; box-shadow: 0 10px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease; min-width: 250px;
         }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
@@ -40,18 +40,19 @@
         .tabs { display: flex; background: var(--sidebar-bg); border-bottom: 1px solid #1e293b; }
         .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-size: 13px; color: var(--text-dim); position: relative; }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--primary); background: #1e3a8a22; }
-        .tab-dot { position: absolute; top: 10px; right: 20%; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: none; }
+        .tab-dot { position: absolute; top: 12px; right: 15px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: none; }
 
-        .list-container { flex: 1; overflow-y: auto; }
-        .item { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; transition: 0.2s; }
+        .list-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        .item { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; order: 2; }
+        .item.pinned { order: 1; border-bottom: 2px solid #1e3a8a; background: #1e3a8a11; }
         .item:hover { background: #0f172a; }
         .item img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; background: #334155; }
-        .item-info { flex: 1; }
-        .item-info h4 { margin: 0; font-size: 15px; }
+        .item-info { flex: 1; overflow: hidden; }
+        .item-info h4 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .item-info p { margin: 2px 0 0; font-size: 12px; color: var(--text-dim); }
 
-        .unread-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; position: absolute; right: 50px; box-shadow: 0 0 10px var(--primary); }
-        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 18px; opacity: 0; transition: 0.2s; padding: 10px; }
+        .unread-dot { width: 10px; height: 10px; background: var(--accent); border-radius: 50%; margin-left: 10px; box-shadow: 0 0 8px var(--primary); }
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 18px; opacity: 0; transition: 0.2s; padding: 5px; }
         .item:hover .delete-btn { opacity: 1; }
 
         /* --- MAIN CHAT --- */
@@ -73,7 +74,7 @@
 
         /* --- MODALS --- */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-box { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 100%; max-width: 450px; border: 1px solid #1e293b; text-align: center; }
+        .modal-box { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 100%; max-width: 450px; border: 1px solid #1e293b; }
         .modal-box input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #1e293b; background: #020617; color: white; }
         .member-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #020617; border-radius: 10px; margin-bottom: 8px; }
     </style>
@@ -92,7 +93,7 @@
         <div class="tabs">
             <div class="tab active" onclick="switchTab('chats', this)">Chats</div>
             <div class="tab" onclick="switchTab('discover', this)">Ontdek</div>
-            <div id="reqTab" class="tab" onclick="switchTab('requests', this)">Verzoeken <div class="tab-dot" id="reqDot"></div></div>
+            <div class="tab" onclick="switchTab('requests', this)">Verzoeken <div class="tab-dot" id="reqDot"></div></div>
         </div>
         <div id="sidebarList" class="list-container"></div>
         <button class="btn" style="margin:10px; background:#1e293b;" onclick="location.href='index.html'">⬅ Terug naar Games</button>
@@ -101,11 +102,9 @@
     <div class="main-chat">
         <div class="chat-header">
             <img id="activeChatImg" src="" style="width:45px; height:45px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
-            <div style="flex:1">
-                <h3 id="activeChatName" style="margin:0">Kies een gesprek</h3>
-            </div>
+            <div style="flex:1"><h3 id="activeChatName" style="margin:0">Selecteer Chat</h3></div>
             <button id="groupSettingsBtn" class="btn" style="display:none; background:none; font-size:20px;" onclick="manageGroup()">⚙️</button>
-            <button id="leaveGroupBtn" class="btn btn-danger" style="display:none; padding:5px 10px; font-size:12px;" onclick="confirmAction('Wil je deze groep verlaten?', exitGroup)">Verlaat Groep</button>
+            <button id="leaveGroupBtn" class="btn btn-danger" style="display:none; padding:5px 10px; font-size:12px;" onclick="confirmAction('Groep verlaten?', exitGroup)">Verlaat Groep</button>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input" id="inputArea" style="display:none">
@@ -117,11 +116,11 @@
     </div>
 </div>
 
-<div id="confirmModal" class="modal"><div class="modal-box">
+<div id="confirmModal" class="modal"><div class="modal-box" style="text-align:center">
     <h3 id="confirmTitle">Weet je het zeker?</h3>
     <p id="confirmText" style="color:var(--text-dim)"></p>
     <div style="display:flex; gap:10px; margin-top:20px;">
-        <button class="btn btn-danger" id="confirmBtn" style="flex:1">Ja, uitvoeren</button>
+        <button class="btn btn-danger" id="confirmBtn" style="flex:1">Ja</button>
         <button class="btn" onclick="closeModal('confirmModal')" style="flex:1; background:#334155">Annuleren</button>
     </div>
 </div></div>
@@ -138,7 +137,7 @@
     <h3>Groepsinstellingen</h3>
     <input type="text" id="editGName">
     <input type="file" id="editGPic" accept="image/*">
-    <div id="currentMembersList" style="max-height:150px; overflow-y:auto; margin:10px 0;"></div>
+    <div id="currentMembersList" style="max-height:200px; overflow-y:auto; margin:15px 0; border-top:1px solid #1e293b; padding-top:10px;"></div>
     <button class="btn" onclick="updateGroup()" style="width:100%">Opslaan</button>
 </div></div>
 
@@ -165,7 +164,8 @@ const auth = firebase.auth();
 let user = null;
 let activeChatId = null;
 let chatType = 'private';
-let unreadChats = new Set();
+let unreadMap = {}; 
+let chatActivity = {}; 
 let isTabActive = true;
 
 document.addEventListener('visibilitychange', () => isTabActive = !document.hidden);
@@ -179,9 +179,14 @@ function notify(msg, type = 'success') {
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
 }
 
-function showDesktopNotification(title, body) {
+function showSystemNotification(title, body, chatId, name, pic, type, owner) {
     if (!isTabActive && Notification.permission === "granted") {
-        new Notification(title, { body, icon: 'https://i.imgur.com/C9HtyPv.jpeg' });
+        const n = new Notification(title, { body, icon: pic || 'https://i.imgur.com/C9HtyPv.jpeg' });
+        n.onclick = () => {
+            window.focus();
+            openChat(chatId, name, pic, type, owner);
+            n.close();
+        };
     }
 }
 
@@ -192,12 +197,8 @@ function confirmAction(text, action) {
 }
 
 auth.onAuthStateChanged(u => {
-    if (u) { 
-        user = u; 
-        setupUser(); 
-        listenForRequests();
-        switchTab('chats', document.querySelector('.tab'));
-    } else { location.href = 'index.html'; }
+    if (u) { user = u; setupUser(); startListeners(); }
+    else { location.href = 'index.html'; }
 });
 
 async function setupUser() {
@@ -210,79 +211,107 @@ async function setupUser() {
     });
 }
 
-function listenForRequests() {
+function startListeners() {
+    // Luister naar verzoeken
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
-        const dot = document.getElementById('reqDot');
-        if (!snap.empty) {
-            dot.style.display = 'block';
-            snap.docChanges().forEach(change => {
-                if (change.type === "added") showDesktopNotification("Nieuw vriendschapsverzoek", `Iemand wil vrienden met je worden op Game Paradise!`);
-            });
-        } else { dot.style.display = 'none'; }
+        document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
+        snap.docChanges().forEach(change => {
+            if (change.type === "added") showSystemNotification("Nieuw Verzoek", `${change.doc.data().name} wil vrienden worden!`, null);
+        });
     });
+
+    // Luister naar ALLES voor ongelezen bolletjes en sortering
+    // Algemeen
+    db.collection("chats").orderBy("timestamp", "desc").limit(1).onSnapshot(snap => handleNewMsg('global', snap, 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global'));
+    
+    // Groepen en Privé worden geladen in sidebar en krijgen daar hun eigen listeners
+    loadSidebar();
+}
+
+function handleNewMsg(chatId, snap, name, pic, type, owner = null) {
+    if (snap.empty) return;
+    const m = snap.docs[0].data();
+    if (m.uid === user.uid) return;
+
+    chatActivity[chatId] = m.timestamp?.toMillis() || Date.now();
+    
+    if (activeChatId !== chatId) {
+        unreadMap[chatId] = true;
+        if (!isTabActive) showSystemNotification(`Bericht in ${name}`, m.text || "📷 Foto", chatId, name, pic, type, owner);
+    }
+    loadSidebar();
 }
 
 async function loadSidebar() {
     const list = document.getElementById('sidebarList');
     const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
+    if (activeTab !== 'Chats') { 
+        renderOtherTabs(activeTab); 
+        return; 
+    }
+
     list.innerHTML = "";
+    let chats = [];
 
-    if (activeTab === 'Chats') {
-        // Algemeen
-        addSidebarItem('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global');
+    // Algemeen (Pinned)
+    chats.push({ id: 'global', name: 'Algemeen', pic: 'https://i.imgur.com/C9HtyPv.jpeg', type: 'global', pinned: true });
+
+    // Haal Groepen
+    const gSnap = await db.collection("groups").where("members", "array-contains", user.uid).get();
+    gSnap.forEach(doc => chats.push({ id: doc.id, ...doc.data(), type: 'group' }));
+
+    // Haal Vrienden
+    const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+    fSnap.forEach(doc => chats.push({ id: doc.id, ...doc.data(), type: 'private' }));
+
+    // Sorteren op chatActivity (behalve pinned)
+    chats.sort((a, b) => {
+        if (a.pinned) return -1;
+        if (b.pinned) return 1;
+        return (chatActivity[b.id] || 0) - (chatActivity[a.id] || 0);
+    });
+
+    chats.forEach(c => {
+        const isUnread = unreadMap[c.id] && activeChatId !== c.id;
+        const safePic = c.pic || `https://ui-avatars.com/api/?name=${c.name}`;
+        const item = document.createElement('div');
+        item.className = `item ${c.pinned ? 'pinned' : ''}`;
+        item.onclick = () => openChat(c.id, c.name, safePic, c.type, c.owner);
         
-        // Groepen (Query op members zorgt dat eigenaar er ook maar 1x in staat)
-        const gSnap = await db.collection("groups").where("members", "array-contains", user.uid).get();
-        gSnap.forEach(doc => addSidebarItem(doc.id, doc.data().name, doc.data().pic, 'group', doc.data().owner));
+        item.innerHTML = `
+            <img src="${safePic}">
+            <div class="item-info">
+                <h4>${c.name}</h4>
+                <p>${c.type === 'private' ? 'Privé' : 'Groep'}</p>
+            </div>
+            ${isUnread ? '<div class="unread-dot"></div>' : ''}
+            ${c.type === 'private' ? `<button class="delete-btn" onclick="event.stopPropagation(); confirmAction('Vriend verwijderen?', () => removeFriend('${c.id}'))">🗑️</button>` : ''}
+        `;
+        list.appendChild(item);
+    });
+}
 
-        // Vrienden
-        const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
-        fSnap.forEach(doc => addSidebarItem(doc.id, doc.data().name, doc.data().pic, 'private'));
-
-    } else if (activeTab === 'Ontdek') {
-        const uSnap = await db.collection("users").limit(15).get();
-        uSnap.forEach(doc => {
-            if(doc.id !== user.uid) {
-                list.innerHTML += `<div class="item">
-                    <img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}">
-                    <div class="item-info"><h4>${doc.data().name}</h4></div>
-                    <button class="btn" style="padding:5px" onclick="sendRequest('${doc.id}')">Add</button>
-                </div>`;
-            }
+async function renderOtherTabs(tab) {
+    const list = document.getElementById('sidebarList');
+    list.innerHTML = "";
+    if (tab === 'Ontdek') {
+        const snap = await db.collection("users").limit(20).get();
+        snap.forEach(doc => {
+            if(doc.id === user.uid) return;
+            list.innerHTML += `<div class="item"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" style="padding:5px 10px" onclick="sendRequest('${doc.id}')">Add</button></div>`;
         });
-    } else if (activeTab === 'Verzoeken') {
-        const rSnap = await db.collection("users").doc(user.uid).collection("requests").get();
-        rSnap.forEach(doc => {
-            list.innerHTML += `<div class="item">
-                <img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}">
-                <div class="item-info"><h4>${doc.data().name}</h4></div>
-                <button class="btn" onclick="acceptFriend('${doc.id}', '${doc.data().name}', '${doc.data().pic}')">Accepteer</button>
-            </div>`;
+    } else {
+        const snap = await db.collection("users").doc(user.uid).collection("requests").get();
+        snap.forEach(doc => {
+            list.innerHTML += `<div class="item"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"><div class="item-info"><h4>${doc.data().name}</h4></div><button class="btn" onclick="acceptFriend('${doc.id}', '${doc.data().name}', '${doc.data().pic}')">Check</button></div>`;
         });
     }
 }
 
-function addSidebarItem(id, name, pic, type, owner = null) {
-    const list = document.getElementById('sidebarList');
-    const isUnread = unreadChats.has(id) && activeChatId !== id;
-    const deleteBtn = (type === 'private') ? `<button class="delete-btn" onclick="event.stopPropagation(); confirmAction('Vriend verwijderen?', () => removeFriend('${id}'))">🗑️</button>` : '';
-
-    list.innerHTML += `
-        <div class="item" onclick="openChat('${id}', '${name}', '${pic || 'https://ui-avatars.com/api/?name='+name}', '${type}', '${owner}')">
-            <img src="${pic || 'https://ui-avatars.com/api/?name='+name}">
-            <div class="item-info">
-                <h4>${name}</h4>
-                <p>${type.toUpperCase()}</p>
-            </div>
-            ${isUnread ? '<div class="unread-dot"></div>' : ''}
-            ${deleteBtn}
-        </div>`;
-}
-
 function openChat(id, name, pic, type, ownerId = null) {
-    activeChatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
+    activeChatId = id;
     chatType = type;
-    unreadChats.delete(id);
+    unreadMap[id] = false;
 
     document.getElementById('activeChatName').innerText = name;
     document.getElementById('activeChatImg').src = pic;
@@ -299,11 +328,12 @@ function openChat(id, name, pic, type, ownerId = null) {
 let msgUnsub = null;
 function listenToMessages() {
     if(msgUnsub) msgUnsub();
+    const realId = chatType === 'private' ? [user.uid, activeChatId].sort().join("_") : activeChatId;
     const col = chatType === 'global' ? db.collection("chats") : 
-                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
-                db.collection("private_chats").doc(activeChatId).collection("messages");
+                chatType === 'group' ? db.collection("groups").doc(realId).collection("messages") :
+                db.collection("private_chats").doc(realId).collection("messages");
 
-    msgUnsub = col.orderBy("timestamp", "asc").limitToLast(40).onSnapshot(snap => {
+    msgUnsub = col.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
         const box = document.getElementById('chatMessages');
         box.innerHTML = "";
         snap.forEach(doc => {
@@ -311,8 +341,6 @@ function listenToMessages() {
             const isMe = m.uid === user.uid;
             let content = m.image ? `<img src="${m.image}" onclick="window.open('${m.image}')">` : m.text;
             box.innerHTML += `<div class="msg ${isMe ? 'sent' : 'received'}"><span class="sender">${isMe ? 'Jij' : m.user}</span>${content}</div>`;
-            
-            if (!isMe && !isTabActive) showDesktopNotification(`Bericht van ${m.user}`, m.text || "📷 Foto");
         });
         box.scrollTop = box.scrollHeight;
     });
@@ -321,36 +349,31 @@ function listenToMessages() {
 async function sendMessage() {
     const input = document.getElementById('messageInput');
     if(!input.value.trim()) return;
-    const my = (await db.collection("users").doc(user.uid).get()).data();
-    const msg = { text: input.value, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-    input.value = "";
+    const text = input.value; input.value = "";
     
+    const my = (await db.collection("users").doc(user.uid).get()).data();
+    const realId = chatType === 'private' ? [user.uid, activeChatId].sort().join("_") : activeChatId;
     const col = chatType === 'global' ? db.collection("chats") : 
-                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
-                db.collection("private_chats").doc(activeChatId).collection("messages");
-    await col.add(msg);
+                chatType === 'group' ? db.collection("groups").doc(realId).collection("messages") :
+                db.collection("private_chats").doc(realId).collection("messages");
+
+    await col.add({ text, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    chatActivity[activeChatId] = Date.now();
+    loadSidebar();
 }
 
-// --- GROEP FUNCTIES ---
-async function exitGroup() {
-    await db.collection("groups").doc(activeChatId).update({
-        members: firebase.firestore.FieldValue.arrayRemove(user.uid)
-    });
-    location.reload();
-}
-
+// --- BEHEER FUNCTIES ---
 async function manageGroup() {
     const g = (await db.collection("groups").doc(activeChatId).get()).data();
     document.getElementById('editGName').value = g.name;
     const list = document.getElementById('currentMembersList');
-    list.innerHTML = "<h4>Leden:</h4>";
+    list.innerHTML = "<b>Leden beheren:</b><br>";
+    
     for(let mId of g.members) {
         if(mId === user.uid) continue;
         const uDoc = await db.collection("users").doc(mId).get();
-        list.innerHTML += `<div class="member-row">
-            <span>${uDoc.exists ? uDoc.data().name : 'Lid'}</span>
-            <button class="btn btn-danger" style="padding:2px 8px" onclick="confirmAction('Lid verwijderen?', () => kickMember('${mId}'))">Kick</button>
-        </div>`;
+        const n = uDoc.exists ? uDoc.data().name : "Lid";
+        list.innerHTML += `<div class="member-row"><span>${n}</span><button class="btn btn-danger" style="padding:2px 8px" onclick="confirmAction('Lid verwijderen?', () => kickMember('${mId}'))">Kick</button></div>`;
     }
     document.getElementById('manageGroupModal').style.display = 'flex';
 }
@@ -359,7 +382,15 @@ async function kickMember(mId) {
     await db.collection("groups").doc(activeChatId).update({
         members: firebase.firestore.FieldValue.arrayRemove(mId)
     });
-    manageGroup();
+    manageGroup(); // Direct verversen
+    notify("Lid verwijderd");
+}
+
+async function exitGroup() {
+    await db.collection("groups").doc(activeChatId).update({
+        members: firebase.firestore.FieldValue.arrayRemove(user.uid)
+    });
+    location.reload();
 }
 
 async function removeFriend(fId) {
@@ -368,47 +399,31 @@ async function removeFriend(fId) {
     notify("Vriend verwijderd", "danger");
 }
 
-// --- HELPERS ---
-async function resizeImage(file, maxWidth = 800) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width, height = img.height;
-                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                canvas.width = width; canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
+// --- STANDAARD FUNCTIES ---
 async function handleImageUpload(input) {
     if(!input.files[0]) return;
-    const base64 = await resizeImage(input.files[0]);
-    const my = (await db.collection("users").doc(user.uid).get()).data();
-    const col = chatType === 'global' ? db.collection("chats") : 
-                chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
-                db.collection("private_chats").doc(activeChatId).collection("messages");
-    await col.add({ image: base64, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const my = (await db.collection("users").doc(user.uid).get()).data();
+        const realId = chatType === 'private' ? [user.uid, activeChatId].sort().join("_") : activeChatId;
+        const col = chatType === 'global' ? db.collection("chats") : 
+                    chatType === 'group' ? db.collection("groups").doc(realId).collection("messages") :
+                    db.collection("private_chats").doc(realId).collection("messages");
+        await col.add({ image: e.target.result, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    };
+    reader.readAsDataURL(input.files[0]);
 }
 
 function switchTab(t, el) {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     el.classList.add('active'); loadSidebar();
 }
-
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openProfile() { document.getElementById('profileModal').style.display = 'flex'; }
 function openGroupModal() { 
     document.getElementById('groupModal').style.display = 'flex';
     db.collection("users").doc(user.uid).collection("friends").get().then(snap => {
-        const list = document.getElementById('friendsInviteList'); list.innerHTML = "<h4>Vrienden uitnodigen:</h4>";
+        const list = document.getElementById('friendsInviteList'); list.innerHTML = "<b>Uitnodigen:</b>";
         snap.forEach(doc => {
             list.innerHTML += `<div class="member-row"><span>${doc.data().name}</span><input type="checkbox" class="g-inv" value="${doc.id}"></div>`;
         });
@@ -417,27 +432,21 @@ function openGroupModal() {
 
 async function createGroup() {
     const name = document.getElementById('groupName').value;
-    const file = document.getElementById('groupPicInput').files[0];
     const members = Array.from(document.querySelectorAll('.g-inv:checked')).map(i => i.value);
-    if(!name) return notify("Naam verplicht", "danger");
-    let pic = file ? await resizeImage(file, 200) : "";
-    await db.collection("groups").add({ name, owner: user.uid, members: [user.uid, ...members], pic });
-    closeModal('groupModal'); loadSidebar(); notify("Groep aangemaakt!");
+    if(!name) return;
+    await db.collection("groups").add({ name, owner: user.uid, members: [user.uid, ...members], pic: "" });
+    closeModal('groupModal'); loadSidebar();
 }
 
 async function saveProfile() {
-    const name = document.getElementById('pName').value;
-    const file = document.getElementById('pPic').files[0];
-    let updateData = { name };
-    if(file) updateData.pic = await resizeImage(file, 200);
-    await db.collection("users").doc(user.uid).update(updateData);
-    closeModal('profileModal'); notify("Profiel bijgewerkt!");
+    await db.collection("users").doc(user.uid).update({ name: document.getElementById('pName').value });
+    closeModal('profileModal');
 }
 
 async function sendRequest(id) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-    notify("Verzoek verstuurd!");
+    notify("Verzoek gestuurd!");
 }
 
 async function acceptFriend(id, name, pic) {
@@ -445,7 +454,7 @@ async function acceptFriend(id, name, pic) {
     await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
     await db.collection("users").doc(id).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
     await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
-    loadSidebar(); notify("Vriend toegevoegd!");
+    loadSidebar();
 }
 </script>
 </body>
