@@ -118,6 +118,17 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+    // Zoek dit stukje onderaan in je script:
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// PLAK DEZE REGELS ER DIRECT ONDER:
+db.settings({ 
+    experimentalForceLongPolling: true,
+    merge: true 
+});
+
+const auth = firebase.auth();
 // FIX VOOR ADBLOCKERS
 db.settings({ experimentalForceLongPolling: true });
 const auth = firebase.auth();
