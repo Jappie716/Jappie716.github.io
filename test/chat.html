@@ -220,9 +220,27 @@ async function loadSidebar() {
 }
 
 async function sendRequest(targetId) {
-    const me = (await db.collection("users").doc(user.uid).get()).data();
-    await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({ name: me.name, uid: user.uid });
-    notify("Verstuurd!");
+    if (targetId === user.uid) return notify("Je kunt jezelf niet toevoegen!");
+    
+    try {
+        const meSnap = await db.collection("users").doc(user.uid).get();
+        const meData = meSnap.data();
+
+        // Dit stuurt het verzoek naar de 'requests' map van de ANDERE persoon
+        await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({
+            name: meData.name,
+            pic: meData.pic || "",
+            uid: user.uid,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        notify("Verzoek verstuurd!");
+        loadSidebar(); 
+    } catch (error) {
+        console.error("Fout:", error);
+        notify("Er ging iets mis met de rechten.", "danger");
+    }
+}
 }
 
 async function acceptRequest(id) {
