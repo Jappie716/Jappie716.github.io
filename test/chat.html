@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Game Paradise - Chat v4</title>
+    <title>Game Paradise - Chat v5 (Patched)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -13,7 +13,6 @@
             --bg: #020617; --sidebar-bg: #010409; --card-bg: #0f172a;
             --primary: #2563eb; --accent: #60a5fa; --sent: #1e3a8a; --received: #1e293b; --online: #22c55e;
         }
-
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
 
@@ -30,15 +29,14 @@
         .item { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; transition: 0.2s; }
         .item:hover { background: #0f172a; }
         
-        /* AVATAR & STATUS */
         .img-container { position: relative; width: 45px; height: 45px; margin-right: 12px; }
-        .img-container img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; background: #334155; }
+        .img-container img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
         .status-dot { position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--sidebar-bg); background: #4b5563; }
         .status-dot.online { background: var(--online); }
 
         .item-info { flex: 1; min-width: 0; }
-        .item-info h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-info p { margin: 2px 0 0; font-size: 11px; color: #94a3b8; }
+        .item-info h4 { margin: 0; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
+        .unread-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; }
 
         /* MAIN CHAT */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
@@ -58,7 +56,7 @@
         .modal-box { background: var(--card-bg); padding: 25px; border-radius: 15px; width: 400px; border: 1px solid #1e293b; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
-        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; }
+        .toast { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
@@ -83,8 +81,8 @@
 <div class="main-chat">
     <div class="chat-header">
         <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:15px; display:none; object-fit: cover;">
-        <div style="flex:1"><h3 id="activeChatName" style="margin:0">Kies een chat</h3></div>
-        <button id="groupSettingsBtn" class="btn" style="display:none; background:none; font-size:20px;" onclick="manageGroup()">⚙️</button>
+        <div style="flex:1"><h3 id="activeChatName" style="margin:0">Paradise Chat</h3></div>
+        <button id="leaveBtn" class="btn" style="display:none; background:#ef4444;" onclick="handleLeave()">Verlaat</button>
     </div>
     <div class="chat-messages" id="chatMessages"></div>
     <div class="chat-input" id="inputArea" style="display:none">
@@ -98,8 +96,8 @@
 <div id="profileModal" class="modal"><div class="modal-box">
     <h3>Profiel</h3>
     <input type="text" id="pName" placeholder="Naam" style="width:100%; padding:10px; margin-bottom:10px; border-radius:8px; background:#020617; color:white; border:1px solid #334155;">
-    <input type="file" id="pPic" accept="image/*" style="margin-bottom:15px;">
-    <button class="btn" onclick="saveProfile()" style="width:100%">Opslaan</button>
+    <input type="file" id="pPic" accept="image/*">
+    <button class="btn" onclick="saveProfile()" style="width:100%; margin-top:10px;">Opslaan</button>
     <button onclick="closeModal('profileModal')" style="width:100%; background:none; color:gray; border:none; margin-top:10px; cursor:pointer;">Sluiten</button>
 </div></div>
 
@@ -112,7 +110,7 @@
 </div></div>
 
 <script>
-// FIREBASE CONFIG
+// CONFIG
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -128,101 +126,92 @@ const auth = firebase.auth();
 let user = null;
 let activeChatId = null;
 let chatType = 'private';
+let unreadMap = {};
 let sessionStartTime = Date.now();
 
-// NOTIFICATIE PERMISSIE
+// PERMISSIES & STATUS
 if (Notification.permission !== "granted") Notification.requestPermission();
 
+auth.onAuthStateChanged(u => {
+    if (u) { 
+        user = u; 
+        setupUser(); 
+        db.collection("users").doc(u.uid).update({ status: 'online', lastSeen: Date.now() });
+        switchTab('chats', document.querySelector('.tab')); 
+    } else { window.location.href = 'index.html'; }
+});
+
+window.addEventListener("beforeunload", () => { if(user) db.collection("users").doc(user.uid).update({ status: "offline", lastSeen: Date.now() }); });
+setInterval(() => { if(user) db.collection("users").doc(user.uid).update({ lastSeen: Date.now(), status: "online" }); }, 30000);
+
 function notify(title, body = "") {
-    // Toast melding
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
     t.className = 'toast';
     t.innerHTML = `<b>${title}</b><br>${body}`;
     container.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 4000);
-
-    // Desktop melding (als tab niet actief is)
-    if (document.hidden && Notification.permission === "granted") {
-        new Notification(title, { body: body, icon: 'https://i.imgur.com/C9HtyPv.jpeg' });
-    }
+    if (document.hidden && Notification.permission === "granted") new Notification(title, { body });
 }
-
-auth.onAuthStateChanged(u => {
-    if (u) { 
-        user = u; 
-        setupUser(); 
-        db.collection("users").doc(u.uid).update({ status: 'online' });
-        switchTab('chats', document.querySelector('.tab')); 
-    } else { window.location.href = 'index.html'; }
-});
 
 async function setupUser() {
     db.collection("users").doc(user.uid).onSnapshot(d => {
         if(d.exists) {
             document.getElementById('myName').innerText = d.data().name;
             document.getElementById('myAvatar').src = d.data().pic || "https://ui-avatars.com/api/?name="+d.data().name;
-            document.getElementById('pName').value = d.data().name;
         }
     });
 
-    // Luister naar verzoeken voor de badge
-    db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
-        const badge = document.getElementById('reqTab');
-        if(!snap.empty) {
-            badge.style.color = "var(--accent)";
-            if(Date.now() - sessionStartTime > 3000) notify("Nieuw Verzoek", "Iemand wil vrienden worden!");
-        } else {
-            badge.style.color = "#94a3b8";
-        }
-        loadSidebar();
-    });
+    db.collection("users").doc(user.uid).collection("requests").onSnapshot(() => loadSidebar());
+    db.collection("users").doc(user.uid).collection("friends").onSnapshot(() => loadSidebar());
+}
 
-    // Luister naar nieuwe vrienden (acceptaties)
-    db.collection("users").doc(user.uid).collection("friends").onSnapshot(snap => {
-        snap.docChanges().forEach(change => {
-            if (change.type === "added" && Date.now() - sessionStartTime > 3000) {
-                notify("Verzoek geaccepteerd", `${change.doc.data().name} is nu je vriend!`);
-            }
-        });
-        loadSidebar();
-    });
+async function checkUnread(chatId, colRef) {
+    const seenSnap = await db.collection("users").doc(user.uid).collection("lastSeen").doc(chatId).get();
+    const lastSeen = seenSnap.exists ? seenSnap.data().lastSeen?.toMillis() || 0 : 0;
+    const lastMsg = await colRef.orderBy("timestamp", "desc").limit(1).get();
+    if (!lastMsg.empty) {
+        const ts = lastMsg.docs[0].data().timestamp?.toMillis() || 0;
+        if (ts > lastSeen) unreadMap[chatId] = true;
+    }
 }
 
 async function loadSidebar() {
     const list = document.getElementById('sidebarList');
     const activeTab = document.querySelector('.tab.active').innerText;
-    list.innerHTML = ""; // BELANGRIJK: Maak lijst leeg tegen duplicaten
+    list.innerHTML = "";
 
     if (activeTab === 'Chats') {
-        // Algemeen
         renderItem('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'Iedereen', 'global', true);
         
-        // Groepen
         const gSnap = await db.collection("groups").get();
-        gSnap.forEach(doc => {
+        for(const doc of gSnap.docs) {
             const g = doc.data();
             if(g.owner === user.uid || (g.members && g.members.includes(user.uid))) {
-                renderItem(doc.id, g.name, g.pic, 'Groep', 'group', false, g.owner);
+                await checkUnread(doc.id, db.collection("groups").doc(doc.id).collection("messages"));
+                renderItem(doc.id, g.name, g.pic, 'Groep', 'group', false);
             }
-        });
+        }
 
-        // Vrienden
         const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
-        fSnap.forEach(async doc => {
+        for(const doc of fSnap.docs) {
             const f = doc.data();
             const uStatus = (await db.collection("users").doc(doc.id).get()).data()?.status;
+            const cId = [user.uid, doc.id].sort().join("_");
+            await checkUnread(cId, db.collection("private_chats").doc(cId).collection("messages"));
             renderItem(doc.id, f.name, f.pic, uStatus === 'online' ? 'Online' : 'Offline', 'private', uStatus === 'online');
-        });
+        }
 
     } else if (activeTab === 'Ontdek') {
-        const uSnap = await db.collection("users").limit(15).get();
+        const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+        const friendIds = friendsSnap.docs.map(d => d.id);
+        const uSnap = await db.collection("users").limit(20).get();
         uSnap.forEach(doc => {
-            if(doc.id !== user.uid) {
+            if(doc.id !== user.uid && !friendIds.includes(doc.id)) {
                 list.innerHTML += `<div class="item">
                     <div class="img-container"><img src="${doc.data().pic || 'https://ui-avatars.com/api/?name='+doc.data().name}"></div>
                     <div class="item-info"><h4>${doc.data().name}</h4></div>
-                    <button class="btn" style="padding:5px 10px" onclick="sendRequest('${doc.id}')">Toevoegen</button>
+                    <button class="btn" onclick="sendRequest('${doc.id}')">Toevoegen</button>
                 </div>`;
             }
         });
@@ -238,31 +227,37 @@ async function loadSidebar() {
     }
 }
 
-function renderItem(id, name, pic, sub, type, online, owner = null) {
+function renderItem(id, name, pic, sub, type, online) {
     const list = document.getElementById('sidebarList');
+    const chatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
+    const dot = unreadMap[chatId] && type !== 'global' ? '<span class="unread-dot"></span>' : '';
     const img = pic || "https://ui-avatars.com/api/?name="+name;
-    const html = `
-        <div class="item" onclick="openChat('${id}', '${name}', '${img}', '${type}', '${owner}')">
+    list.innerHTML += `
+        <div class="item" onclick="openChat('${id}', '${name}', '${img}', '${type}')">
             <div class="img-container">
                 <img src="${img}">
                 <div class="status-dot ${online ? 'online' : ''}"></div>
             </div>
             <div class="item-info">
-                <h4>${name}</h4>
+                <h4>${name} ${dot}</h4>
                 <p>${sub}</p>
             </div>
         </div>`;
-    list.innerHTML += html;
 }
 
-function openChat(id, name, pic, type, ownerId = null) {
+async function openChat(id, name, pic, type) {
     activeChatId = type === 'private' ? [user.uid, id].sort().join("_") : id;
     chatType = type;
     document.getElementById('activeChatName').innerText = name;
     document.getElementById('activeChatImg').src = pic;
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
-    document.getElementById('groupSettingsBtn').style.display = (type==='group' && ownerId===user.uid) ? "block" : "none";
+    document.getElementById('leaveBtn').style.display = type === 'group' ? 'block' : 'none';
+
+    if (type !== 'global') {
+        db.collection("users").doc(user.uid).collection("lastSeen").doc(activeChatId).set({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+        delete unreadMap[activeChatId];
+    }
     listenToMessages();
 }
 
@@ -283,11 +278,6 @@ function listenToMessages() {
                 <span class="sender">${isMe ? 'Jij' : (m.user || 'Onbekend')}</span>
                 ${m.image ? `<img src="${m.image}" style="width:100%; border-radius:8px;">` : m.text}
             </div>`;
-            
-            // Melding voor nieuw bericht
-            if(!isMe && Date.now() - sessionStartTime > 3000) {
-                notify("Nieuw bericht", `${m.user}: ${m.text || '📷 Foto'}`);
-            }
         });
         box.scrollTop = box.scrollHeight;
     });
@@ -300,23 +290,19 @@ async function sendMessage() {
     const col = chatType === 'global' ? db.collection("chats") : 
                 chatType === 'group' ? db.collection("groups").doc(activeChatId).collection("messages") :
                 db.collection("private_chats").doc(activeChatId).collection("messages");
-    
     await col.add({ text: input.value, user: my.name, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     input.value = "";
 }
 
-// IMAGE RESIZE
-async function resizeImage(file, maxWidth = 400) {
+async function resizeImage(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                let width = img.width; let height = img.height;
-                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
-                canvas.width = width; canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                canvas.width = 400; canvas.height = (img.height/img.width)*400;
+                canvas.getContext('2d').drawImage(img, 0, 0, 400, canvas.height);
                 resolve(canvas.toDataURL('image/jpeg', 0.6));
             };
             img.src = e.target.result;
@@ -339,29 +325,37 @@ async function saveProfile() {
     const name = document.getElementById('pName').value;
     const file = document.getElementById('pPic').files[0];
     let data = { name };
-    if(file) data.pic = await resizeImage(file, 200);
+    if(file) data.pic = await resizeImage(file);
     await db.collection("users").doc(user.uid).update(data);
     closeModal('profileModal');
-    notify("Profiel opgeslagen");
 }
 
 async function sendRequest(id) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-    notify("Verzoek verstuurd");
+    notify("Verstuurd!");
 }
 
 async function acceptFriend(id, name, pic) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     const batch = db.batch();
-    batch.set(db.collection("users").doc(user.uid).collection("friends").doc(id), { name, pic: pic || "" });
-    batch.set(db.collection("users").doc(id).collection("friends").doc(user.uid), { name: me.name, pic: me.pic || "" });
+    batch.set(db.collection("users").doc(user.uid).collection("friends").doc(id), { name, pic: pic || "", status: "offline" });
+    batch.set(db.collection("users").doc(id).collection("friends").doc(user.uid), { name: me.name, pic: me.pic || "", status: "offline" });
     batch.delete(db.collection("users").doc(user.uid).collection("requests").doc(id));
     await batch.commit();
+}
+
+async function handleLeave() {
+    if(chatType !== 'group') return;
+    const ref = db.collection("groups").doc(activeChatId);
+    const snap = await ref.get();
+    const members = (snap.data().members || []).filter(m => m !== user.uid);
+    await ref.update({ members });
+    document.getElementById('inputArea').style.display = "none";
+    document.getElementById('activeChatName').innerText = "Kies een chat";
     loadSidebar();
 }
 
-// UI HELPERS
 function switchTab(t, el) {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     el.classList.add('active');
@@ -373,11 +367,7 @@ function openGroupModal() {
     document.getElementById('groupModal').style.display = 'flex';
     db.collection("users").doc(user.uid).collection("friends").get().then(snap => {
         const list = document.getElementById('friendsInviteList'); list.innerHTML = "";
-        snap.forEach(doc => {
-            list.innerHTML += `<div style="padding:5px; border-bottom:1px solid #1e293b;">
-                <input type="checkbox" class="g-inv" value="${doc.id}"> ${doc.data().name}
-            </div>`;
-        });
+        snap.forEach(doc => { list.innerHTML += `<div><input type="checkbox" class="g-inv" value="${doc.id}"> ${doc.data().name}</div>`; });
     });
 }
 async function createGroup() {
@@ -386,7 +376,6 @@ async function createGroup() {
     if(!name) return;
     await db.collection("groups").add({ name, owner: user.uid, members, pic: "" });
     closeModal('groupModal');
-    loadSidebar();
 }
 </script>
 </body>
