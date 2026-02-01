@@ -13,6 +13,7 @@
             --bg: #020617; --sidebar-bg: #010409; --card-bg: #0f172a;
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
             --sent: #172554; --received: #1e293b; --danger: #ef4444; --system: #334155;
+            --online: #22c55e; --offline: #64748b;
         }
 
         * { box-sizing: border-box; }
@@ -22,7 +23,6 @@
             display: flex; overflow: hidden; 
         }
 
-        /* --- TOASTS --- */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 999999; pointer-events: none; }
         .toast { 
             background: var(--card-bg); color: white; padding: 15px 20px; 
@@ -34,7 +34,7 @@
 
         .container { display: flex; width: 100%; height: 100%; }
 
-        /* --- SIDEBAR --- */
+        /* SIDEBAR */
         .sidebar { width: 320px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
         .sidebar-header { padding: 15px; background: var(--card-bg); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; }
         .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary); }
@@ -56,10 +56,20 @@
         .item-info { flex: 1; overflow: hidden; }
         .item-info h4 { margin: 0; font-size: 14px; color: #e2e8f0; }
         .item-info p { margin: 0; font-size: 11px; color: gray; }
+        
+        /* Online Dot */
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%; 
+            position: absolute; bottom: 10px; left: 45px; 
+            border: 2px solid var(--sidebar-bg);
+            background-color: var(--offline);
+        }
+        .status-dot.online { background-color: var(--online); box-shadow: 0 0 5px var(--online); }
+
         .unread-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
         .unread-badge.show { display: block; }
 
-        /* --- MAIN CHAT --- */
+        /* MAIN CHAT */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
         .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
@@ -71,6 +81,10 @@
         
         .msg img { max-width: 350px; max-height: 350px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; object-fit: cover; }
         .msg .sender { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 2px; display: block; }
+
+        /* Delete knop */
+        .delete-btn { position: absolute; top: -10px; right: -10px; background: var(--card-bg); border: 1px solid var(--danger); color: var(--danger); border-radius: 50%; width: 20px; height: 20px; display: none; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
+        .msg.sent:hover .delete-btn { display: flex; }
 
         .chat-input { padding: 15px; background: var(--card-bg); display: flex; gap: 10px; align-items: center; border-top: 1px solid #1e293b; }
         .chat-input input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #1e293b; background: var(--bg); color: white; outline: none; }
@@ -84,7 +98,7 @@
         .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; }
         .settings-icon:hover { transform: rotate(45deg); }
 
-        /* --- MODALS --- */
+        /* MODALS */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-box { background: var(--card-bg); padding: 25px; border-radius: 18px; width: 100%; max-width: 400px; border: 1px solid #1e293b; max-height: 90vh; overflow-y: auto; }
         input[type="text"] { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #1e293b; background: #020617; color: white; }
@@ -129,7 +143,10 @@
     <div class="main-chat">
         <div class="chat-header">
             <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:12px; display:none; object-fit:cover;">
-            <div style="flex:1"><h3 id="activeChatName" style="margin:0; font-size:16px;">Game Paradise</h3></div>
+            <div style="flex:1">
+                <h3 id="activeChatName" style="margin:0; font-size:16px;">Game Paradise</h3>
+                <span id="activeStatus" style="font-size:11px; color:gray; display:none;">Online</span>
+            </div>
             <img id="settingsBtn" src="https://flaticons.net/icon.php?slug_category=mobile-application&slug_icon=settings-01&icon_size=256&icon_color=FFFFFF&icon_flip=&icon_rotate=100" class="settings-icon" style="display:none;" onclick="openChatSettings()">
         </div>
         <div class="chat-messages" id="chatMessages">
@@ -211,9 +228,38 @@ let activeListeners = new Set();
 let msgUnsub = null;
 
 auth.onAuthStateChanged(u => {
-    if (u) { user = u; checkSetup(); }
+    if (u) { user = u; checkSetup(); startPresenceSystem(); }
     else { location.href = 'index.html'; }
 });
+
+// --- PRESENCE SYSTEM (ONLINE/OFFLINE) ---
+function startPresenceSystem() {
+    // 1. Zet direct online
+    updatePresence('online');
+
+    // 2. Elke minuut 'heartbeat' updaten
+    setInterval(() => {
+        updatePresence('online');
+    }, 60000);
+
+    // 3. Bij afsluiten tabblad direct offline zetten
+    window.addEventListener('beforeunload', () => {
+        // We proberen nog snel offline te sturen
+        db.collection("users").doc(user.uid).update({ 
+            status: 'offline',
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+}
+
+function updatePresence(status) {
+    if(user) {
+        db.collection("users").doc(user.uid).update({
+            status: status,
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+}
 
 async function checkSetup() {
     const doc = await db.collection("users").doc(user.uid).get();
@@ -221,7 +267,7 @@ async function checkSetup() {
         document.getElementById('setupOverlay').style.display = 'flex';
     } else {
         document.getElementById('setupOverlay').style.display = 'none';
-        if (Notification.permission !== "granted") Notification.requestPermission();
+        if (Notification.permission === "default") Notification.requestPermission();
         initApp();
     }
 }
@@ -247,22 +293,51 @@ function initApp() {
 async function subscribeToChats() {
     setupListener('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global', db.collection("chats"));
 
-    // LIVE GROEPEN UPDATE (Fix voor reload)
+    // LIVE GROEPEN (Live onSnapshot)
     db.collection("groups").where("members", "array-contains", user.uid).onSnapshot(snap => {
         snap.docChanges().forEach(change => {
             if (change.type === "added") {
                 const d = change.doc.data();
                 setupListener(change.doc.id, d.name, d.pic, 'group', db.collection("groups").doc(change.doc.id).collection("messages"));
-                notify("Nieuwe Groep", `Je bent toegevoegd aan ${d.name}`, d.pic, change.doc.id, 'group');
+                // Alleen melding als de timestamp recent is (voorkom meldingen bij opstarten)
+                notify("Nieuwe Groep", `Toegevoegd aan ${d.name}`, d.pic, change.doc.id, 'group');
+            } else if (change.type === "removed") {
+                chatDataMap.delete(change.doc.id);
+                if(activeChatId === change.doc.id) {
+                    document.getElementById('chatMessages').innerHTML = "<div style='text-align:center; margin-top:50px'>Groep verwijderd</div>";
+                    document.getElementById('inputArea').style.display = 'none';
+                }
+                renderSidebar();
             }
         });
     });
 
-    // Vrienden
     const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     fSnap.forEach(doc => {
         const chatId = [user.uid, doc.id].sort().join("_");
         setupListener(doc.id, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
+        
+        // Luister naar online status van vrienden
+        db.collection("users").doc(doc.id).onSnapshot(s => {
+            const data = s.data();
+            const now = Date.now();
+            const lastSeen = data.lastSeen ? data.lastSeen.toMillis() : 0;
+            // Als lastSeen < 2 minuten geleden is -> Online
+            const isOnline = (now - lastSeen) < 120000; 
+            
+            if(chatDataMap.has(doc.id)) {
+                const c = chatDataMap.get(doc.id);
+                c.online = isOnline;
+                chatDataMap.set(doc.id, c);
+                renderSidebar();
+                
+                if(activeChatId === doc.id) {
+                    document.getElementById('activeStatus').style.display = 'block';
+                    document.getElementById('activeStatus').innerText = isOnline ? 'Online' : 'Offline';
+                    document.getElementById('activeStatus').style.color = isOnline ? 'var(--online)' : 'gray';
+                }
+            }
+        });
     });
 }
 
@@ -270,19 +345,15 @@ function setupListener(id, name, pic, type, ref) {
     if(activeListeners.has(id)) return;
     activeListeners.add(id);
 
-    if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false });
+    if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, online: false });
 
+    // Live update voor groepsinfo (naam/foto wijzigingen)
     if(type === 'group') {
         db.collection("groups").doc(id).onSnapshot(snap => {
-            if(!snap.exists) {
-                chatDataMap.delete(id);
-                if(activeChatId === id) location.reload();
-                renderSidebar();
-            } else {
+            if(snap.exists) {
                 const d = snap.data();
                 const c = chatDataMap.get(id);
-                c.name = d.name;
-                c.pic = d.pic;
+                c.name = d.name; c.pic = d.pic;
                 chatDataMap.set(id, c);
                 if(activeChatId === id) {
                     document.getElementById('activeChatName').innerText = d.name;
@@ -301,12 +372,17 @@ function setupListener(id, name, pic, type, ref) {
         
         cData.timestamp = time;
         
-        // MELDINGEN LOGICA FIX
-        if (activeChatId !== id && m.uid !== user.uid) {
-            cData.unread = true;
-            // Als het venster verborgen is, of we zitten in een andere chat -> Stuur OS melding
-            if(document.hidden || activeChatId !== id) {
-                notify(name, m.type === 'system' ? m.text : (m.text || "📷 Foto"), pic, id, type);
+        // --- BERICHT MELDING LOGICA ---
+        if (m.uid !== user.uid) {
+            // Geen meldingen voor Global
+            if (type !== 'global') {
+                // Alleen melding als tabblad verborgen is (desktop notificatie)
+                if (document.hidden) {
+                    notify(name, m.type==='system'?m.text:(m.text || "Foto"), pic, id, type);
+                } else if (activeChatId !== id) {
+                    // Wel in app, maar andere chat -> Alleen rood bolletje
+                    cData.unread = true;
+                }
             }
         } else if (activeChatId === id) {
             cData.unread = false;
@@ -336,7 +412,10 @@ function renderSidebar() {
             item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
             item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
             item.innerHTML = `
-                <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
+                <div style="position:relative;">
+                    <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
+                    ${c.type === 'private' ? `<div class="status-dot ${c.online?'online':''}"></div>` : ''}
+                </div>
                 <div class="item-info"><h4>${c.name}</h4><p>${c.type==='private'?'Vriend':c.type==='group'?'Groep':'Community'}</p></div>
                 <div class="unread-badge ${c.unread?'show':''}">${c.unread?'!':''}</div>`;
             list.appendChild(item);
@@ -391,6 +470,17 @@ function openChat(id, name, pic, type) {
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('settingsBtn').style.display = type === 'global' ? 'none' : 'block';
     
+    // Status weergave reset
+    const statusEl = document.getElementById('activeStatus');
+    if(type === 'private' && chatDataMap.has(id)) {
+        const isOnline = chatDataMap.get(id).online;
+        statusEl.style.display = 'block';
+        statusEl.innerText = isOnline ? 'Online' : 'Offline';
+        statusEl.style.color = isOnline ? 'var(--online)' : 'gray';
+    } else {
+        statusEl.style.display = 'none';
+    }
+
     renderSidebar();
     
     if(msgUnsub) msgUnsub();
@@ -415,8 +505,14 @@ function openChat(id, name, pic, type) {
             } else {
                 content = `<span class="sender">${m.user}</span>${m.text}`;
             }
+            
+            // Delete button voor eigen berichten
+            let deleteBtn = "";
+            if (m.uid === user.uid && m.type !== 'system') {
+                deleteBtn = `<div class="delete-btn" onclick="deleteMessage('${doc.id}')">🗑</div>`;
+            }
 
-            box.innerHTML += `<div class="msg ${className}">${content}</div>`;
+            box.innerHTML += `<div class="msg ${className}">${deleteBtn}${content}</div>`;
         });
         box.scrollTop = box.scrollHeight;
     });
@@ -467,6 +563,17 @@ async function pushMsg(data) {
     else await db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages").add(payload);
 }
 
+// VERWIJDER BERICHT
+async function deleteMessage(mid) {
+    if(!confirm("Bericht verwijderen?")) return;
+    let ref;
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+    
+    await ref.doc(mid).delete();
+}
+
 async function sendSystemMessage(text) {
     const payload = { text, type: 'system', user: 'System', uid: 'system', timestamp: firebase.firestore.FieldValue.serverTimestamp() };
     if(chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(payload);
@@ -487,6 +594,7 @@ async function openChatSettings() {
         `;
     } else if (chatType === 'group') {
         const gDoc = await db.collection("groups").doc(activeChatId).get();
+        if(!gDoc.exists) return;
         const gData = gDoc.data();
         const isOwner = gData.owner === user.uid;
         
@@ -568,7 +676,7 @@ async function addMemberToGroup(newId, newName) {
     });
     await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} toegevoegd.`);
     closeModal('addMemberModal');
-    openChatSettings(); // Refresh settings
+    openChatSettings();
 }
 
 // --- ACTIONS ---
@@ -592,7 +700,11 @@ async function updateGroupInfo() {
 
 async function deleteGroup() {
     await db.collection("groups").doc(activeChatId).delete();
-    location.reload();
+    // Chat sluiten en modal dicht
+    activeChatId = null;
+    document.getElementById('chatMessages').innerHTML = "";
+    document.getElementById('inputArea').style.display = 'none';
+    closeModal('settingsModal');
 }
 async function removeFriend() {
     await db.collection("users").doc(user.uid).collection("friends").doc(activeChatId).delete();
@@ -612,17 +724,19 @@ async function transferOwner(newId, newName) {
 
 // --- NOTIFICATIONS FIX ---
 function notify(title, body, icon, chatId, type) {
-    // 1. In-app Toast
-    const box = document.getElementById('toast-container');
-    const t = document.createElement('div');
-    t.className = 'toast';
-    t.innerHTML = `<img src="${icon || 'https://ui-avatars.com/api/?name=Msg'}" style="width:30px;height:30px;border-radius:50%"><div><b>${title}</b><br><small>${body}</small></div>`;
-    t.onclick = () => { if(chatId) openChat(chatId, title, icon, type); t.remove(); };
-    box.appendChild(t);
-    setTimeout(()=>t.remove(), 4000);
+    // 1. In-app Toast (alleen als niet de huidige chat)
+    if(activeChatId !== chatId) {
+        const box = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `<img src="${icon || 'https://ui-avatars.com/api/?name=Msg'}" style="width:30px;height:30px;border-radius:50%"><div><b>${title}</b><br><small>${body}</small></div>`;
+        t.onclick = () => { if(chatId) openChat(chatId, title, icon, type); t.remove(); };
+        box.appendChild(t);
+        setTimeout(()=>t.remove(), 4000);
+    }
 
-    // 2. Desktop Notification
-    if(Notification.permission === "granted" && (document.hidden || chatId)) {
+    // 2. Desktop Notification (Alleen als tabblad HIDDEN is)
+    if(Notification.permission === "granted" && document.hidden) {
         const n = new Notification(title, { body: body, icon: icon || "https://i.imgur.com/CeRZ8na.png" });
         n.onclick = function() {
             window.focus();
