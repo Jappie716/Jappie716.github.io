@@ -49,7 +49,6 @@
 
         .list-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
         
-        /* Compactere Items */
         .item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; transition: 0.2s; }
         .item:hover { background: #0f172a; }
         .item.active-chat { background: #1e3a8a !important; border-left: 4px solid #60a5fa; }
@@ -68,8 +67,6 @@
         .msg { max-width: 70%; padding: 10px 14px; border-radius: 12px; font-size: 14px; position: relative; word-wrap: break-word; }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
-        
-        /* Systeem berichten (WhatsApp style) */
         .msg.system { align-self: center; background: #1e293b88; padding: 5px 12px; border-radius: 20px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px solid #334155; margin: 5px 0; max-width: 90%; }
         
         .msg img { max-width: 350px; max-height: 350px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; object-fit: cover; }
@@ -93,6 +90,7 @@
         input[type="text"] { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #1e293b; background: #020617; color: white; }
         
         .member-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
+        .full-btn { width: 100%; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -138,16 +136,13 @@
             <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
         </div>
         <div class="chat-input" id="inputArea" style="display:none">
-    <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()" 
-            style="--size: 30px; width: calc(var(--size) + 15px); height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; background: #334155;">
-        <img src="https://i.imgur.com/CeRZ8na.png" 
-             style="width: var(--size); height: var(--size); object-fit: contain;">
-    </button>
-    
-    <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
-    <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
-    <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
-</div>
+            <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()" style="--size: 30px; width: calc(var(--size) + 15px); height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; background: #334155;">
+                <img src="https://i.imgur.com/CeRZ8na.png" style="width: var(--size); height: var(--size); object-fit: contain;">
+            </button>
+            <input type="file" id="imgInp" hidden accept="image/*" onchange="handleImageSend(this)">
+            <input type="text" id="messageInput" placeholder="Typ bericht..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <button class="btn" onclick="sendMessage()">➤ Verstuur</button>
+        </div>
     </div>
 </div>
 
@@ -186,6 +181,12 @@
     <button class="btn" onclick="closeModal('groupModal')" style="width:100%; background:#334155; margin-top:5px;">Annuleren</button>
 </div></div>
 
+<div id="addMemberModal" class="modal"><div class="modal-box">
+    <h3>Lid Toevoegen</h3>
+    <div id="addMemberList" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid #1e293b; border-radius:8px; padding:10px;">Laden...</div>
+    <button class="btn" onclick="closeModal('addMemberModal')" style="width:100%; background:#334155;">Sluiten</button>
+</div></div>
+
 <div id="settingsModal" class="modal"><div class="modal-box" id="settingsContent"></div></div>
 
 <script>
@@ -220,7 +221,7 @@ async function checkSetup() {
         document.getElementById('setupOverlay').style.display = 'flex';
     } else {
         document.getElementById('setupOverlay').style.display = 'none';
-        if (Notification.permission === "default") Notification.requestPermission();
+        if (Notification.permission !== "granted") Notification.requestPermission();
         initApp();
     }
 }
@@ -234,7 +235,11 @@ function initApp() {
     
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
-        if(!snap.empty && document.hidden) notify("Vriendschapsverzoek", "Je hebt een nieuw verzoek!");
+        if(!snap.empty) {
+            snap.docChanges().forEach(change => {
+                if(change.type === 'added') notify("Vriendschapsverzoek", "Je hebt een nieuw verzoek!", "", "requests");
+            });
+        }
     });
     subscribeToChats();
 }
@@ -242,9 +247,18 @@ function initApp() {
 async function subscribeToChats() {
     setupListener('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global', db.collection("chats"));
 
-    const gSnap = await db.collection("groups").where("members", "array-contains", user.uid).get();
-    gSnap.forEach(doc => setupListener(doc.id, doc.data().name, doc.data().pic, 'group', db.collection("groups").doc(doc.id).collection("messages")));
+    // LIVE GROEPEN UPDATE (Fix voor reload)
+    db.collection("groups").where("members", "array-contains", user.uid).onSnapshot(snap => {
+        snap.docChanges().forEach(change => {
+            if (change.type === "added") {
+                const d = change.doc.data();
+                setupListener(change.doc.id, d.name, d.pic, 'group', db.collection("groups").doc(change.doc.id).collection("messages"));
+                notify("Nieuwe Groep", `Je bent toegevoegd aan ${d.name}`, d.pic, change.doc.id, 'group');
+            }
+        });
+    });
 
+    // Vrienden
     const fSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     fSnap.forEach(doc => {
         const chatId = [user.uid, doc.id].sort().join("_");
@@ -258,16 +272,13 @@ function setupListener(id, name, pic, type, ref) {
 
     if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false });
 
-    // Check of groep nog bestaat
     if(type === 'group') {
         db.collection("groups").doc(id).onSnapshot(snap => {
             if(!snap.exists) {
-                // Groep is verwijderd
                 chatDataMap.delete(id);
                 if(activeChatId === id) location.reload();
                 renderSidebar();
             } else {
-                // Update naam/foto als admin die aanpast
                 const d = snap.data();
                 const c = chatDataMap.get(id);
                 c.name = d.name;
@@ -290,9 +301,13 @@ function setupListener(id, name, pic, type, ref) {
         
         cData.timestamp = time;
         
+        // MELDINGEN LOGICA FIX
         if (activeChatId !== id && m.uid !== user.uid) {
             cData.unread = true;
-            if(type !== 'global') notify(name, m.type === 'system' ? m.text : (m.text || "Foto"), pic);
+            // Als het venster verborgen is, of we zitten in een andere chat -> Stuur OS melding
+            if(document.hidden || activeChatId !== id) {
+                notify(name, m.type === 'system' ? m.text : (m.text || "📷 Foto"), pic, id, type);
+            }
         } else if (activeChatId === id) {
             cData.unread = false;
         }
@@ -421,10 +436,8 @@ async function resizeAndCompressImage(file) {
                 const scaleSize = maxWidth / img.width;
                 canvas.width = maxWidth;
                 canvas.height = img.height * scaleSize;
-                
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                // Comprimeren naar 0.7 kwaliteit JPEG
                 resolve(canvas.toDataURL('image/jpeg', 0.7));
             }
         }
@@ -449,19 +462,17 @@ async function sendMessage() {
 async function pushMsg(data) {
     const myName = document.getElementById('myName').innerText;
     const payload = { ...data, user: myName, uid: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
-    
     if(chatType === 'global') await db.collection("chats").add(payload);
     else if(chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(payload);
     else await db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages").add(payload);
 }
 
-// --- SYSTEEM BERICHTEN ---
 async function sendSystemMessage(text) {
     const payload = { text, type: 'system', user: 'System', uid: 'system', timestamp: firebase.firestore.FieldValue.serverTimestamp() };
     if(chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(payload);
 }
 
-// --- SETTINGS ---
+// --- SETTINGS (GEÜPDATE UI) ---
 async function openChatSettings() {
     const modal = document.getElementById('settingsModal');
     const content = document.getElementById('settingsContent');
@@ -471,8 +482,8 @@ async function openChatSettings() {
     if (chatType === 'private') {
         content.innerHTML = `
             <h3>${document.getElementById('activeChatName').innerText}</h3>
-            <button class="btn btn-danger" onclick="confirmAction('Vriend verwijderen', 'Weet je zeker dat je deze vriend wilt verwijderen?', removeFriend)">Verwijder Vriend</button>
-            <button class="btn" style="margin-top:10px; background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>
+            <button class="btn btn-danger" onclick="confirmAction('Vriend verwijderen', 'Weet je zeker?', removeFriend)">Verwijder Vriend</button>
+            <button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>
         `;
     } else if (chatType === 'group') {
         const gDoc = await db.collection("groups").doc(activeChatId).get();
@@ -484,13 +495,17 @@ async function openChatSettings() {
         if(isOwner) {
             html += `
             <div style="margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
-                <label style="font-size:12px; color:gray">Naam & Foto aanpassen:</label>
-                <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                    <img id="groupEditPreview" src="${gData.pic}" style="width:40px; height:40px; border-radius:50%">
-                    <input type="file" id="groupEditFile" hidden onchange="previewImage(this, 'groupEditPreview')">
-                    <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">📷</button>
-                    <input type="text" id="groupEditName" value="${gData.name}" style="margin:0">
-                    <button class="btn btn-sm" onclick="updateGroupInfo()">💾</button>
+                <label style="font-size:12px; color:gray">Aanpassen:</label>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:5px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img id="groupEditPreview" src="${gData.pic}" style="width:40px; height:40px; border-radius:50%">
+                        <input type="text" id="groupEditName" value="${gData.name}" style="margin:0">
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                        <input type="file" id="groupEditFile" hidden onchange="previewImage(this, 'groupEditPreview')">
+                        <button class="btn btn-sm" onclick="document.getElementById('groupEditFile').click()">Wijzig groepsfoto</button>
+                        <button class="btn btn-sm" onclick="updateGroupInfo()">Opslaan</button>
+                    </div>
                 </div>
             </div>`;
         }
@@ -503,25 +518,57 @@ async function openChatSettings() {
                 const uDoc = await db.collection("users").doc(mid).get();
                 if(uDoc.exists) mName = uDoc.data().name;
             }
-            
             html += `<div class="member-row">
                 <span>${mName} ${gData.owner === mid ? '👑' : ''}</span>
                 <div>
-                   ${isOwner && mid !== user.uid ? `<button class="btn btn-sm" onclick="confirmAction('Beheerder maken', 'Wil je het eigenaarschap overdragen aan ${mName}?', () => transferOwner('${mid}', '${mName}'))">Maak Admin</button>` : ''}
+                   ${isOwner && mid !== user.uid ? `<button class="btn btn-sm" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">Maak Admin</button>` : ''}
                 </div>
             </div>`;
         }
         html += `</div>`;
 
-        if (isOwner) {
-             html += `<button class="btn btn-danger" style="width:100%" onclick="confirmAction('Groep Verwijderen', 'Dit wist de groep voor iedereen. Doorgaan?', deleteGroup)">Groep Verwijderen (Alles)</button>`;
+        if(isOwner) {
+            html += `<button class="btn full-btn" onclick="openAddMemberModal('${gData.members.join(",")}')">+ Lid Toevoegen</button>`;
+            html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Groep Verwijderen', 'Zeker weten?', deleteGroup)">Groep Verwijderen</button>`;
         } else {
-             html += `<button class="btn btn-danger" style="width:100%" onclick="confirmAction('Verlaten', 'Wil je de groep verlaten?', leaveGroup)">Groep Verlaten</button>`;
+            html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Verlaten', 'Groep verlaten?', leaveGroup)">Groep Verlaten</button>`;
         }
         
-        html += `<button class="btn" style="width:100%; margin-top:10px; background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>`;
+        html += `<button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>`;
         content.innerHTML = html;
     }
+}
+
+// --- ADD MEMBER LOGIC ---
+async function openAddMemberModal(currentMembersStr) {
+    const currentMembers = currentMembersStr.split(",");
+    const list = document.getElementById('addMemberList');
+    document.getElementById('addMemberModal').style.display = 'flex';
+    list.innerHTML = "Laden...";
+
+    const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+    let content = "";
+    
+    friendsSnap.forEach(doc => {
+        if(!currentMembers.includes(doc.id)) {
+            content += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #334155;">
+                    <span>${doc.data().name}</span>
+                    <button class="btn btn-sm" onclick="addMemberToGroup('${doc.id}', '${doc.data().name}')">Toevoegen</button>
+                </div>`;
+        }
+    });
+
+    list.innerHTML = content || "<div style='text-align:center; color:gray'>Al je vrienden zitten er al in!</div>";
+}
+
+async function addMemberToGroup(newId, newName) {
+    await db.collection("groups").doc(activeChatId).update({
+        members: firebase.firestore.FieldValue.arrayUnion(newId)
+    });
+    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} toegevoegd.`);
+    closeModal('addMemberModal');
+    openChatSettings(); // Refresh settings
 }
 
 // --- ACTIONS ---
@@ -538,52 +585,50 @@ function confirmAction(title, text, actionFn) {
 async function updateGroupInfo() {
     const newName = document.getElementById('groupEditName').value;
     const imgPreview = document.getElementById('groupEditPreview').src;
-    // Check if image changed (basic check, can be improved)
     await db.collection("groups").doc(activeChatId).update({ name: newName, pic: imgPreview });
     notify("Aangepast", "Groepsinformatie bijgewerkt");
-    openChatSettings(); // Refresh modal
+    openChatSettings();
 }
 
 async function deleteGroup() {
     await db.collection("groups").doc(activeChatId).delete();
     location.reload();
 }
-
 async function removeFriend() {
     await db.collection("users").doc(user.uid).collection("friends").doc(activeChatId).delete();
     await db.collection("users").doc(activeChatId).collection("friends").doc(user.uid).delete();
     location.reload();
 }
-
 async function leaveGroup() {
-    const myName = document.getElementById('myName').innerText;
-    await sendSystemMessage(`${myName} heeft de groep verlaten.`);
-    await db.collection("groups").doc(activeChatId).update({
-        members: firebase.firestore.FieldValue.arrayRemove(user.uid)
-    });
+    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`);
+    await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) });
     location.reload();
 }
-
 async function transferOwner(newId, newName) {
-    const myName = document.getElementById('myName').innerText;
-    await sendSystemMessage(`${myName} heeft ${newName} beheerder gemaakt.`);
+    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`);
     await db.collection("groups").doc(activeChatId).update({ owner: newId });
     openChatSettings();
 }
 
-// --- UTILS ---
-function notify(title, body, icon) {
-    // 1. Toast
+// --- NOTIFICATIONS FIX ---
+function notify(title, body, icon, chatId, type) {
+    // 1. In-app Toast
     const box = document.getElementById('toast-container');
     const t = document.createElement('div');
     t.className = 'toast';
     t.innerHTML = `<img src="${icon || 'https://ui-avatars.com/api/?name=Msg'}" style="width:30px;height:30px;border-radius:50%"><div><b>${title}</b><br><small>${body}</small></div>`;
+    t.onclick = () => { if(chatId) openChat(chatId, title, icon, type); t.remove(); };
     box.appendChild(t);
     setTimeout(()=>t.remove(), 4000);
 
-    // 2. OS Notification (Alleen als hidden)
-    if(Notification.permission === "granted" && document.hidden) {
-        new Notification(title, { body, icon });
+    // 2. Desktop Notification
+    if(Notification.permission === "granted" && (document.hidden || chatId)) {
+        const n = new Notification(title, { body: body, icon: icon || "https://i.imgur.com/CeRZ8na.png" });
+        n.onclick = function() {
+            window.focus();
+            this.close();
+            if(chatId) openChat(chatId, title, icon, type);
+        };
     }
 }
 
