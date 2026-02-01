@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Game Paradise</title>
+    <title>Game Paradise - Admin</title>
     <link rel="icon" type="image/png" href="/icon/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -16,129 +16,89 @@
         }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar */
-        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
-        .logo { color: var(--accent); font-size: 20px; font-weight: bold; margin-bottom: 30px; text-align: center; }
-        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; transition: 0.2s; }
-        .nav-btn:hover { background: #1e293b; color: white; }
-        .nav-btn.active { background: var(--primary); color: white; }
+        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; }
+        .sidebar h2 { font-size: 1.2rem; margin-bottom: 20px; color: var(--accent); }
+        .sidebar button { background: transparent; border: 1px solid #1e293b; color: white; padding: 12px; text-align: left; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .sidebar button:hover { background: #1e293b; border-color: var(--accent); }
 
-        /* Main Area */
-        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
-        .section { display: none; animation: fadeIn 0.3s ease; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 25px; }
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 20px; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; background: #020617; border: 1px solid #1e293b; color: white; border-radius: 8px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-danger { background: var(--danger); }
         
-        /* Form & Preview */
-        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .success { background: var(--success); color: white; width: 100%; margin-bottom: 10px; }
-        .danger { background: var(--danger); color: white; }
-
-        /* De Preview Afbeelding */
-        .preview-container { text-align: center; margin-bottom: 15px; background: #020617; border-radius: 10px; padding: 10px; border: 1px dashed #334155; }
-        #editPreview { max-width: 100%; max-height: 150px; border-radius: 8px; display: none; margin: 0 auto; }
-        #previewPlaceholder { color: #475569; font-size: 14px; padding: 20px; }
-
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
-        .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; }
-
-        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .toast { background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #toast { position: fixed; bottom: 20px; right: 20px; background: var(--success); color: white; padding: 15px 25px; border-radius: 8px; display: none; z-index: 1000; }
     </style>
 </head>
 <body>
 
-<div id="toast-container"></div>
+<div id="toast">Melding!</div>
 
 <div class="sidebar">
-    <div class="logo">🎮 Admin Panel</div>
-    <button class="nav-btn active" id="btn-dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
-    <button class="nav-btn" id="btn-editor" onclick="showTab('editor')">✏️ Game Editor</button>
-    <button class="nav-btn" id="btn-games" onclick="showTab('games')">🎮 Games Lijst</button>
-    <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
-    <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
-    <button onclick="showTab('news')">📰 Nieuws Beheer</button>
-    
-    <div style="margin-top: auto;">
-        <button class="btn" style="width:100%; background:#1e293b; color:white; margin-bottom:10px" onclick="location.href='index.html'">🌐 Bekijk Site</button>
-        <button class="btn danger" style="width:100%" onclick="auth.signOut()">🚪 Uitloggen</button>
-    </div>
+    <h2>GP Admin</h2>
+    <button onclick="showTab('news-tab')">📰 Nieuws Beheer</button>
+    <button onclick="showTab('editor')">🎮 Game Toevoegen</button>
+    <button onclick="showTab('list')">📋 Game Lijst</button>
+    <button onclick="showTab('cats')">📁 Categorieën</button>
+    <button onclick="showTab('users')">👤 Gebruikers</button>
+    <button onclick="clearAllChat()" class="btn-danger">🗑 Wis Chat</button>
+    <button onclick="location.href='index.html'" style="margin-top:auto">🏠 Naar Site</button>
 </div>
 
 <div class="main">
-    <div id="dashboardSection" class="section" style="display:block">
+    <div id="news-tab" class="tab-content">
+        <h2>📰 Nieuws & Updates Publiceren</h2>
         <div class="card">
-            <h2>Welkom Admin</h2>
-            <p>Gebruik het linker menu om de website te beheren.</p>
-            <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">
-                Laden statistieken...
-            </div>
+            <label>Titel van het bericht</label>
+            <input type="text" id="newsTitle" placeholder="Bijv: Update v2.0 is live!">
+            <label>Inhoud</label>
+            <textarea id="newsText" placeholder="Wat wil je vertellen aan de gebruikers?" style="height: 150px;"></textarea>
+            <label>Link (optioneel)</label>
+            <input type="text" id="newsLink" placeholder="https://gameparadise.nl/update-info">
+            <button class="btn" onclick="publishNews()">Update Publiceren</button>
         </div>
     </div>
 
-    <div id="editorSection" class="section">
+    <div id="editor" class="tab-content">
+        <h2 id="editorTitle">Nieuwe Game</h2>
         <div class="card">
-            <h3 id="editorTitle">Nieuwe Game Toevoegen</h3>
-            
-            <div class="preview-container">
-                <div id="previewPlaceholder">Afbeelding preview verschijnt hier...</div>
-                <img id="editPreview" src="" alt="Preview">
-            </div>
-
-            <input id="editId" placeholder="Uniek ID (bijv: subway-surfers)">
-            <input id="editTitle" placeholder="Titel van de game">
-            <input id="editImg" placeholder="Afbeelding URL" oninput="updatePreview(this.value)">
-            <input id="editLink" value="games/" placeholder="Link naar game map">
+            <input type="hidden" id="editId">
+            <input type="text" id="editTitle" placeholder="Game Titel">
+            <input type="text" id="editImg" placeholder="Afbeelding URL">
+            <input type="text" id="editLink" placeholder="Game Link (URL)">
             <select id="editCat"></select>
-            
-            <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;">
-                <input type="checkbox" id="editHasSave" style="width:auto; margin:0">
-                <span>Slaat voortgang op (💾 icoon tonen)</span>
-            </label>
-<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
-    <input type="checkbox" id="editHasInfo" style="width:auto; margin:0">
-    <span>Heeft extra info (❓ icoon tonen)</span>
-</label>
-<input id="editInfoText" placeholder="Informatie tekst voor de game">
-            <button class="btn success" onclick="saveGame()">💾 Opslaan</button>
-            <button class="btn" style="width:100%; background:transparent; color:#94a3b8" onclick="resetEditor()">Schoonmaken</button>
+            <div style="margin: 15px 0;">
+                <label><input type="checkbox" id="editHasSave"> Slaat voortgang op (💾)</label><br><br>
+                <label><input type="checkbox" id="editHasInfo"> Heeft info-knop (❓)</label>
+            </div>
+            <textarea id="editInfoText" placeholder="Info tekst voor de ❓ knop..."></textarea>
+            <button class="btn" onclick="saveGame()">Opslaan</button>
+            <button class="btn btn-danger" onclick="resetEditor(); showTab('list')">Annuleren</button>
         </div>
     </div>
 
-    <div id="gamesSection" class="section">
+    <div id="list" class="tab-content">
+        <h2>Alle Games</h2>
+        <div id="gamesContainer"></div>
+    </div>
+
+    <div id="cats" class="tab-content">
+        <h2>Categorieën</h2>
         <div class="card">
-            <table>
-                <thead><tr><th>Beeld</th><th>Titel</th><th>Save</th><th>Acties</th></tr></thead>
-                <tbody id="gamesList"></tbody>
-            </table>
+            <input type="text" id="catId" placeholder="ID (bijv. actie)">
+            <input type="text" id="catName" placeholder="Naam (bijv. Actie & Avontuur)">
+            <button class="btn" onclick="addCategory()">Toevoegen</button>
         </div>
+        <div id="catsContainer"></div>
     </div>
 
-    <div id="categoriesSection" class="section">
-        <div class="card">
-            <input id="catId" placeholder="ID (bijv: actie)"><input id="catName" placeholder="Naam (bijv: Actie Games)">
-            <button class="btn success" onclick="addCategory()">Toevoegen</button>
-        </div>
-        <div id="categoriesList"></div>
+    <div id="users" class="tab-content">
+        <h2>Gebruikers</h2>
+        <div id="usersContainer"></div>
     </div>
-
-    <div id="chatSection" class="section">
-        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Hele Chat</button></div>
-        <div id="adminChatList"></div>
-    </div>
-
-  <div id="news" class="tab-content">
-    <h2>📰 Nieuws Update</h2>
-    <div class="card">
-        <p>Dit bericht verschijnt bovenaan de chat in de index.</p>
-        <input type="text" id="newsTitle" placeholder="Titel (bijv. Update v1.2)">
-        <textarea id="newsText" placeholder="Inhoud van het bericht..." style="width:100%; height:80px; background:#020617; color:white; border:1px solid #1e293b; border-radius:8px; padding:10px; margin:10px 0;"></textarea>
-        <input type="text" id="newsLink" placeholder="Link naar meer info (optioneel)">
-        <button class="btn" onclick="updateNews()" style="width:100%">Update Nieuws Publiceren</button>
-    </div>
-</div>
 </div>
 
 <script>
@@ -152,171 +112,120 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
-const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
-
-auth.onAuthStateChanged(user => {
-    if (user && ADMINS.includes(user.email.toLowerCase())) {
-        init();
-    } else {
-        alert("Geen toegang! Log in met een admin account.");
-        location.href = "index.html";
-    }
-});
 
 function notify(msg) {
-    const t = document.createElement('div'); t.className = 'toast'; t.innerText = msg;
-    document.getElementById('toast-container').appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
 }
 
 function showTab(id) {
-    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id + 'Section').style.display = 'block';
-    document.getElementById('btn-' + id).classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id === 'news-tab') loadCurrentNews();
 }
 
-function updatePreview(url) {
-    const img = document.getElementById('editPreview');
-    const placeholder = document.getElementById('previewPlaceholder');
-    if (url.length > 5) {
-        img.src = url;
-        img.style.display = 'block';
-        placeholder.style.display = 'none';
-    } else {
-        img.style.display = 'none';
-        placeholder.style.display = 'block';
+// NIEUWS FUNCTIES
+async function publishNews() {
+    const title = document.getElementById('newsTitle').value;
+    const text = document.getElementById('newsText').value;
+    const link = document.getElementById('newsLink').value;
+
+    await db.collection("settings").doc("news").set({
+        title, text, link, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    notify("✅ Nieuwsbericht geplaatst!");
+}
+
+async function loadCurrentNews() {
+    const doc = await db.collection("settings").doc("news").get();
+    if(doc.exists) {
+        const d = doc.data();
+        document.getElementById('newsTitle').value = d.title || "";
+        document.getElementById('newsText').value = d.text || "";
+        document.getElementById('newsLink').value = d.link || "";
     }
 }
 
-function init() {
-    // Games laden
-    db.collection("games").onSnapshot(s => {
-        const list = document.getElementById('gamesList');
-        list.innerHTML = "";
-        let count = 0;
-        s.forEach(doc => {
-            count++;
-            const g = doc.data();
-            list.innerHTML += `<tr>
-                <td><img src="${g.image}" class="thumb"></td>
-                <td><b>${g.title}</b></td>
-                <td>${g.hasSave ? '💾' : '-'}</td>
-                <td>
-                    <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
-                    <button class="btn danger" onclick="deleteItem('games','${doc.id}')">🗑️</button>
-                </td>
-            </tr>`;
-        });
-        document.getElementById('stats').innerText = `Totaal games: ${count}`;
-    });
-
-    // Categorieën
-    db.collection("categories").onSnapshot(s => {
-        const list = document.getElementById('categoriesList');
-        const select = document.getElementById('editCat');
-        list.innerHTML = ""; select.innerHTML = "";
-        s.forEach(doc => {
-            list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                <span>${doc.data().name}</span>
-                <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button>
-            </div>`;
-            select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
-        });
-    });
-
-    // Chat
-    db.collection("chats").orderBy("timestamp", "desc").limit(30).onSnapshot(s => {
-        const list = document.getElementById('adminChatList');
-        list.innerHTML = "";
-        s.forEach(doc => {
-            list.innerHTML += `<div class="card">
-                <b>${doc.data().user}:</b> ${doc.data().text} 
-                <button class="btn danger" style="float:right; padding:5px" onclick="deleteItem('chats','${doc.id}')">X</button>
-            </div>`;
-        });
-    });
-}
-
-function saveGame() {
-    const id = document.getElementById('editId').value;
-    if(!id) return notify("ID is verplicht!");
-    
+// GAME FUNCTIES
+async function saveGame() {
+    const id = document.getElementById('editId').value || document.getElementById('editTitle').value.toLowerCase().replace(/\s/g, '-');
     const data = {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
         category: document.getElementById('editCat').value,
         hasSave: document.getElementById('editHasSave').checked,
-        hasInfo: document.getElementById('editHasInfo').checked, // Nieuw
-        infoText: document.getElementById('editInfoText').value // Nieuw
+        hasInfo: document.getElementById('editHasInfo').checked,
+        infoText: document.getElementById('editInfoText').value
     };
-    
-    db.collection("games").doc(id).set(data, {merge:true}).then(() => {
-        notify("Game succesvol opgeslagen!");
-        resetEditor();
-    });
+    await db.collection("games").doc(id).set(data);
+    notify("Game opgeslagen!");
+    resetEditor();
+    showTab('list');
 }
+
+function resetEditor() {
+    document.getElementById('editId').value = "";
+    document.getElementById('editTitle').value = "";
+    document.getElementById('editImg').value = "";
+    document.getElementById('editLink').value = "";
+    document.getElementById('editHasSave').checked = false;
+    document.getElementById('editHasInfo').checked = false;
+    document.getElementById('editInfoText').value = "";
+}
+
+// Laden van data
+db.collection("categories").onSnapshot(snap => {
+    const select = document.getElementById('editCat');
+    const container = document.getElementById('catsContainer');
+    select.innerHTML = ""; container.innerHTML = "";
+    snap.forEach(doc => {
+        select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+        container.innerHTML += `<div class="card">${doc.data().name} <button class="btn btn-danger" onclick="deleteItem('categories','${doc.id}')">X</button></div>`;
+    });
+});
+
+db.collection("games").onSnapshot(snap => {
+    const container = document.getElementById('gamesContainer');
+    container.innerHTML = "";
+    snap.forEach(doc => {
+        const g = doc.data();
+        container.innerHTML += `<div class="card"><b>${g.title}</b> (${g.category}) 
+            <button class="btn" onclick="editGame('${doc.id}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteItem('games','${doc.id}')">X</button></div>`;
+    });
+});
 
 function editGame(id) {
     db.collection("games").doc(id).get().then(doc => {
         const g = doc.data();
         document.getElementById('editId').value = id;
-        document.getElementById('editId').disabled = true;
         document.getElementById('editTitle').value = g.title;
         document.getElementById('editImg').value = g.image;
         document.getElementById('editLink').value = g.link;
         document.getElementById('editCat').value = g.category;
-        document.getElementById('editHasSave').checked = g.hasSave || false;
-        document.getElementById('editHasInfo').checked = g.hasInfo || false; // Nieuw
-        document.getElementById('editInfoText').value = g.infoText || ""; // Nieuw
-        updatePreview(g.image);
+        document.getElementById('editHasSave').checked = g.hasSave;
+        document.getElementById('editHasInfo').checked = g.hasInfo;
+        document.getElementById('editInfoText').value = g.infoText || "";
         showTab('editor');
     });
 }
 
-function resetEditor() {
-    document.getElementById('editId').value = "";
-    document.getElementById('editId').disabled = false;
-    document.getElementById('editTitle').value = "";
-    document.getElementById('editImg').value = "";
-    document.getElementById('editHasSave').checked = false;
-    document.getElementById('editHasInfo').checked = false; // Nieuw
-    document.getElementById('editInfoText').value = ""; // Nieuw
-    updatePreview("");
-}
-
-function addCategory() {
-    const id = document.getElementById('catId').value;
-    const name = document.getElementById('catName').value;
-    if(id && name) db.collection("categories").doc(id).set({name});
-}
-
 function deleteItem(col, id) {
-    if(confirm("Zeker weten?")) db.collection(col).doc(id).delete().then(() => notify("Item verwijderd."));
+    if(confirm("Zeker weten?")) db.collection(col).doc(id).delete();
 }
 
 async function clearAllChat() {
-    if(confirm("Hele chat wissen? Dit kan niet ongedaan worden gemaakt!")) {
+    if(confirm("Hele chat wissen?")) {
         const snap = await db.collection("chats").get();
         snap.forEach(doc => doc.ref.delete());
-        notify("Chat leeggemaakt.");
+        notify("Chat gewist.");
     }
-  function updateNews() {
-    const title = document.getElementById('newsTitle').value;
-    const text = document.getElementById('newsText').value;
-    const link = document.getElementById('newsLink').value;
-
-    db.collection("settings").doc("news").set({
-        title: title,
-        text: text,
-        link: link,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        notify("✅ Nieuws geüpdatet!");
-    });
 }
+
+showTab('news-tab');
 </script>
 </body>
 </html>
