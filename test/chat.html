@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Game Paradise - Chat</title>
+    <link rel="icon" type="image/png" href="/icon/favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -48,7 +49,24 @@
         .tab-dot { position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: none; }
 
         .list-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        /* Zorgt dat de footer altijd onderaan de sidebar staat */
+        .sidebar-footer {
+            padding: 15px;
+            border-top: 1px solid #1e293b;
+            background: var(--sidebar-bg);
+            margin-top: auto; /* Dit duwt de div naar de bodem */
+        }
         
+        /* Extra styling voor de secundaire knop look */
+        .btn-secondary {
+            background: #334155;
+            color: white;
+            transition: 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
         .item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; transition: 0.2s; }
         .item:hover { background: #0f172a; }
         .item.active-chat { background: #1e3a8a !important; border-left: 4px solid #60a5fa; }
@@ -138,6 +156,14 @@
             <div class="tab" onclick="switchTab('requests', this)">Verzoeken <div class="tab-dot" id="reqDot"></div></div>
         </div>
         <div id="sidebarList" class="list-container"></div>
+    </div>
+    <div id="sidebarList" class="list-container"></div>
+
+        <div class="sidebar-footer">
+            <a href="index.html" class="btn btn-secondary" style="width: 100%; text-decoration: none;">
+                ← Terug naar Games
+            </a>
+        </div>
     </div>
 
     <div class="main-chat">
