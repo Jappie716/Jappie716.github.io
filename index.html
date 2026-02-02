@@ -106,8 +106,7 @@
   <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
   <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
   <div id="categoryList"></div>
-  <div class="category-btn" onclick="location.href='chat.html'" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 GP Chat</div>
-</div>
+  <div class="category-btn" onclick="checkChatAccess()" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 GP Chat</div>
 
 <div class="main">
     <div class="topbar">
@@ -368,6 +367,19 @@ function renderGames() {
 document.getElementById("searchInput").oninput = renderGames;
 loadGames();
 loadCategories();
+
+    // DIT IS STAP 2: DE FUNCTIE PRECIES HIER PLAKKEN
+    function checkChatAccess() {
+        if (typeof user === 'undefined' || !user) {
+            notify("❌ Je moet ingelogd zijn om te chatten!");
+            setTimeout(() => {
+                document.getElementById('loginModal').style.display = 'flex';
+            }, 1000);
+        } else {
+            location.href = 'chat.html';
+        }
+    }
+
 </script>
 </body>
 </html>
