@@ -144,10 +144,25 @@
 <div id="registerModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
         <h2 style="color: var(--accent);">Account Aanvragen</h2>
-        <div class="elfsight-app-7c5ef237-dd88-40b6-b144-0fa9040e8653" data-elfsight-app-lazy></div>
+        
+        <iframe 
+            data-tally-src="https://tally.so/embed/gDGQPM?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
+            loading="lazy" 
+            width="100%" 
+            height="500" 
+            frameborder="0" 
+            marginheight="0" 
+            marginwidth="0" 
+            title="Account aanvraag">
+        </iframe>
+
         <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
     </div>
 </div>
+
+<script>
+    var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}
+</script>
 
 <div id="infoModal" class="modal">
     <div class="modal-box">
