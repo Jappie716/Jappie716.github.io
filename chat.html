@@ -623,8 +623,7 @@ async function openChat(id, name, pic, type) {
         ref = docRef.collection("messages");
     }
 
-    // 1. Markeer chat als gelezen door MIJ (update lastRead_{myUid})
-    markChatRead(docRef);
+
 
     // 2. Luister naar metadata voor TYPEN en GELEZEN status van de ander
     typingUnsub = docRef.onSnapshot(doc => {
@@ -642,16 +641,6 @@ async function openChat(id, name, pic, type) {
                 ind.classList.add('active');
             } else {
                 ind.classList.remove('active');
-            }
-
-            // Gelezen logica (alleen privé voor nu)
-            if(chatType === 'private') {
-                const otherUid = id;
-                // Haal de tijd op dat de ander voor het laatst keek
-                const t = data[`lastRead_${otherUid}`];
-                lastReadTime = t ? t.toMillis() : 0;
-                // Re-render berichtjes om vinkjes te updaten
-                renderMessagesFromCache(); 
             }
         }
     });
@@ -710,19 +699,10 @@ function renderMessagesFromCache() {
             deleteBtn = `<div class="delete-btn" title="Opties" onclick="openDeleteMenu('${doc.id}')">✖</div>`;
         }
 
-        // Footer bouwen (Tijd + Vinkjes)
+       // Footer bouwen (Alleen tijd)
         let footerHtml = "";
         if(m.type !== 'system') {
-            let readIcon = "";
-            // Alleen vinkjes bij eigen berichten in privé chat
-            if(chatType === 'private' && m.uid === user.uid) {
-                // Als bericht ouder is dan lastReadTime van ander -> Blauw (Gelezen)
-                // Anders -> Grijs (Verzonden)
-                const isRead = msgTimeMillis < lastReadTime;
-                // ✓✓ symbool. Kleur blauw via class 'read'
-                readIcon = `<span class="read-status ${isRead?'read':''}" style="display:inline-block">✓✓</span>`;
-            }
-            footerHtml = `<div class="msg-footer"><span class="msg-time">${timeStr}</span>${readIcon}</div>`;
+            footerHtml = `<div class="msg-footer"><span class="msg-time">${timeStr}</span></div>`;
         }
 
         box.innerHTML += `<div class="msg ${className}">${deleteBtn}${content}${footerHtml}</div>`;
