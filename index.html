@@ -106,9 +106,10 @@
   <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
   <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
   <div id="categoryList"></div>
-  
-  <div class="category-btn" onclick="checkChatAccess()" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 GP Chat</div>
-</div> <div class="main">
+  <div class="category-btn" onclick="location.href='chat.html'" style="margin-top:auto; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">💬 GP Chat</div>
+</div>
+
+<div class="main">
     <div class="topbar">
         <h2 id="sectionTitle" class="section-title">Alle Games</h2>
         <div>
@@ -117,6 +118,18 @@
         </div>
     </div>
     <div id="gameGrid" class="game-grid"></div>
+</div>
+
+<div id="loginModal" class="modal">
+    <div class="modal-box">
+        <h2>Inloggen</h2>
+        <input id="emailInput" type="email" placeholder="E-mail">
+        <input id="passwordInput" type="password" placeholder="Wachtwoord">
+        <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
+        <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
+        <button id="forgotPasswordSubmit" style="background: #334155; color: white;">Wachtwoord vergeten</button>
+        <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Annuleren</button>
+    </div>
 </div>
 
 <div id="favModal" class="modal">
@@ -355,19 +368,6 @@ function renderGames() {
 document.getElementById("searchInput").oninput = renderGames;
 loadGames();
 loadCategories();
-
-    // DIT IS STAP 2: DE FUNCTIE PRECIES HIER PLAKKEN
-    function checkChatAccess() {
-        if (typeof user === 'undefined' || !user) {
-            notify("❌ Je moet ingelogd zijn om te chatten!");
-            setTimeout(() => {
-                document.getElementById('loginModal').style.display = 'flex';
-            }, 1000);
-        } else {
-            location.href = 'chat.html';
-        }
-    }
-
 </script>
 </body>
 </html>
