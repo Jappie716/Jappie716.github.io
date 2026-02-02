@@ -24,6 +24,10 @@
             display: flex; overflow: hidden; 
         }
 
+        /* LINKS */
+        a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
+        a:hover { border-bottom: 1px solid var(--accent); }
+
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 999999; pointer-events: none; }
         .toast { 
             background: var(--card-bg); color: white; padding: 15px 20px; 
@@ -49,8 +53,6 @@
         .tab-dot { position: absolute; top: 8px; right: 10px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: none; }
 
         .list-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        
-        /* Sidebar Footer (Home knop) */
         .sidebar-footer { padding: 15px; border-top: 1px solid #1e293b; background: var(--sidebar-bg); }
 
         .item { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #0f172a; position: relative; transition: 0.2s; }
@@ -61,12 +63,11 @@
         .item-info h4 { margin: 0; font-size: 14px; color: #e2e8f0; }
         .item-info p { margin: 0; font-size: 11px; color: gray; }
         
-        /* AANGEPAST: Online Dot positie */
         .status-wrapper { position: relative; margin-right: 12px; width: 40px; height: 40px; }
         .status-wrapper img { margin-right: 0; width: 100%; height: 100%; }
         .status-dot {
             width: 12px; height: 12px; border-radius: 50%; 
-            position: absolute; bottom: 0; right: 0; /* Rechts onderin op de foto */
+            position: absolute; bottom: 0; right: 0;
             border: 2px solid var(--sidebar-bg);
             background-color: var(--offline);
             z-index: 5;
@@ -90,7 +91,14 @@
         .msg .sender { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 2px; display: block; }
         .msg-time { font-size: 9px; color: #64748b; align-self: flex-end; margin-top: 4px; }
 
-        /* Delete knop verbeterd */
+        /* DATUM STREEPJES */
+        .date-divider {
+            display: flex; align-items: center; justify-content: center; margin: 15px 0;
+            font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .date-divider span { background: #1e293b; padding: 4px 12px; border-radius: 12px; border: 1px solid #334155; }
+
+        /* DELETE KNOP */
         .delete-btn { 
             position: absolute; top: -8px; right: -8px; 
             background: var(--card-bg); border: 1px solid var(--danger); 
@@ -123,9 +131,9 @@
         .member-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .full-btn { width: 100%; margin-top: 5px; }
 
-        /* AANGEPAST: Hogere z-index voor lid toevoegen modal zodat hij BOVEN settings komt */
+        /* Z-INDEX STAPELING */
         #addMemberModal { z-index: 2000; }
-        #confirmModal { z-index: 3000; }
+        #deleteOptionsModal { z-index: 3000; }
     </style>
 </head>
 <body>
@@ -190,7 +198,18 @@
     </div>
 </div>
 
-<div id="confirmModal" class="modal">
+<div id="deleteOptionsModal" class="modal">
+    <div class="modal-box" style="text-align:center;">
+        <h3>Bericht Opties</h3>
+        <p style="color:gray; font-size:13px; margin-bottom:20px;">Wat wil je doen met dit bericht?</p>
+        
+        <button class="btn btn-danger" onclick="confirmDeleteMessage()" style="width:100%; margin-bottom:10px;">🗑 Verwijder voor iedereen</button>
+        <button class="btn" style="background:#334155; width:100%;" onclick="closeModal('deleteOptionsModal')">Annuleren</button>
+        <p id="deleteError" style="color:var(--danger); font-size:11px; margin-top:10px; display:none;">Fout: Geen rechten (Check Firebase Rules)</p>
+    </div>
+</div>
+
+<div id="confirmModal" class="modal" style="z-index: 3000;">
     <div class="modal-box" style="text-align:center;">
         <h3 id="confirmTitle">Bevestigen</h3>
         <p id="confirmText" style="color:gray; font-size:14px;"></p>
@@ -255,6 +274,8 @@ let activeListeners = new Set();
 let msgUnsub = null;
 let originalTitle = document.title;
 let titleInterval = null;
+let ignoreInitialGroups = true; // Fix voor reload meldingen
+let messageToDeleteId = null;   // Variabele voor delete logica
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
@@ -307,6 +328,8 @@ function initApp() {
         }
     });
     subscribeToChats();
+    // Na 2 seconden mag je meldingen krijgen voor nieuwe groepen (voorkomt reload spam)
+    setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
 
 async function subscribeToChats() {
@@ -317,7 +340,11 @@ async function subscribeToChats() {
             if (change.type === "added") {
                 const d = change.doc.data();
                 setupListener(change.doc.id, d.name, d.pic, 'group', db.collection("groups").doc(change.doc.id).collection("messages"));
-                notify("Nieuwe Groep", `Toegevoegd aan ${d.name}`, d.pic, change.doc.id, 'group');
+                
+                // Fix voor reload spam:
+                if(!ignoreInitialGroups) {
+                    notify("Nieuwe Groep", `Toegevoegd aan ${d.name}`, d.pic, change.doc.id, 'group');
+                }
             } else if (change.type === "removed") {
                 chatDataMap.delete(change.doc.id);
                 if(activeChatId === change.doc.id) {
@@ -386,12 +413,10 @@ function setupListener(id, name, pic, type, ref) {
         
         cData.timestamp = time;
         
-        // --- BERICHT MELDING LOGICA ---
         if (m.uid !== user.uid) {
-            // Melding als chat NIET actief is (behalve Global)
             if (activeChatId !== id) {
                 cData.unread = true;
-                if(type !== 'global') {
+                if(type !== 'global' && !ignoreInitialGroups) {
                     notify(name, m.type==='system'?m.text:(m.text || "Foto"), pic, id, type);
                     flashTitle("Nieuw bericht!");
                     playNotificationSound();
@@ -413,16 +438,14 @@ function flashTitle(msg) {
         document.title = state ? originalTitle : `🔔 ${msg}`;
         state = !state;
     }, 1000);
-    // Stop na 5 sec of bij klik
     setTimeout(() => { clearInterval(titleInterval); document.title = originalTitle; }, 5000);
     window.onclick = () => { clearInterval(titleInterval); document.title = originalTitle; };
 }
 
 function playNotificationSound() {
-    // Simpele piep of link naar geluid
     const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
     audio.volume = 0.5;
-    audio.play().catch(e => {}); // Autoplay block negeren
+    audio.play().catch(e => {}); 
 }
 
 function renderSidebar() {
@@ -444,7 +467,6 @@ function renderSidebar() {
             item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
             item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
             
-            // Aangepaste HTML voor status bolletje
             let avatarHtml = `<div class="status-wrapper">
                     <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
                     ${c.type === 'private' ? `<div class="status-dot ${c.online?'online':''}"></div>` : ''}
@@ -496,11 +518,32 @@ function renderRequests(list) {
     });
 }
 
+// LINKIFY FUNCTIE
+function linkify(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+        return '<a href="' + url + '" target="_blank">' + url + '</a>';
+    });
+}
+
+// DATUM FORMATTER
+function getFormattedDate(date) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return "VANDAAG";
+    if (date.toDateString() === yesterday.toDateString()) return "GISTEREN";
+    
+    // Anders datum formaat bijv "5 januari"
+    const options = { day: 'numeric', month: 'long' };
+    return date.toLocaleDateString('nl-NL', options);
+}
+
 function openChat(id, name, pic, type) {
     activeChatId = id; chatType = type;
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
     
-    // Stop knipperen titel bij openen
     if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
 
     document.getElementById('activeChatName').innerText = name;
@@ -530,16 +573,25 @@ function openChat(id, name, pic, type) {
     msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
         const box = document.getElementById('chatMessages');
         box.innerHTML = "";
+        let lastDateStr = "";
+
         snap.forEach(doc => {
             const m = doc.data();
             let content = "";
             let className = m.uid === user.uid ? 'sent' : 'received';
 
-            // Tijdstip berekenen
+            // Tijd en Datum logica
             let timeStr = "";
             if(m.timestamp) {
                 const date = m.timestamp.toDate();
                 timeStr = date.getHours().toString().padStart(2,'0') + ":" + date.getMinutes().toString().padStart(2,'0');
+                
+                // Datum Divider toevoegen
+                const dateHeader = getFormattedDate(date);
+                if(dateHeader !== lastDateStr) {
+                    box.innerHTML += `<div class="date-divider"><span>${dateHeader}</span></div>`;
+                    lastDateStr = dateHeader;
+                }
             }
 
             if (m.type === 'system') {
@@ -548,16 +600,16 @@ function openChat(id, name, pic, type) {
             } else if (m.image) {
                 content = `<span class="sender">${m.user}</span><img src="${m.image}" onclick="window.open(this.src)">`;
             } else {
-                content = `<span class="sender">${m.user}</span>${m.text}`;
+                // Linkify de tekst hier
+                content = `<span class="sender">${m.user}</span>${linkify(m.text)}`;
             }
             
-            // Delete knop
+            // Delete knop opent nu MENU
             let deleteBtn = "";
             if (m.uid === user.uid && m.type !== 'system') {
-                deleteBtn = `<div class="delete-btn" title="Verwijder" onclick="deleteMessage('${doc.id}')">✖</div>`;
+                deleteBtn = `<div class="delete-btn" title="Opties" onclick="openDeleteMenu('${doc.id}')">✖</div>`;
             }
 
-            // Tijd toevoegen
             if(m.type !== 'system') {
                 content += `<span class="msg-time">${timeStr}</span>`;
             }
@@ -613,18 +665,29 @@ async function pushMsg(data) {
     else await db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages").add(payload);
 }
 
-// VERWIJDER BERICHT FIX
-async function deleteMessage(mid) {
-    if(!confirm("Bericht verwijderen?")) return;
+// --- DELETE FUNCTIONALITEIT (MENU) ---
+function openDeleteMenu(mid) {
+    messageToDeleteId = mid;
+    document.getElementById('deleteError').style.display = 'none'; // Reset error
+    document.getElementById('deleteOptionsModal').style.display = 'flex';
+}
+
+async function confirmDeleteMessage() {
+    if(!messageToDeleteId) return;
+    
     let ref;
     if(chatType === 'global') ref = db.collection("chats");
     else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
     
     try {
-        await ref.doc(mid).delete();
+        await ref.doc(messageToDeleteId).delete();
+        closeModal('deleteOptionsModal');
     } catch(e) {
-        alert("Kon bericht niet verwijderen: " + e.message);
+        console.error(e);
+        // Toon error in het menu zelf
+        document.getElementById('deleteError').style.display = 'block';
+        document.getElementById('deleteError').innerText = "Fout: " + e.message;
     }
 }
 
