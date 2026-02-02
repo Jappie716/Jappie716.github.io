@@ -127,6 +127,7 @@
         <input id="passwordInput" type="password" placeholder="Wachtwoord">
         <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
         <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
+        <button id="forgotPasswordSubmit" style="background: #334155; color: white;">Wachtwoord vergeten</button>
         <button onclick="document.getElementById('loginModal').style.display='none'" style="background:transparent; color: var(--text-dim);">Annuleren</button>
     </div>
 </div>
@@ -163,7 +164,24 @@
 <script>
     var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}
 </script>
-
+    
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto;">
+        <h2 style="color: var(--accent);">Wachtwoord Vergeten</h2>
+        <iframe 
+            data-tally-src="https://tally.so/embed/gDGQPM?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
+            loading="lazy" 
+            width="100%" 
+            height="424" 
+            frameborder="0" 
+            marginheight="0" 
+            marginwidth="0" 
+            title="Wachtwoord vergeten">
+        </iframe>
+        <button onclick="document.getElementById('forgotPasswordModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
+    </div>
+</div>
+    
 <div id="infoModal" class="modal">
     <div class="modal-box">
         <h2 id="infoTitle" style="color: var(--accent);">Game Info</h2>
@@ -239,10 +257,18 @@ document.getElementById("loginSubmit").onclick = () => {
     .catch(() => notify("❌ Fout: Controleer je gegevens", "danger"));
 };
 
+// ... bestaande code ...
 document.getElementById("registerSubmit").onclick = () => {
     document.getElementById("loginModal").style.display = "none";
     document.getElementById("registerModal").style.display = "flex";
 };
+
+// PLAK HIER NUMMER 3:
+document.getElementById("forgotPasswordSubmit").onclick = () => {
+    document.getElementById("loginModal").style.display = "none";
+    document.getElementById("forgotPasswordModal").style.display = "flex";
+};
+// ... rest van de code ...
 
 // NIEUW: Functie om info modal te openen
 function showInfo(id, e) {
