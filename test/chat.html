@@ -81,22 +81,16 @@
         .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
         
-        /* AANGEPAST: CSS voor word-wrap en white-space */
         .msg { 
             max-width: 75%; 
             padding: 10px 14px; 
             border-radius: 12px; 
             font-size: 14px; 
             position: relative; 
-            
-            /* Zorgt dat lange woorden breken */
             word-wrap: break-word;
             word-break: break-word;
             overflow-wrap: break-word;
-            
-            /* Zorgt dat enters (nieuwe regels) zichtbaar zijn */
             white-space: pre-wrap;
-            
             display: flex; 
             flex-direction: column;
         }
@@ -111,8 +105,6 @@
             display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px;
         }
         .msg-time { font-size: 9px; color: #64748b; }
-        .read-status { font-size: 12px; color: var(--accent); display: none; }
-        .read-status.read { display: inline-block; }
 
         .date-divider {
             display: flex; align-items: center; justify-content: center; margin: 15px 0;
@@ -136,11 +128,15 @@
 
         .input-row { display: flex; gap: 10px; align-items: flex-end; width: 100%; }
         
-        /* Textarea ipv Input */
+        /* AANGEPAST: Textarea styling voor auto-scaling */
         .chat-input textarea { 
             flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; 
             background: var(--bg); color: white; outline: none; 
-            resize: none; font-family: inherit; height: 44px; overflow-y: hidden;
+            resize: none; font-family: inherit; 
+            height: 44px; 
+            min-height: 44px; 
+            max-height: 150px; /* Maximale hoogte */
+            overflow-y: auto;
             line-height: 1.4;
         }
         
@@ -162,8 +158,13 @@
         .member-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .full-btn { width: 100%; margin-top: 5px; }
 
-        #addMemberModal { z-index: 2000; }
-        #deleteOptionsModal { z-index: 3000; }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -214,10 +215,12 @@
             </div>
             <img id="settingsBtn" src="https://flaticons.net/icon.php?slug_category=mobile-application&slug_icon=settings-01&icon_size=256&icon_color=FFFFFF&icon_flip=&icon_rotate=100" class="settings-icon" style="display:none;" onclick="openChatSettings()">
         </div>
+        
         <div class="chat-messages" id="chatMessages">
             <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
         </div>
-        
+        <div id="loadingOld">Berichten laden...</div>
+
         <div class="chat-input" id="inputArea" style="display:none">
             <div id="typingIndicator" class="typing-indicator">Iemand is aan het typen...</div>
             <div class="input-row">
@@ -309,13 +312,13 @@ let currentBase64 = null;
 let chatDataMap = new Map();
 let activeListeners = new Set();
 let msgUnsub = null;
-let typingUnsub = null; // Voor typ-status listener
+let typingUnsub = null;
 let originalTitle = document.title;
 let titleInterval = null;
 let ignoreInitialGroups = true;
 let messageToDeleteId = null;
-let typingTimeout = null; // Voor debounce
-let lastReadTime = 0; // Tijdstip waarop ander voor het laatst keek
+let typingTimeout = null;
+let msgLimit = 50; // AANTAL BERICHTEN OM TE LADEN
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
@@ -329,7 +332,7 @@ function startPresenceSystem() {
         db.collection("users").doc(user.uid).update({ 
             status: 'offline', lastSeen: firebase.firestore.FieldValue.serverTimestamp()
         });
-        if(activeChatId) updateTyping(false); // Stop typen bij afsluiten
+        if(activeChatId) updateTyping(false);
     });
 }
 
@@ -383,8 +386,9 @@ async function subscribeToChats() {
             } else if (change.type === "removed") {
                 chatDataMap.delete(change.doc.id);
                 if(activeChatId === change.doc.id) {
-                    document.getElementById('chatMessages').innerHTML = "<div style='text-align:center; margin-top:50px'>Groep verwijderd</div>";
+                    document.getElementById('chatMessages').innerHTML = "<div style='text-align:center; margin-top:50px'>Groep verwijderd of verlaten</div>";
                     document.getElementById('inputArea').style.display = 'none';
+                    activeChatId = null;
                 }
                 renderSidebar();
             }
@@ -396,7 +400,6 @@ async function subscribeToChats() {
         const chatId = [user.uid, doc.id].sort().join("_");
         setupListener(doc.id, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
         
-        // Luister naar updates van vrienden (online status + FOTO update)
         db.collection("users").doc(doc.id).onSnapshot(s => {
             const data = s.data();
             const now = Date.now();
@@ -406,7 +409,7 @@ async function subscribeToChats() {
             if(chatDataMap.has(doc.id)) {
                 const c = chatDataMap.get(doc.id);
                 c.online = isOnline;
-                c.pic = data.pic || c.pic; // LIVE FOTO UPDATE
+                c.pic = data.pic || c.pic;
                 chatDataMap.set(doc.id, c);
                 renderSidebar();
                 
@@ -414,7 +417,7 @@ async function subscribeToChats() {
                     document.getElementById('activeStatus').style.display = 'block';
                     document.getElementById('activeStatus').innerText = isOnline ? 'Online' : 'Offline';
                     document.getElementById('activeStatus').style.color = isOnline ? 'var(--online)' : 'gray';
-                    document.getElementById('activeChatImg').src = c.pic; // Update header img ook direct
+                    document.getElementById('activeChatImg').src = c.pic;
                 }
             }
         });
@@ -546,7 +549,6 @@ function renderRequests(list) {
         if(snap.empty) list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
         snap.forEach(doc => {
             const d = doc.data();
-            // AANGEPAST: Afwijzen knop toegevoegd
             list.innerHTML += `
                 <div class="item">
                     <img src="${d.pic}">
@@ -578,10 +580,10 @@ function getFormattedDate(date) {
     return date.toLocaleDateString('nl-NL', options);
 }
 
-// --- OPEN CHAT LOGICA & GELEZEN STATUS ---
+// --- OPEN CHAT LOGICA ---
 async function openChat(id, name, pic, type) {
     activeChatId = id; chatType = type;
-    lastReadTime = 0; // Reset last read van de ander
+    msgLimit = 50; // Reset limiet bij openen nieuwe chat
     
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
     if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
@@ -591,9 +593,15 @@ async function openChat(id, name, pic, type) {
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('settingsBtn').style.display = type === 'global' ? 'none' : 'block';
-    document.getElementById('messageInput').value = ""; // Clear input
     
-    // Status in header
+    // Reset input height
+    const txtArea = document.getElementById('messageInput');
+    txtArea.value = "";
+    txtArea.style.height = "44px";
+
+    // Scroll listener toevoegen voor history
+    document.getElementById('chatMessages').onscroll = checkScroll;
+    
     const statusEl = document.getElementById('activeStatus');
     if(type === 'private' && chatDataMap.has(id)) {
         const isOnline = chatDataMap.get(id).online;
@@ -606,38 +614,43 @@ async function openChat(id, name, pic, type) {
 
     renderSidebar();
     
-    // Unsubscribe oude listeners
     if(msgUnsub) msgUnsub();
     if(typingUnsub) typingUnsub();
 
+    setupChatListeners();
+}
+
+function setupChatListeners() {
     let ref, docRef;
-    if(type === 'global') {
+    if(chatType === 'global') {
         ref = db.collection("chats");
-        docRef = db.collection("metadata").doc("global"); // Simpel metadata doc voor global typen
-    } else if(type === 'group') {
-        docRef = db.collection("groups").doc(id);
+        docRef = db.collection("metadata").doc("global");
+    } else if(chatType === 'group') {
+        docRef = db.collection("groups").doc(activeChatId);
         ref = docRef.collection("messages");
     } else {
-        const chatId = [user.uid, id].sort().join("_");
+        const chatId = [user.uid, activeChatId].sort().join("_");
         docRef = db.collection("private_chats").doc(chatId);
         ref = docRef.collection("messages");
     }
 
-
-
-    // 2. Luister naar metadata voor TYPEN en GELEZEN status van de ander
+    // 1. Luister naar TYPEN (met namen)
     typingUnsub = docRef.onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
+            const typingMap = data.typingStatus || {};
             
-            // Typen logica
-            const typers = data.typing || [];
-            // Filter mezelf eruit
-            const othersTyping = typers.filter(uid => uid !== user.uid);
+            // Haal namen van anderen op
+            const typerNames = Object.keys(typingMap)
+                .filter(uid => uid !== user.uid) // Filter mezelf eruit
+                .map(uid => typingMap[uid]);
+
             const ind = document.getElementById('typingIndicator');
             
-            if(othersTyping.length > 0) {
-                ind.innerText = othersTyping.length > 1 ? "Meerdere mensen typen..." : "Iemand is aan het typen...";
+            if(typerNames.length > 0) {
+                // Maak string: "Jan is aan het typen" of "Jan, Piet zijn aan het typen"
+                const text = typerNames.join(", ") + (typerNames.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
+                ind.innerText = text;
                 ind.classList.add('active');
             } else {
                 ind.classList.remove('active');
@@ -645,24 +658,59 @@ async function openChat(id, name, pic, type) {
         }
     });
 
-    // 3. Berichten luisteren
-    msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
-        // Cache snap voor re-renders (voor vinkjes)
+    // 2. Berichten luisteren (met msgLimit voor history)
+    msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(msgLimit).onSnapshot(snap => {
         window.currentSnap = snap;
         renderMessagesFromCache();
     });
 }
 
-function markChatRead(docRef) {
-    // Update veld: lastRead_MIJNID = nu
-    const update = {};
-    update[`lastRead_${user.uid}`] = firebase.firestore.FieldValue.serverTimestamp();
-    docRef.set(update, { merge: true });
+// History Scroll Functie
+function checkScroll() {
+    const box = document.getElementById('chatMessages');
+    if (box.scrollTop === 0 && window.currentSnap && window.currentSnap.size >= msgLimit) {
+        // We zitten bovenaan én er zijn mogelijk meer berichten
+        loadMoreMessages();
+    }
 }
+
+function loadMoreMessages() {
+    const oldLimit = msgLimit;
+    msgLimit += 50; // Laad 50 extra
+    document.getElementById('loadingOld').style.display = 'block';
+    
+    // Bewaar huidige scroll positie tov onderkant
+    const box = document.getElementById('chatMessages');
+    const oldHeight = box.scrollHeight;
+    
+    if(msgUnsub) msgUnsub(); // Stop huidige listener
+
+    let ref;
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+
+    msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(msgLimit).onSnapshot(snap => {
+        window.currentSnap = snap;
+        renderMessagesFromCache();
+        
+        document.getElementById('loadingOld').style.display = 'none';
+        
+        // Herstel scroll positie zodat je niet verspringt
+        if (oldLimit !== msgLimit) {
+            const newHeight = box.scrollHeight;
+            box.scrollTop = newHeight - oldHeight;
+        }
+    });
+}
+
 
 function renderMessagesFromCache() {
     if(!window.currentSnap) return;
     const box = document.getElementById('chatMessages');
+    // Bewaar of we beneden zijn voor auto-scroll bij nieuwe berichten
+    const isAtBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 100;
+    
     box.innerHTML = "";
     let lastDateStr = "";
 
@@ -671,11 +719,9 @@ function renderMessagesFromCache() {
         let content = "";
         let className = m.uid === user.uid ? 'sent' : 'received';
         let timeStr = "";
-        let msgTimeMillis = 0;
 
         if(m.timestamp) {
             const date = m.timestamp.toDate();
-            msgTimeMillis = date.getTime();
             timeStr = date.getHours().toString().padStart(2,'0') + ":" + date.getMinutes().toString().padStart(2,'0');
             
             const dateHeader = getFormattedDate(date);
@@ -699,7 +745,6 @@ function renderMessagesFromCache() {
             deleteBtn = `<div class="delete-btn" title="Opties" onclick="openDeleteMenu('${doc.id}')">✖</div>`;
         }
 
-       // Footer bouwen (Alleen tijd)
         let footerHtml = "";
         if(m.type !== 'system') {
             footerHtml = `<div class="msg-footer"><span class="msg-time">${timeStr}</span></div>`;
@@ -707,43 +752,55 @@ function renderMessagesFromCache() {
 
         box.innerHTML += `<div class="msg ${className}">${deleteBtn}${content}${footerHtml}</div>`;
     });
-    box.scrollTop = box.scrollHeight;
+
+    // Alleen naar beneden scrollen als we al beneden waren of als het de eerste laad is
+    if (msgLimit === 50 || isAtBottom) {
+        box.scrollTop = box.scrollHeight;
+    }
 }
 
-// --- TEXTAREA & SHIFT+ENTER ---
+// --- TEXTAREA & SHIFT+ENTER & AUTO-SIZE ---
 function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault(); // Voorkom nieuwe regel
+        e.preventDefault(); 
         sendMessage();
     }
-    // Shift+Enter doet standaard gedrag (nieuwe regel)
+    // Bij Shift+Enter gebeurt default (nieuwe regel) -> handleTyping regelt resize
 }
 
-// --- TYPEN LOGICA ---
 function handleTyping() {
-    if(typingTimeout) clearTimeout(typingTimeout);
+    // 1. Auto-resize textarea
+    const tx = document.getElementById('messageInput');
+    tx.style.height = 'auto'; // Reset
+    tx.style.height = (tx.scrollHeight) + 'px'; // Set to content height
     
-    // Zet mezelf als 'typing'
+    // 2. Typing indicator logica
+    if(typingTimeout) clearTimeout(typingTimeout);
     updateTyping(true);
-
-    // Stop na 2 sec niks doen
     typingTimeout = setTimeout(() => {
         updateTyping(false);
     }, 2000);
 }
 
+// Aangepast: Sla nu NAAM op ipv alleen ID in een Map
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
     let ref;
-    // Bepaal ref
     if(chatType === 'global') ref = db.collection("metadata").doc("global");
     else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
 
+    const myName = document.getElementById('myName').innerText;
+    const fieldPath = "typingStatus." + user.uid; // Dynamische key voor Map
+
     if(isTyping) {
-        await ref.set({ typing: firebase.firestore.FieldValue.arrayUnion(user.uid) }, { merge: true });
+        const update = {};
+        update[fieldPath] = myName;
+        await ref.set(update, { merge: true });
     } else {
-        await ref.set({ typing: firebase.firestore.FieldValue.arrayRemove(user.uid) }, { merge: true });
+        const update = {};
+        update[fieldPath] = firebase.firestore.FieldValue.delete();
+        await ref.update(update);
     }
 }
 
@@ -781,7 +838,8 @@ async function sendMessage() {
     if(!txt) return;
     
     inp.value = "";
-    // Stop typen direct
+    inp.style.height = "44px"; // Reset hoogte na zenden
+
     updateTyping(false);
     if(typingTimeout) clearTimeout(typingTimeout);
 
@@ -870,10 +928,15 @@ async function openChatSettings() {
                 const uDoc = await db.collection("users").doc(mid).get();
                 if(uDoc.exists) mName = uDoc.data().name;
             }
+            
+            // ADMIN ACTIES: Kick & Make Admin
             html += `<div class="member-row">
                 <span>${mName} ${gData.owner === mid ? '👑' : ''}</span>
-                <div>
-                   ${isOwner && mid !== user.uid ? `<button class="btn btn-sm" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">Admin</button>` : ''}
+                <div style="display:flex; gap:5px;">
+                   ${isOwner && mid !== user.uid ? `
+                        <button class="btn btn-sm btn-icon" style="width:30px; height:30px; padding:0; background:#334155" title="Maak Beheerder" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">👑</button>
+                        <button class="btn btn-sm btn-danger" style="width:30px; height:30px; padding:0;" title="Verwijder Lid" onclick="confirmAction('Lid Verwijderen', '${mName} verwijderen uit de groep?', () => kickMember('${mid}', '${mName}'))">✖</button>
+                   ` : ''}
                 </div>
             </div>`;
         }
@@ -950,6 +1013,11 @@ async function leaveGroup() {
     await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`);
     await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) });
     location.reload();
+}
+async function kickMember(mid, mName) {
+    await sendSystemMessage(`${mName} is verwijderd door de beheerder.`);
+    await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(mid) });
+    openChatSettings(); // Ververs de lijst
 }
 async function transferOwner(newId, newName) {
     await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`);
@@ -1043,7 +1111,6 @@ async function acceptFriend(id, name, pic) {
 async function declineRequest(id) {
     if(!confirm("Verzoek afwijzen?")) return;
     await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
-    // Geen reload nodig, snapshot luistert
 }
 </script>
 </body>
