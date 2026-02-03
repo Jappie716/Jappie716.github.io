@@ -390,12 +390,14 @@ loadCategories();
 
 // NIEUW: De functie die de chat beveiligt
 function checkChatAccess() {
-    if (typeof user === 'undefined' || !currentUser) {
+    // We gebruiken 'currentUser' omdat jouw Firebase-script die naam gebruikt
+    if (!currentUser) {
         notify("❌ Je moet ingelogd zijn om te chatten!");
         setTimeout(() => {
             document.getElementById('loginModal').style.display = 'flex';
         }, 1000);
     } else {
+        // Als currentUser bestaat (je bent ingelogd), dan ga je naar de chat
         location.href = 'chat.html';
     }
 }
