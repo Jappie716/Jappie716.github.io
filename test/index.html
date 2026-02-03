@@ -29,11 +29,11 @@
         }
 
         /* --- SIDEBAR --- */
-        /* --- SIDEBAR --- */
         .sidebar {
             width: 260px; min-width: 260px; background: var(--sidebar-bg);
             padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
-            overflow-y: auto; /* Dit maakt hem scrollbaar op kleine schermen */
+            /* AANGEPAST: Scrollbaar maken voor kleine schermen */
+            overflow-y: auto;
         }
         .logo { font-size: 22px; font-weight: bold; color: var(--accent); margin-bottom: 25px; text-align: center; }
 
@@ -77,7 +77,6 @@
         .star.fav { color: #fbbf24; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
         .save-icon { color: var(--accent); font-size: 12px; margin-right: 5px; opacity: 0.8; }
 
-        /* NIEUW: Info knop stijl */
         .info-btn { font-size: 18px; color: var(--text-dim); margin-right: 8px; cursor: pointer; transition: 0.2s; }
         .info-btn:hover { color: white; }
 
@@ -106,8 +105,10 @@
     <input id="searchInput" type="search" name="search_query" placeholder="Zoek games..." autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
   </div>
   <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
-  <div id="categoryList"></div>
+  <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
   
+  <div id="categoryList"></div>
+
   <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="margin-top:auto; border: 1px solid #10b981; color: #34d399; text-align: center;">
       🛠️ Support
   </div>
@@ -115,18 +116,7 @@
   <div class="category-btn" onclick="checkChatAccess()" style="margin-top:10px; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">
       💬 GP Chat
   </div>
-</div> ```
-
-### Stap 2: CSS aanpassen (Scrollbaar maken)
-Zoek bovenin bij je `<style>` naar **`.sidebar`** (rond regel 33).
-Vervang dat hele blokje door dit (zodat `overflow-y: auto` erbij staat):
-
-```css
-        .sidebar {
-            width: 260px; min-width: 260px; background: var(--sidebar-bg);
-            padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
-            overflow-y: auto; /* Zorgt voor een scrollbalk op kleine schermen */
-        }
+</div>
 
 <div class="main">
     <div class="topbar">
@@ -164,7 +154,6 @@ Vervang dat hele blokje door dit (zodat `overflow-y: auto` erbij staat):
 <div id="registerModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto; overflow-x: hidden;">
         <h2 style="color: var(--accent);">Account Aanvragen</h2>
-        
         <iframe 
             data-tally-src="https://tally.so/embed/yPYeEd?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
             loading="lazy" 
@@ -175,15 +164,10 @@ Vervang dat hele blokje door dit (zodat `overflow-y: auto` erbij staat):
             marginwidth="0" 
             title="Account aanvraag">
         </iframe>
-
         <button onclick="document.getElementById('registerModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
     </div>
 </div>
 
-<script>
-    var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}
-</script>
-    
 <div id="forgotPasswordModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto;">
         <h2 style="color: var(--accent);">Wachtwoord Vergeten</h2>
@@ -200,7 +184,8 @@ Vervang dat hele blokje door dit (zodat `overflow-y: auto` erbij staat):
         <button onclick="document.getElementById('forgotPasswordModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
     </div>
 </div>
-    <div id="supportModal" class="modal">
+
+<div id="supportModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 90vh; overflow-y: auto;">
         <h2 style="color: var(--accent);">Game Paradise Support</h2>
         <iframe 
@@ -216,6 +201,11 @@ Vervang dat hele blokje door dit (zodat `overflow-y: auto` erbij staat):
         <button onclick="document.getElementById('supportModal').style.display='none'" style="margin-top:20px; background: #1e293b; color: white;">Sluiten</button>
     </div>
 </div>
+
+<script>
+    var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}
+</script>
+
 <div id="infoModal" class="modal">
     <div class="modal-box">
         <h2 id="infoTitle" style="color: var(--accent);">Game Info</h2>
@@ -291,20 +281,16 @@ document.getElementById("loginSubmit").onclick = () => {
     .catch(() => notify("❌ Fout: Controleer je gegevens", "danger"));
 };
 
-// ... bestaande code ...
 document.getElementById("registerSubmit").onclick = () => {
     document.getElementById("loginModal").style.display = "none";
     document.getElementById("registerModal").style.display = "flex";
 };
 
-// PLAK HIER NUMMER 3:
 document.getElementById("forgotPasswordSubmit").onclick = () => {
     document.getElementById("loginModal").style.display = "none";
     document.getElementById("forgotPasswordModal").style.display = "flex";
 };
-// ... rest van de code ...
 
-// NIEUW: Functie om info modal te openen
 function showInfo(id, e) {
     e.stopPropagation();
     const g = allGames[id];
@@ -383,7 +369,6 @@ function renderGames() {
 
         const card = document.createElement("div");
         card.className = "game-card";
-        // AANGEPAST: h3 bevat nu de info-btn (❓) als hasInfo true is
         card.innerHTML = `
             <img src="${g.image}">
             <h3>
@@ -402,6 +387,18 @@ function renderGames() {
 document.getElementById("searchInput").oninput = renderGames;
 loadGames();
 loadCategories();
+
+// NIEUW: De functie die de chat beveiligt
+function checkChatAccess() {
+    if (typeof user === 'undefined' || !currentUser) {
+        notify("❌ Je moet ingelogd zijn om te chatten!");
+        setTimeout(() => {
+            document.getElementById('loginModal').style.display = 'flex';
+        }, 1000);
+    } else {
+        location.href = 'chat.html';
+    }
+}
 </script>
 </body>
 </html>
