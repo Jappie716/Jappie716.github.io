@@ -21,58 +21,58 @@
         body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
 
         /* SIDEBAR */
-        .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        .sidebar { width: 300px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
         .sidebar-header { padding: 15px; background: #0f172a; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; }
-        .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; object-fit: cover; }
+        .sidebar-header img { width: 45px; height: 45px; border-radius: 50%; cursor: pointer; object-fit: cover; border: 2px solid var(--primary); }
         .chat-list { flex: 1; overflow-y: auto; }
         
-        .chat-item { display: flex; align-items: center; padding: 12px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #1e293b; }
-        .chat-item:hover, .chat-item.active { background: #1e293b; }
-        .chat-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; }
+        .chat-item { display: flex; align-items: center; padding: 12px; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #1e293b; position: relative; }
+        .chat-item:hover, .chat-item.active { background: #1e293b; border-left: 4px solid var(--accent); }
+        .chat-item img { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; object-fit: cover; background: #334155; }
         .chat-info { flex: 1; min-width: 0; }
-        .chat-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .chat-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; font-size: 14px; }
         .chat-preview { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 5px; }
 
         /* STATUS DOTS */
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--offline); display: inline-block; margin-right: 5px; border: 2px solid var(--sidebar-bg); }
-        .status-dot.online { background: var(--online); }
+        .status-dot.online { background: var(--online); box-shadow: 0 0 5px var(--online); }
 
         /* MAIN CHAT AREA */
-        .main { flex: 1; display: flex; flex-direction: column; background: var(--bg); }
-        .chat-header { padding: 15px; background: var(--card-bg); border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+        .main { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
+        .chat-header { padding: 15px; background: var(--card-bg); border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; height: 70px; }
         .header-info { display: flex; align-items: center; }
         .header-info img { width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; object-fit: cover; }
         
-        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
         
-        .msg { max-width: 70%; padding: 10px 15px; border-radius: 12px; position: relative; word-wrap: break-word; font-size: 14px; line-height: 1.4; }
+        .msg { max-width: 75%; padding: 10px 15px; border-radius: 12px; position: relative; word-wrap: break-word; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
-        .msg.system { align-self: center; background: var(--system); font-size: 12px; padding: 5px 15px; border-radius: 20px; color: #cbd5e1; }
+        .msg.system { align-self: center; background: var(--system); font-size: 11px; padding: 5px 15px; border-radius: 20px; color: #cbd5e1; text-align: center; }
         
         .sender { font-size: 10px; color: var(--accent); display: block; margin-bottom: 2px; font-weight: bold; }
-        .timestamp { font-size: 9px; color: var(--text-dim); float: right; margin-left: 10px; margin-top: 5px; }
-        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; transition: 0.2s; }
+        .timestamp { font-size: 9px; color: var(--text-dim); align-self: flex-end; margin-top: 4px; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; transition: 0.2s; max-height: 300px; object-fit: cover; }
         .msg img:hover { opacity: 0.9; }
 
         /* INPUT AREA */
         .input-area { padding: 15px; background: var(--card-bg); border-top: 1px solid #1e293b; display: flex; gap: 10px; align-items: flex-end; }
-        .input-area textarea { flex: 1; background: #1e293b; border: none; color: white; padding: 12px; border-radius: 20px; resize: none; outline: none; height: 44px; max-height: 120px; font-family: inherit; }
-        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        .btn:hover { opacity: 0.9; }
-        .btn-icon { padding: 10px; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
-        .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+        .input-area textarea { flex: 1; background: #020617; border: 1px solid #1e293b; color: white; padding: 12px; border-radius: 12px; resize: none; outline: none; height: 44px; max-height: 120px; font-family: inherit; }
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-icon { padding: 0; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #334155; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
         .btn-danger { background: var(--danger); }
 
         /* MODALS */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        .modal-box { background: #0f172a; padding: 25px; border-radius: 15px; width: 400px; max-width: 90%; border: 1px solid #1e293b; text-align: center; }
-        .modal-box input { width: 100%; padding: 10px; margin: 10px 0; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 8px; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-box { background: #0f172a; padding: 25px; border-radius: 15px; width: 400px; max-width: 90%; border: 1px solid #1e293b; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal-box input { width: 100%; padding: 10px; margin: 10px 0; background: #020617; border: 1px solid #334155; color: white; border-radius: 8px; }
         .full-btn { width: 100%; margin-top: 10px; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .toast { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); animation: slideIn 0.3s; }
+        .toast { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); animation: slideIn 0.3s; cursor: pointer; display: flex; align-items: center; gap: 10px; }
         @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
     </style>
 </head>
@@ -102,9 +102,15 @@
         </div>
         <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
     </div>
+    
+    <div style="padding:10px;">
+        <input id="searchBar" type="text" placeholder="🔍 Zoeken..." onkeyup="renderSidebar()" style="width:100%; background:#0f172a; border:1px solid #1e293b; padding:8px; border-radius:8px; color:white;">
+    </div>
+
     <div id="chatList" class="chat-list"></div>
+    
     <div style="padding:10px; border-top:1px solid #1e293b; text-align:center;">
-        <button class="btn btn-sm" style="background:#334155" onclick="location.href='index.html'">🏠 Terug naar Home</button>
+        <button class="btn btn-sm" style="background:#334155; width:100%" onclick="location.href='index.html'">🏠 Terug naar Home</button>
     </div>
 </div>
 
@@ -125,6 +131,8 @@
             👋 Welkom bij Game Paradise Chat!<br>Selecteer een chat links om te beginnen.
         </div>
     </div>
+    
+    <div id="typingIndicator" style="display:none; padding: 0 20px; font-size: 11px; color: var(--accent); font-style: italic;">...</div>
 
     <div id="inputArea" class="input-area" style="display:none">
         <button class="btn btn-icon" onclick="document.getElementById('fileInput').click()" style="background:#334155;">📷</button>
@@ -137,6 +145,12 @@
 <div id="groupModal" class="modal">
     <div class="modal-box">
         <h2>Nieuwe Groep</h2>
+        <div style="text-align:center; margin-bottom:10px;">
+            <img id="groupCreatePreview" src="https://ui-avatars.com/api/?name=Group" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+            <br>
+            <button class="btn btn-sm" onclick="document.getElementById('groupCreateFile').click()" style="margin-top:5px;">Kies Groepsfoto</button>
+            <input type="file" id="groupCreateFile" hidden accept="image/*" onchange="previewImage(this, 'groupCreatePreview')">
+        </div>
         <input id="newGroupName" placeholder="Groepsnaam">
         <button class="btn full-btn" onclick="createGroup()">Aanmaken</button>
         <button class="btn full-btn" style="background:transparent; color:gray;" onclick="closeModal('groupModal')">Annuleren</button>
@@ -152,7 +166,7 @@
 </div>
 
 <script>
-// FIREBASE CONFIG
+// FIREBASE CONFIG (Zelfde als je had)
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -164,9 +178,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
-const storage = firebase.storage();
 
-// VARIABELEN
 let user = null;
 let activeChatId = null;
 let chatType = null; // 'global', 'group', 'private'
@@ -177,24 +189,32 @@ let typingTimeout = null;
 let isOfflineMode = false;
 let originalTitle = document.title;
 let titleInterval = null;
+let activeListeners = new Set(); // Om dubbele listeners te voorkomen
+let currentBase64 = null;
 
 // INIT
 auth.onAuthStateChanged(u => {
     if (!u) location.href = 'index.html';
     user = u;
     loadUserData();
-    loadChats();
+    subscribeToChats(); // OUDE METHODE DIE WERKT
     startPresenceSystem();
 });
 
-// STATUS SYSTEM
+function loadUserData() {
+    db.collection("users").doc(user.uid).get().then(doc => {
+        if(doc.exists) {
+            const data = doc.data();
+            document.getElementById('myName').innerText = data.name;
+            document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
+        }
+    });
+}
+
+// --- STATUS SYSTEEM ---
 function startPresenceSystem() {
     if(!isOfflineMode) updatePresence('online');
-    
-    // Elke minuut status verversen
     setInterval(() => { if(!isOfflineMode) updatePresence('online'); }, 60000);
-
-    // Bij afsluiten offline zetten
     window.addEventListener('beforeunload', () => {
         updatePresence('offline');
         if(activeChatId) updateTyping(false);
@@ -230,98 +250,93 @@ function toggleMyStatus() {
     }
 }
 
-function loadUserData() {
-    db.collection("users").doc(user.uid).get().then(doc => {
-        if(doc.exists) {
-            const data = doc.data();
-            document.getElementById('myName').innerText = data.name;
-            document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
-        }
-    });
-}
-
-// CHATS LADEN
-function loadChats() {
-    // 1. Global Chat
-    const globalChat = { id: 'global', name: 'Wereld Chat', type: 'global', pic: 'https://cdn-icons-png.flaticon.com/512/921/921347.png' };
-    chatDataMap.set('global', globalChat);
-    renderSidebar();
+// --- CHATS LADEN (HERSTELD NAAR OUDE METHODE) ---
+function subscribeToChats() {
+    // 1. Global
+    setupListener('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global', db.collection("chats"));
 
     // 2. Groepen
     db.collection("groups").where("members", "array-contains", user.uid).onSnapshot(snap => {
-        snap.forEach(doc => {
-            const d = doc.data();
-            chatDataMap.set(doc.id, { ...d, id: doc.id, type: 'group', pic: d.pic || 'https://cdn-icons-png.flaticon.com/512/1256/1256650.png' });
+        snap.docChanges().forEach(change => {
+            if (change.type === "added") {
+                const d = change.doc.data();
+                setupListener(change.doc.id, d.name, d.pic, 'group', db.collection("groups").doc(change.doc.id).collection("messages"));
+            } else if (change.type === "removed") {
+                chatDataMap.delete(change.doc.id);
+                renderSidebar();
+            }
         });
-        renderSidebar();
     });
 
-    // 3. Vrienden (Privé)
+    // 3. Vrienden
     db.collection("users").doc(user.uid).collection("friends").onSnapshot(snap => {
         snap.forEach(doc => {
-            const d = doc.data();
-            // Check online status van vriend
-            db.collection("users").doc(doc.id).onSnapshot(friendDoc => {
-                const friendData = friendDoc.data();
-                const isOnline = friendData && friendData.status === 'online';
-                
-                chatDataMap.set(doc.id, { 
-                    ...d, id: doc.id, type: 'private', 
-                    name: d.name, pic: d.pic,
-                    online: isOnline
-                });
-                
-                // Als dit de actieve chat is, update header status direct
-                if(activeChatId === doc.id) {
-                    const statusEl = document.getElementById('activeStatus');
-                    statusEl.innerText = isOnline ? 'Online' : 'Offline';
-                    statusEl.style.color = isOnline ? 'var(--online)' : 'gray';
+            const chatId = [user.uid, doc.id].sort().join("_");
+            setupListener(doc.id, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
+            
+            // Check online status
+            db.collection("users").doc(doc.id).onSnapshot(s => {
+                const d = s.data();
+                const isOnline = d && d.status === 'online';
+                if(chatDataMap.has(doc.id)) {
+                    const c = chatDataMap.get(doc.id);
+                    c.online = isOnline;
+                    c.pic = d.pic || c.pic;
+                    chatDataMap.set(doc.id, c);
+                    renderSidebar();
+                    
+                    if(activeChatId === doc.id) {
+                        const el = document.getElementById('activeStatus');
+                        el.innerText = isOnline ? 'Online' : 'Offline';
+                        el.style.color = isOnline ? 'var(--online)' : 'gray';
+                    }
                 }
-                renderSidebar();
             });
         });
     });
-    
-    // Check unread messages
-    listenForUnread();
 }
 
-function listenForUnread() {
-    db.collection("messages").where("to", "==", user.uid).where("read", "==", false)
-    .onSnapshot(snap => {
-        snap.docChanges().forEach(change => {
-            if(change.type === 'added') {
-                const msg = change.doc.data();
-                const senderId = msg.chatId || msg.from; // Voor groups is het chatId, prive is from
-                
-                // Als we niet in deze chat zitten, zet rood bolletje
-                if(activeChatId !== senderId && chatDataMap.has(senderId)) {
-                    const c = chatDataMap.get(senderId);
-                    c.unread = true;
-                    c.lastMsg = msg.text;
-                    chatDataMap.set(senderId, c);
-                    renderSidebar();
-                    playNotificationSound();
-                    
-                    if(document.hidden) startTitleFlash("💬 Nieuw bericht!");
-                }
-            }
-        });
+function setupListener(id, name, pic, type, ref) {
+    if(activeListeners.has(id)) return;
+    activeListeners.add(id);
+
+    if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, online: false });
+
+    // Luister naar laatste bericht voor unread status
+    ref.orderBy("timestamp", "desc").limit(1).onSnapshot(snap => {
+        if(snap.empty) return;
+        const m = snap.docs[0].data();
+        const time = m.timestamp ? m.timestamp.toMillis() : Date.now();
+        const cData = chatDataMap.get(id);
+        
+        cData.timestamp = time;
+        cData.lastMsg = m.image ? '📷 Foto' : m.text;
+        
+        if (m.uid !== user.uid && activeChatId !== id) {
+            cData.unread = true;
+            playNotificationSound();
+        } else if (activeChatId === id) {
+            cData.unread = false;
+        }
+
+        chatDataMap.set(id, cData);
+        renderSidebar();
     });
 }
 
 function renderSidebar() {
     const list = document.getElementById('chatList');
+    const term = document.getElementById('searchBar').value.toLowerCase();
     list.innerHTML = "";
     
-    // Sorteer: eerst ongelezen, dan alfabetisch (of op datum als je dat hebt)
-    const chats = Array.from(chatDataMap.values()).sort((a, b) => (b.unread ? 1 : 0) - (a.unread ? 1 : 0));
+    const chats = Array.from(chatDataMap.values()).sort((a,b) => b.timestamp - a.timestamp);
 
     chats.forEach(c => {
+        if(term && !c.name.toLowerCase().includes(term)) return;
+
         const div = document.createElement('div');
         div.className = `chat-item ${activeChatId === c.id ? 'active' : ''}`;
         
-        // Status dot voor privé
         let statusHtml = '';
         if(c.type === 'private') {
             statusHtml = `<div class="status-dot ${c.online ? 'online' : ''}" style="width:8px; height:8px; border:none; margin-right:0;"></div>`;
@@ -334,7 +349,9 @@ function renderSidebar() {
                     <span class="chat-name">${c.name}</span>
                     ${statusHtml}
                 </div>
-                <div class="chat-preview">${c.unread ? '<b>Nieuw bericht</b>' : (c.lastMsg || 'Klik om te openen')}</div>
+                <div class="chat-preview" style="${c.unread ? 'font-weight:bold; color:white' : ''}">
+                    ${c.unread ? '🔵 ' : ''}${c.lastMsg || 'Klik om te openen'}
+                </div>
             </div>
             ${c.unread ? `<div class="unread-badge">1</div>` : ''}
         `;
@@ -343,12 +360,11 @@ function renderSidebar() {
     });
 }
 
-// CHAT OPENEN
+// --- CHAT OPENEN & BERICHTEN ---
 async function openChat(id, name, pic, type) {
     activeChatId = id; 
     chatType = type;
     
-    // FIX: Rode bolletje direct weghalen en data updaten
     if(chatDataMap.has(id)) {
         const c = chatDataMap.get(id);
         c.unread = false;
@@ -356,20 +372,16 @@ async function openChat(id, name, pic, type) {
     }
     renderSidebar();
 
-    // Titel flash stoppen
-    if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
-
-    // UI Update
     document.getElementById('activeChatName').innerText = name;
     document.getElementById('activeChatImg').src = pic || `https://ui-avatars.com/api/?name=${name}`;
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     
-    // Instellingen knop alleen voor groepen
+    // Settings knop
     const settingsBtn = document.getElementById('settingsBtn');
     settingsBtn.style.display = (type === 'group') ? 'block' : 'none';
     
-    // Status in header
+    // Status
     const statusEl = document.getElementById('activeStatus');
     if(type === 'private' && chatDataMap.has(id)) {
         const isOnline = chatDataMap.get(id).online;
@@ -383,7 +395,6 @@ async function openChat(id, name, pic, type) {
     document.getElementById('messageInput').value = "";
     document.getElementById('chatMessages').innerHTML = '<div style="text-align:center; margin-top:20px;">Berichten laden...</div>';
 
-    // Oude listeners stoppen
     if(msgUnsub) msgUnsub();
     if(typingUnsub) typingUnsub();
 
@@ -391,51 +402,46 @@ async function openChat(id, name, pic, type) {
     setupTypingListener();
 }
 
-function loadMessages() {
-    let query;
-    if(chatType === 'global') {
-        query = db.collection("messages").where("chatId", "==", "global").orderBy("timestamp", "asc").limitToLast(50);
-    } else if(chatType === 'group') {
-        query = db.collection("messages").where("chatId", "==", activeChatId).orderBy("timestamp", "asc").limitToLast(50);
-    } else {
-        // Prive: berichten tussen mij en de ander
-        const chatID = [user.uid, activeChatId].sort().join("_");
-        query = db.collection("messages").where("chatId", "==", chatID).orderBy("timestamp", "asc").limitToLast(50);
-    }
+function getChatRef() {
+    if(chatType === 'global') return db.collection("chats");
+    if(chatType === 'group') return db.collection("groups").doc(activeChatId).collection("messages");
+    if(chatType === 'private') return db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+}
 
-    msgUnsub = query.onSnapshot(snap => {
+function getMetaRef() {
+    if(chatType === 'global') return db.collection("metadata").doc("global");
+    if(chatType === 'group') return db.collection("groups").doc(activeChatId);
+    if(chatType === 'private') return db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
+}
+
+function loadMessages() {
+    const ref = getChatRef();
+    msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
         const container = document.getElementById('chatMessages');
         container.innerHTML = "";
         snap.forEach(doc => renderMessage(doc.data(), container));
         container.scrollTop = container.scrollHeight;
-        
-        // Markeer als gelezen
-        if(!snap.empty) {
-            // Dit kan je optimaliseren door batch updates, voor nu simpel:
-            // (In productie doe je dit server-side of slimmer)
-        }
     });
 }
 
 function renderMessage(msg, container) {
     const div = document.createElement('div');
-    const isMe = msg.from === user.uid;
+    const isMe = msg.uid === user.uid;
     
-    div.className = `msg ${msg.system ? 'system' : (isMe ? 'sent' : 'received')}`;
+    div.className = `msg ${msg.type === 'system' ? 'system' : (isMe ? 'sent' : 'received')}`;
     
     let content = "";
     if(msg.image) {
-        // NIEUW: Openen in modal ipv nieuw tabblad
         content = `<img src="${msg.image}" onclick="openImage('${msg.image}')">`;
     } else {
         content = msg.text;
     }
 
-    if(msg.system) {
+    if(msg.type === 'system') {
         div.innerHTML = content;
     } else {
         div.innerHTML = `
-            ${!isMe && chatType !== 'private' ? `<span class="sender">${msg.senderName}</span>` : ''}
+            ${!isMe && chatType !== 'private' ? `<span class="sender">${msg.user}</span>` : ''}
             ${content}
             <span class="timestamp">${msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</span>
         `;
@@ -443,63 +449,34 @@ function renderMessage(msg, container) {
     container.appendChild(div);
 }
 
-// BERICHTEN VERSTUREN
+// --- VERSTUREN ---
 async function sendMessage(imageUrl = null) {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
     
     if(!text && !imageUrl) return;
 
-    let targetId = activeChatId;
-    if(chatType === 'private') {
-        targetId = [user.uid, activeChatId].sort().join("_");
-    }
-
     const msg = {
         text: text,
         image: imageUrl || null,
-        from: user.uid,
-        senderName: document.getElementById('myName').innerText,
-        chatId: targetId,
+        uid: user.uid,
+        user: document.getElementById('myName').innerText,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        system: false,
-        read: false,
-        to: chatType === 'private' ? activeChatId : null // Handig voor notifications
+        type: 'text'
     };
 
     input.value = "";
     updateTyping(false);
-    await db.collection("messages").add(msg);
+    
+    await getChatRef().add(msg);
 }
 
-// AFBEELDINGEN UPLOADEN
-function handleFileUpload(input) {
-    const file = input.files[0];
-    if(!file) return;
-
-    const ref = storage.ref(`chat_images/${Date.now()}_${file.name}`);
-    ref.put(file).then(snap => snap.ref.getDownloadURL()).then(url => {
-        sendMessage(url);
-    });
-}
-
-// TYPING INDICATOR (FIX VOOR PRIVE)
+// --- TYPEN ---
 async function setupTypingListener() {
-    let ref;
-    if(chatType === 'global') ref = db.collection("metadata").doc("global");
-    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
-    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
-
+    const ref = getMetaRef();
     typingUnsub = ref.onSnapshot(doc => {
-        // Maak element aan als het er niet is
-        let indic = document.getElementById('typingIndicator');
-        if(!indic) {
-            indic = document.createElement('div');
-            indic.id = 'typingIndicator';
-            indic.style.cssText = "font-size:12px; color:#94a3b8; padding:0 20px; font-style:italic; display:none;";
-            document.getElementById('inputArea').before(indic);
-        }
-
+        const indic = document.getElementById('typingIndicator');
+        
         if(doc.exists && doc.data().typingStatus) {
             const typers = Object.entries(doc.data().typingStatus)
                 .filter(([uid, name]) => uid !== user.uid)
@@ -525,30 +502,20 @@ async function handleTyping() {
 
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
-    let ref;
-    
-    // Correcte path bepalen
-    if(chatType === 'global') ref = db.collection("metadata").doc("global");
-    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
-    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
-
+    const ref = getMetaRef();
     const myName = document.getElementById('myName').innerText;
     const fieldPath = "typingStatus." + user.uid;
 
     if(isTyping) {
-        const update = {};
-        update[fieldPath] = myName;
-        // Merge: true zorgt dat het document gemaakt wordt als het niet bestaat (belangrijk voor prive)
+        const update = {}; update[fieldPath] = myName;
         await ref.set(update, { merge: true });
     } else {
-        const update = {};
-        update[fieldPath] = firebase.firestore.FieldValue.delete();
-        // Update faalt als doc niet bestaat, catch dat
+        const update = {}; update[fieldPath] = firebase.firestore.FieldValue.delete();
         await ref.update(update).catch(e => {}); 
     }
 }
 
-// INSTELLINGEN & LEDEN (GEFIXTE MENU'S)
+// --- INSTELLINGEN & LEDEN ---
 async function openChatSettings() {
     const modal = document.getElementById('groupSettingsModal');
     const content = document.getElementById('settingsContent');
@@ -556,14 +523,19 @@ async function openChatSettings() {
     
     const groupDoc = await db.collection("groups").doc(activeChatId).get();
     const g = groupDoc.data();
-    const isAdmin = g.admins && g.admins.includes(user.uid);
+    const isAdmin = g.owner === user.uid || (g.admins && g.admins.includes(user.uid));
 
-    // Bouw de instellingen pagina
+    // Leden namen ophalen als ze er niet zijn
+    let membersHtml = '';
+    for(const mid of g.members) {
+        membersHtml += `<div style="padding:5px 0;">👤 ${mid === user.uid ? 'Jij' : 'Lid'}</div>`; 
+    }
+
     content.innerHTML = `
         <h2 style="color:var(--accent)">${g.name}</h2>
         <div style="margin:20px 0; text-align:left; max-height:200px; overflow-y:auto; border:1px solid #334155; padding:10px; border-radius:8px;">
             <div style="color:gray; font-size:12px; margin-bottom:5px;">Leden (${g.members.length})</div>
-            ${g.memberNames ? g.memberNames.map(n => `<div>👤 ${n}</div>`).join('') : 'Laden...'}
+            ${membersHtml}
         </div>
         ${isAdmin ? `
             <button class="btn full-btn" onclick="openAddMemberMenu('${g.members.join(",")}')">➕ Leden Toevoegen</button>
@@ -572,11 +544,9 @@ async function openChatSettings() {
     `;
 }
 
-// NIEUW: Opent menu IN de modal ipv erbovenop
 async function openAddMemberMenu(currentMembersStr) {
     const currentMembers = currentMembersStr.split(",");
     const content = document.getElementById('settingsContent');
-    
     content.innerHTML = `<h3>Vrienden Uitnodigen</h3><div id="inviteList">Laden...</div>`;
     
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
@@ -596,33 +566,48 @@ async function openAddMemberMenu(currentMembersStr) {
 
     if(count === 0) html += `<div style="text-align:center; color:gray;">Geen vrienden om toe te voegen.</div>`;
     html += `</div>`;
-    
-    // Terug knop
     html += `<button class="btn full-btn" style="background:#334155" onclick="openChatSettings()">⬅ Terug naar Instellingen</button>`;
     
     content.innerHTML = html;
 }
 
 async function addMemberToGroup(uid, name) {
-    const ref = db.collection("groups").doc(activeChatId);
-    await ref.update({
-        members: firebase.firestore.FieldValue.arrayUnion(uid),
-        memberNames: firebase.firestore.FieldValue.arrayUnion(name)
+    await db.collection("groups").doc(activeChatId).update({
+        members: firebase.firestore.FieldValue.arrayUnion(uid)
+    });
+    // Systeem bericht
+    await db.collection("groups").doc(activeChatId).collection("messages").add({
+        text: `${document.getElementById('myName').innerText} heeft ${name} toegevoegd.`,
+        type: 'system',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     notify("Succes", `${name} is toegevoegd!`);
-    // Herlaad de lijst door menu opnieuw te openen
-    const updatedDoc = await ref.get();
-    openAddMemberMenu(updatedDoc.data().members.join(","));
+    openChatSettings(); // Ververs menu
 }
 
-// MODAL & IMAGE UTILS
-function openGroupModal() { document.getElementById('groupModal').style.display = 'flex'; }
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+// --- UTILS (Images, Modals, etc) ---
+function handleFileUpload(input) {
+    const file = input.files[0];
+    if(!file) return;
+    
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+        // Simpele compressie/resize logic kan hier, maar voor nu sturen we base64
+        // Let op: Firestore heeft limiet. Beter is Storage, maar dit werkt voor kleine plaatjes.
+        sendMessage(e.target.result); 
+    };
+}
 
-function openImage(src) {
-    document.getElementById('imgViewer').src = src;
-    document.getElementById('imgDownload').href = src;
-    document.getElementById('imageModal').style.display = 'flex';
+function previewImage(inp, id) {
+    if(inp.files[0]) {
+        const reader = new FileReader();
+        reader.readAsDataURL(inp.files[0]);
+        reader.onload = (e) => {
+            document.getElementById(id).src = e.target.result;
+            currentBase64 = e.target.result;
+        }
+    }
 }
 
 function createGroup() {
@@ -631,11 +616,9 @@ function createGroup() {
     
     db.collection("groups").add({
         name: name,
-        admins: [user.uid],
+        owner: user.uid,
         members: [user.uid],
-        memberNames: [document.getElementById('myName').innerText],
-        pic: "",
-        lastMsg: "Groep aangemaakt",
+        pic: currentBase64 || "",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     }).then(() => {
         closeModal('groupModal');
@@ -643,34 +626,30 @@ function createGroup() {
     });
 }
 
+function openGroupModal() { 
+    currentBase64 = null;
+    document.getElementById('groupCreatePreview').src = "https://ui-avatars.com/api/?name=Group";
+    document.getElementById('groupModal').style.display = 'flex'; 
+}
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openImage(src) {
+    document.getElementById('imgViewer').src = src;
+    document.getElementById('imgDownload').href = src;
+    document.getElementById('imageModal').style.display = 'flex';
+}
 function notify(title, msg) {
     const c = document.getElementById('toast-container');
     const t = document.createElement('div');
-    t.className = 'toast';
-    t.innerHTML = `<b>${title}</b><br>${msg}`;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    t.className = 'toast'; t.innerHTML = `<b>${title}</b><br>${msg}`;
+    c.appendChild(t); setTimeout(() => t.remove(), 3000);
 }
-
 function playNotificationSound() {
     const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
     audio.play().catch(e => {});
 }
 
-function startTitleFlash(text) {
-    let state = false;
-    titleInterval = setInterval(() => {
-        document.title = state ? originalTitle : text;
-        state = !state;
-    }, 1000);
-}
-
-// GLOBALE ESCAPE KEY
-document.addEventListener('keydown', (e) => {
-    if(e.key === "Escape") {
-        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-    }
-});
+// ESC to close
+document.addEventListener('keydown', (e) => { if(e.key==="Escape") document.querySelectorAll('.modal').forEach(m => m.style.display='none'); });
 </script>
 </body>
 </html>
