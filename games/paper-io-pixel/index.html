@@ -985,6 +985,8 @@ const db = firebase.firestore();
 let currentUser = null;
 let isOnline = navigator.onLine;
 let syncPending = false;
+let autoSaveInterval = null;
+let lastSaveTime = 0;
 
 // ==========================================
 // CLOUD SAVE MANAGER
@@ -1172,12 +1174,15 @@ function updateSyncStatus(status) {
     
     syncStatusEl.className = 'sync-status ' + status;
     
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    
     switch(status) {
         case 'syncing':
             syncTextEl.textContent = 'Syncing...';
             break;
         case 'synced':
-            syncTextEl.textContent = 'Cloud synced';
+            syncTextEl.textContent = `Saved ${timeStr}`;
             break;
         case 'offline':
             syncTextEl.textContent = 'Offline';
@@ -1254,7 +1259,17 @@ function applyLoadedData(data) {
 }
 
 // Save progress (called after game ends, settings change, etc.)
-async function saveProgress() {
+async function saveProgress(reason = 'manual') {
+    const now = Date.now();
+    
+    // Prevent saving too frequently (minimum 5 seconds between saves)
+    if (now - lastSaveTime < 5000 && reason === 'auto') {
+        console.log('Skipping auto-save, too soon since last save');
+        return;
+    }
+    
+    lastSaveTime = now;
+    
     const data = {
         highScore: highScore,
         gamesPlayed: gamesPlayed,
@@ -1267,29 +1282,110 @@ async function saveProgress() {
             speed: CONFIG.speed,
             zoom: CONFIG.zoom,
             mapRadius: CONFIG.mapRadius,
-            playerColor: CONFIG.colors.player
+            playerColor: CONFIG.colors.player,
+            screenTheme: currentScreenTheme
         }
     };
+    
+    console.log(`💾 Saving progress (${reason})...`, {
+        highScore: data.highScore,
+        gamesPlayed: data.gamesPlayed,
+        playerName: data.playerName
+    });
     
     // Save locally first
     saveLocalData(data);
     
     // Then sync to cloud
-    await CloudSave.save(data);
+    const success = await CloudSave.save(data);
+    
+    if (success) {
+        console.log(`✅ Cloud save successful (${reason})`);
+    } else {
+        console.log(`⚠️ Cloud save failed, saved locally (${reason})`);
+    }
+    
+    return success;
+}
+
+// Start auto-save interval (every 60 seconds)
+function startAutoSave() {
+    // Clear any existing interval
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+    }
+    
+    // Save every 60 seconds while game is running
+    autoSaveInterval = setInterval(async () => {
+        if (gameRunning && !gamePaused && currentUser) {
+            console.log('⏰ Auto-save triggered (60 second interval)');
+            await saveProgress('auto');
+        }
+    }, 60000); // 60 seconds
+    
+    console.log('🔄 Auto-save started (every 60 seconds)');
+}
+
+// Stop auto-save interval
+function stopAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+        autoSaveInterval = null;
+        console.log('⏹️ Auto-save stopped');
+    }
 }
 
 // Online/offline handlers
 window.addEventListener('online', async () => {
     isOnline = true;
+    console.log('🌐 Back online - syncing pending data...');
     if (syncPending) {
-        await saveProgress();
+        await saveProgress('reconnected');
         syncPending = false;
     }
 });
 
 window.addEventListener('offline', () => {
     isOnline = false;
+    console.log('📴 Went offline');
     updateSyncStatus('offline');
+});
+
+// Save before page closes/refreshes
+window.addEventListener('beforeunload', (e) => {
+    // Save synchronously to localStorage (cloud save might not complete in time)
+    const data = {
+        highScore: highScore,
+        gamesPlayed: gamesPlayed,
+        playerName: playerNameInput.value.trim(),
+        playerColor: CONFIG.colors.player,
+        unlockedSkins: JSON.parse(localStorage.getItem('paperio_skins') || '["default"]'),
+        selectedSkin: localStorage.getItem('paperio_selected_skin') || 'default',
+        settings: {
+            botCount: CONFIG.botCount,
+            speed: CONFIG.speed,
+            zoom: CONFIG.zoom,
+            mapRadius: CONFIG.mapRadius,
+            playerColor: CONFIG.colors.player,
+            screenTheme: currentScreenTheme
+        }
+    };
+    saveLocalData(data);
+    console.log('🚨 Page closing - saved to localStorage');
+    
+    // Try to save to cloud (may not complete)
+    if (currentUser && navigator.sendBeacon) {
+        // Use sendBeacon for reliable save on page close
+        // Note: This won't work with Firestore, but we already saved locally
+    }
+});
+
+// Save when tab becomes hidden (user switches tabs or minimizes)
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'hidden' && gameRunning) {
+        console.log('👁️ Tab hidden - saving progress...');
+        await saveProgress('tab_hidden');
+    }
 });
 
 // ==========================================
@@ -1544,9 +1640,15 @@ function updateAccountTab() {
     // Update cloud sync info
     const syncDetail = document.getElementById('cloud-sync-detail');
     if (currentUser) {
+        const lastSaveStr = lastSaveTime > 0 
+            ? new Date(lastSaveTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            : 'Never';
+        
         syncDetail.innerHTML = `
             <div>📍 User ID: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-size:10px;">${currentUser.uid.substring(0, 12)}...</code></div>
-            <div style="margin-top:5px;">💾 Saves to: game-saves/paper-io-pixel/players/${currentUser.uid.substring(0, 8)}...</div>
+            <div style="margin-top:5px;">💾 Path: game-saves/paper-io-pixel/players/${currentUser.uid.substring(0, 8)}...</div>
+            <div style="margin-top:5px;">🕐 Last save: ${lastSaveStr}</div>
+            <div style="margin-top:5px;">⏰ Auto-save: Every 60 seconds during gameplay</div>
         `;
     } else {
         syncDetail.textContent = 'Connecting to cloud...';
@@ -1588,7 +1690,8 @@ async function closeSettings() {
     settingsOverlay.style.display = 'none';
     
     // Sync to cloud
-    await saveProgress();
+    console.log('⚙️ Settings saved - syncing to cloud...');
+    await saveProgress('settings_saved');
 }
 
 settingsBtn.onclick = openSettings;
@@ -1608,6 +1711,10 @@ resumeBtn.onclick = () => {
 quitBtn.onclick = async () => {
     gamePaused = false;
     gameRunning = false;
+    
+    // Stop auto-save when quitting
+    stopAutoSave();
+    
     pauseOverlay.style.display = 'none';
     scoreDisplay.style.display = 'none';
     leaderboard.style.display = 'none';
@@ -1617,7 +1724,8 @@ quitBtn.onclick = async () => {
     animateMenuBackground();
     
     // Save progress when quitting
-    await saveProgress();
+    console.log('🚪 Quit game - saving progress...');
+    await saveProgress('quit_game');
 };
 
 // Skins button handlers (placeholder - opens alert for now)
@@ -2160,6 +2268,9 @@ class Player extends Entity {
     async die() {
         this.alive = false;
         gameRunning = false;
+        
+        // Stop auto-save when game ends
+        stopAutoSave();
 
         const score = this.calculateScore();
         if (score > highScore) {
@@ -2176,7 +2287,8 @@ class Player extends Entity {
         animateMenuBackground();
         
         // Save progress to cloud on death
-        await saveProgress();
+        console.log('💀 Game over - saving progress...');
+        await saveProgress('game_over');
     }
 }
 
@@ -2757,8 +2869,12 @@ async function startGame() {
     gameRunning = true;
     gamePaused = false;
     
+    // Start auto-save (every 60 seconds)
+    startAutoSave();
+    
     // Save game start to cloud
-    await saveProgress();
+    console.log('🎮 Game started - saving initial progress...');
+    await saveProgress('game_start');
 }
 
 // ==========================================
