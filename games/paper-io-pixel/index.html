@@ -990,16 +990,21 @@ let syncPending = false;
 // CLOUD SAVE MANAGER
 // ==========================================
 const CloudSave = {
-    // Collection path
-    basePath: 'game-saves/paper-io-pixel/users',
-    
-    // Get user document reference
+    // Get user document reference - saves directly to game-saves/paper-io-pixel/{userId}
     getUserDoc() {
         if (!currentUser) return null;
-        return db.collection(this.basePath).doc(currentUser.uid);
+        // Structure: game-saves/paper-io-pixel/{userId}
+        return db.collection('game-saves').doc('paper-io-pixel').collection('players').doc(currentUser.uid);
     },
     
     // Save data to cloud
+    // Structure in Firebase:
+    // game-saves/paper-io-pixel/players/{userId}/
+    //   - stats: { highScore, gamesPlayed }
+    //   - profile: { playerName, playerColor }
+    //   - skins: { unlocked: [], selected: 'default' }
+    //   - settings: { botCount, speed, zoom, mapRadius }
+    //   - meta: { lastUpdated, deviceId, createdAt }
     async save(data) {
         const userDoc = this.getUserDoc();
         if (!userDoc) {
@@ -1009,13 +1014,31 @@ const CloudSave = {
         
         try {
             updateSyncStatus('syncing');
-            await userDoc.set({
-                ...data,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                deviceId: getDeviceId()
-            }, { merge: true });
+            
+            // Structure the data properly for Firebase
+            const saveData = {
+                stats: {
+                    highScore: data.highScore || 0,
+                    gamesPlayed: data.gamesPlayed || 0
+                },
+                profile: {
+                    playerName: data.playerName || '',
+                    playerColor: data.playerColor || '#ff4757'
+                },
+                skins: {
+                    unlocked: data.unlockedSkins || ['default'],
+                    selected: data.selectedSkin || 'default'
+                },
+                settings: data.settings || {},
+                meta: {
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                    deviceId: getDeviceId()
+                }
+            };
+            
+            await userDoc.set(saveData, { merge: true });
             updateSyncStatus('synced');
-            console.log('Cloud save successful');
+            console.log('Cloud save successful to:', userDoc.path);
             return true;
         } catch (error) {
             console.error('Cloud save failed:', error);
@@ -1033,8 +1056,19 @@ const CloudSave = {
         try {
             const doc = await userDoc.get();
             if (doc.exists) {
-                console.log('Cloud data loaded');
-                return doc.data();
+                const rawData = doc.data();
+                console.log('Cloud data loaded from:', userDoc.path);
+                
+                // Convert structured Firebase data back to flat format for the game
+                return {
+                    highScore: rawData.stats?.highScore || 0,
+                    gamesPlayed: rawData.stats?.gamesPlayed || 0,
+                    playerName: rawData.profile?.playerName || '',
+                    playerColor: rawData.profile?.playerColor || '#ff4757',
+                    unlockedSkins: rawData.skins?.unlocked || ['default'],
+                    selectedSkin: rawData.skins?.selected || 'default',
+                    settings: rawData.settings || {}
+                };
             }
             return null;
         } catch (error) {
@@ -1510,7 +1544,10 @@ function updateAccountTab() {
     // Update cloud sync info
     const syncDetail = document.getElementById('cloud-sync-detail');
     if (currentUser) {
-        syncDetail.textContent = `Device ID: ${getDeviceId().substring(0, 15)}...`;
+        syncDetail.innerHTML = `
+            <div>📍 User ID: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-size:10px;">${currentUser.uid.substring(0, 12)}...</code></div>
+            <div style="margin-top:5px;">💾 Saves to: game-saves/paper-io-pixel/players/${currentUser.uid.substring(0, 8)}...</div>
+        `;
     } else {
         syncDetail.textContent = 'Connecting to cloud...';
     }
