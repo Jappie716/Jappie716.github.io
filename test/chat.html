@@ -52,9 +52,16 @@
         .msg.system { align-self: center; background: var(--system); font-size: 11px; padding: 5px 15px; border-radius: 20px; color: #cbd5e1; text-align: center; }
         
         .sender { font-size: 10px; color: var(--accent); display: block; margin-bottom: 2px; font-weight: bold; }
-        .timestamp { font-size: 9px; color: var(--text-dim); align-self: flex-end; margin-top: 4px; }
+        .timestamp { font-size: 9px; color: var(--text-dim); align-self: flex-end; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
         .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; transition: 0.2s; max-height: 300px; object-fit: cover; }
         .msg img:hover { opacity: 0.9; }
+
+        /* Actions (Edit/Delete) */
+        .msg-actions { display: none; position: absolute; top: -10px; right: -5px; background: var(--card-bg); border: 1px solid #334155; border-radius: 10px; padding: 2px; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .msg.sent:hover .msg-actions { display: flex; }
+        .action-btn { font-size: 12px; padding: 4px 8px; cursor: pointer; color: var(--text-dim); transition: 0.2s; }
+        .action-btn:hover { color: white; }
+        .action-btn.del:hover { color: var(--danger); }
 
         /* INPUT AREA */
         .input-area { padding: 15px; background: var(--card-bg); border-top: 1px solid #1e293b; display: flex; gap: 10px; align-items: flex-end; }
@@ -70,6 +77,11 @@
         .modal-box { background: #0f172a; padding: 25px; border-radius: 15px; width: 400px; max-width: 90%; border: 1px solid #1e293b; text-align: center; max-height: 90vh; overflow-y: auto; }
         .modal-box input { width: 100%; padding: 10px; margin: 10px 0; background: #020617; border: 1px solid #334155; color: white; border-radius: 8px; }
         .full-btn { width: 100%; margin-top: 10px; }
+
+        /* Tabs */
+        .tabs { display: flex; background: var(--sidebar-bg); border-bottom: 1px solid #1e293b; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 12px; color: var(--text-dim); position: relative; }
+        .tab.active { color: var(--accent); border-bottom: 2px solid var(--primary); background: #1e3a8a22; font-weight: bold; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
         .toast { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); animation: slideIn 0.3s; cursor: pointer; display: flex; align-items: center; gap: 10px; }
@@ -90,6 +102,28 @@
     </div>
 </div>
 
+<div id="editModal" class="modal">
+    <div class="modal-box">
+        <h3>Bericht Bewerken</h3>
+        <input type="text" id="editInput">
+        <div style="display:flex; gap:10px;">
+            <button class="btn" style="flex:1" onclick="saveEdit()">Opslaan</button>
+            <button class="btn btn-danger" style="flex:1" onclick="closeModal('editModal')">Annuleren</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal">
+    <div class="modal-box">
+        <h3>Bericht Verwijderen</h3>
+        <p>Weet je het zeker? Dit kan niet ongedaan worden gemaakt.</p>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-danger" style="flex:1" onclick="confirmDelete()">Verwijderen</button>
+            <button class="btn" style="background:#334155; flex:1" onclick="closeModal('deleteModal')">Annuleren</button>
+        </div>
+    </div>
+</div>
+
 <div class="sidebar">
     <div class="sidebar-header">
         <img id="myAvatar" src="" onclick="location.href='index.html'">
@@ -105,6 +139,11 @@
     
     <div style="padding:10px;">
         <input id="searchBar" type="text" placeholder="🔍 Zoeken..." onkeyup="renderSidebar()" style="width:100%; background:#0f172a; border:1px solid #1e293b; padding:8px; border-radius:8px; color:white;">
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('chats', this)">Chats</div>
+        <div class="tab" onclick="switchTab('requests', this)">Verzoeken</div>
     </div>
 
     <div id="chatList" class="chat-list"></div>
@@ -166,7 +205,7 @@
 </div>
 
 <script>
-// FIREBASE CONFIG (Zelfde als je had)
+// FIREBASE CONFIG
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -185,19 +224,22 @@ let chatType = null; // 'global', 'group', 'private'
 let msgUnsub = null;
 let typingUnsub = null;
 let chatDataMap = new Map();
+let requestsMap = new Map();
+let sentRequestsMap = new Map();
 let typingTimeout = null;
 let isOfflineMode = false;
-let originalTitle = document.title;
-let titleInterval = null;
-let activeListeners = new Set(); // Om dubbele listeners te voorkomen
+let activeTab = 'chats';
 let currentBase64 = null;
+let editMsgId = null;
+let delMsgId = null;
 
 // INIT
 auth.onAuthStateChanged(u => {
     if (!u) location.href = 'index.html';
     user = u;
     loadUserData();
-    subscribeToChats(); // OUDE METHODE DIE WERKT
+    subscribeToChats();
+    subscribeToRequests();
     startPresenceSystem();
 });
 
@@ -211,7 +253,7 @@ function loadUserData() {
     });
 }
 
-// --- STATUS SYSTEEM ---
+// --- STATUS SYSTEEM (FEATURE 6) ---
 function startPresenceSystem() {
     if(!isOfflineMode) updatePresence('online');
     setInterval(() => { if(!isOfflineMode) updatePresence('online'); }, 60000);
@@ -240,17 +282,15 @@ function toggleMyStatus() {
         txt.innerText = "Offline (Verborgen)";
         txt.style.color = "gray";
         updatePresence('offline');
-        notify("Status", "Je bent nu onzichtbaar.");
     } else {
         dot.className = "status-dot online";
         txt.innerText = "Online";
         txt.style.color = "white";
         updatePresence('online');
-        notify("Status", "Je bent nu online.");
     }
 }
 
-// --- CHATS LADEN (HERSTELD NAAR OUDE METHODE) ---
+// --- DATA LADEN ---
 function subscribeToChats() {
     // 1. Global
     setupListener('global', 'Algemeen', 'https://i.imgur.com/C9HtyPv.jpeg', 'global', db.collection("chats"));
@@ -296,13 +336,24 @@ function subscribeToChats() {
     });
 }
 
-function setupListener(id, name, pic, type, ref) {
-    if(activeListeners.has(id)) return;
-    activeListeners.add(id);
+function subscribeToRequests() {
+    // Ontvangen
+    db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
+        requestsMap.clear();
+        snap.forEach(doc => requestsMap.set(doc.id, doc.data()));
+        renderSidebar();
+    });
+    // Verzonden (FEATURE 5)
+    db.collection("users").doc(user.uid).collection("sent_requests").onSnapshot(snap => {
+        sentRequestsMap.clear();
+        snap.forEach(doc => sentRequestsMap.set(doc.id, doc.data()));
+        renderSidebar();
+    });
+}
 
+function setupListener(id, name, pic, type, ref) {
     if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, online: false });
 
-    // Luister naar laatste bericht voor unread status
     ref.orderBy("timestamp", "desc").limit(1).onSnapshot(snap => {
         if(snap.empty) return;
         const m = snap.docs[0].data();
@@ -312,11 +363,12 @@ function setupListener(id, name, pic, type, ref) {
         cData.timestamp = time;
         cData.lastMsg = m.image ? '📷 Foto' : m.text;
         
+        // FEATURE 7: Unread badge logic
         if (m.uid !== user.uid && activeChatId !== id) {
             cData.unread = true;
             playNotificationSound();
         } else if (activeChatId === id) {
-            cData.unread = false;
+            cData.unread = false; // Direct resetten als chat open is
         }
 
         chatDataMap.set(id, cData);
@@ -326,45 +378,103 @@ function setupListener(id, name, pic, type, ref) {
 
 function renderSidebar() {
     const list = document.getElementById('chatList');
-    const term = document.getElementById('searchBar').value.toLowerCase();
     list.innerHTML = "";
-    
-    const chats = Array.from(chatDataMap.values()).sort((a,b) => b.timestamp - a.timestamp);
+    const term = document.getElementById('searchBar').value.toLowerCase();
 
-    chats.forEach(c => {
-        if(term && !c.name.toLowerCase().includes(term)) return;
+    if(activeTab === 'chats') {
+        const chats = Array.from(chatDataMap.values()).sort((a,b) => b.timestamp - a.timestamp);
+        chats.forEach(c => {
+            if(term && !c.name.toLowerCase().includes(term)) return;
+            const div = document.createElement('div');
+            div.className = `chat-item ${activeChatId === c.id ? 'active' : ''}`;
+            
+            let statusHtml = '';
+            if(c.type === 'private') {
+                statusHtml = `<div class="status-dot ${c.online ? 'online' : ''}" style="width:8px; height:8px; border:none; margin-right:0;"></div>`;
+            }
 
-        const div = document.createElement('div');
-        div.className = `chat-item ${activeChatId === c.id ? 'active' : ''}`;
-        
-        let statusHtml = '';
-        if(c.type === 'private') {
-            statusHtml = `<div class="status-dot ${c.online ? 'online' : ''}" style="width:8px; height:8px; border:none; margin-right:0;"></div>`;
+            div.innerHTML = `
+                <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
+                <div class="chat-info">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="chat-name">${c.name}</span>
+                        ${statusHtml}
+                    </div>
+                    <div class="chat-preview" style="${c.unread ? 'font-weight:bold; color:white' : ''}">
+                        ${c.unread ? '🔵 ' : ''}${c.lastMsg || 'Start een gesprek'}
+                    </div>
+                </div>
+                ${c.unread ? `<div class="unread-badge">1</div>` : ''}
+            `;
+            div.onclick = () => openChat(c.id, c.name, c.pic, c.type);
+            list.appendChild(div);
+        });
+    } else {
+        // REQUESTS TAB (FEATURE 5)
+        if(requestsMap.size === 0 && sentRequestsMap.size === 0) {
+            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
+            // Laat zoekresultaten zien om mensen toe te voegen
+            if(term) searchUsers(term);
+        } else {
+            // Ontvangen
+            requestsMap.forEach((d, id) => {
+                list.innerHTML += `
+                <div class="chat-item">
+                    <img src="${d.pic}">
+                    <div class="chat-info">
+                        <span class="chat-name">${d.name}</span>
+                        <div style="color:#22c55e; font-size:11px;">Ontvangen verzoek</div>
+                    </div>
+                    <button class="btn btn-sm" onclick="acceptFriend('${id}', '${d.name}', '${d.pic}')">✅</button>
+                    <button class="btn btn-sm btn-danger" style="margin-left:5px" onclick="declineRequest('${id}')">❌</button>
+                </div>`;
+            });
+            // Verzonden
+            sentRequestsMap.forEach((d, id) => {
+                list.innerHTML += `
+                <div class="chat-item" style="opacity:0.7">
+                    <img src="${d.pic}">
+                    <div class="chat-info">
+                        <span class="chat-name">${d.name}</span>
+                        <div style="color:var(--text-dim); font-size:11px;">🕒 In afwachting...</div>
+                    </div>
+                </div>`;
+            });
         }
+    }
+}
 
-        div.innerHTML = `
-            <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
-            <div class="chat-info">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="chat-name">${c.name}</span>
-                    ${statusHtml}
-                </div>
-                <div class="chat-preview" style="${c.unread ? 'font-weight:bold; color:white' : ''}">
-                    ${c.unread ? '🔵 ' : ''}${c.lastMsg || 'Klik om te openen'}
-                </div>
-            </div>
-            ${c.unread ? `<div class="unread-badge">1</div>` : ''}
-        `;
-        div.onclick = () => openChat(c.id, c.name, c.pic, c.type);
-        list.appendChild(div);
+function searchUsers(term) {
+    // Simpele search simulatie (in echt firestore moet je queries doen)
+    db.collection("users").get().then(snap => {
+        const list = document.getElementById('chatList');
+        snap.forEach(doc => {
+            const d = doc.data();
+            if(d.name.toLowerCase().includes(term) && doc.id !== user.uid && !chatDataMap.has(doc.id)) {
+                list.innerHTML += `
+                <div class="chat-item">
+                    <img src="${d.pic}">
+                    <div class="chat-info"><span class="chat-name">${d.name}</span></div>
+                    <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}', '${d.pic}')">➕</button>
+                </div>`;
+            }
+        });
     });
 }
 
-// --- CHAT OPENEN & BERICHTEN ---
+function switchTab(t, el) {
+    activeTab = t;
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    renderSidebar();
+}
+
+// --- OPEN CHAT ---
 async function openChat(id, name, pic, type) {
     activeChatId = id; 
     chatType = type;
     
+    // FEATURE 7: Direct unread weghalen
     if(chatDataMap.has(id)) {
         const c = chatDataMap.get(id);
         c.unread = false;
@@ -377,11 +487,9 @@ async function openChat(id, name, pic, type) {
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     
-    // Settings knop
     const settingsBtn = document.getElementById('settingsBtn');
     settingsBtn.style.display = (type === 'group') ? 'block' : 'none';
     
-    // Status
     const statusEl = document.getElementById('activeStatus');
     if(type === 'private' && chatDataMap.has(id)) {
         const isOnline = chatDataMap.get(id).online;
@@ -409,6 +517,7 @@ function getChatRef() {
 }
 
 function getMetaRef() {
+    // FEATURE 1: Correcte refs voor typen in alle chats
     if(chatType === 'global') return db.collection("metadata").doc("global");
     if(chatType === 'group') return db.collection("groups").doc(activeChatId);
     if(chatType === 'private') return db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
@@ -419,12 +528,12 @@ function loadMessages() {
     msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(50).onSnapshot(snap => {
         const container = document.getElementById('chatMessages');
         container.innerHTML = "";
-        snap.forEach(doc => renderMessage(doc.data(), container));
+        snap.forEach(doc => renderMessage(doc.id, doc.data(), container));
         container.scrollTop = container.scrollHeight;
     });
 }
 
-function renderMessage(msg, container) {
+function renderMessage(id, msg, container) {
     const div = document.createElement('div');
     const isMe = msg.uid === user.uid;
     
@@ -432,6 +541,7 @@ function renderMessage(msg, container) {
     
     let content = "";
     if(msg.image) {
+        // FEATURE 2: Image Viewer
         content = `<img src="${msg.image}" onclick="openImage('${msg.image}')">`;
     } else {
         content = msg.text;
@@ -440,20 +550,31 @@ function renderMessage(msg, container) {
     if(msg.type === 'system') {
         div.innerHTML = content;
     } else {
+        // FEATURE 4: Edit/Delete knoppen voor eigen berichten
+        let actions = "";
+        if(isMe) {
+            actions = `
+            <div class="msg-actions">
+                <span class="action-btn" onclick="openEditModal('${id}', '${msg.text}')">✎</span>
+                <span class="action-btn del" onclick="openDeleteModal('${id}')">✖</span>
+            </div>`;
+        }
+
         div.innerHTML = `
+            ${actions}
             ${!isMe && chatType !== 'private' ? `<span class="sender">${msg.user}</span>` : ''}
             ${content}
+            ${msg.edited ? '<span style="font-size:9px; color:gray; font-style:italic;"> (bewerkt)</span>' : ''}
             <span class="timestamp">${msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}</span>
         `;
     }
     container.appendChild(div);
 }
 
-// --- VERSTUREN ---
+// --- ACTIES (VERSTUREN, BEWERKEN, VERWIJDEREN) ---
 async function sendMessage(imageUrl = null) {
     const input = document.getElementById('messageInput');
     const text = input.value.trim();
-    
     if(!text && !imageUrl) return;
 
     const msg = {
@@ -462,21 +583,44 @@ async function sendMessage(imageUrl = null) {
         uid: user.uid,
         user: document.getElementById('myName').innerText,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        type: 'text'
+        type: 'text',
+        edited: false
     };
 
     input.value = "";
     updateTyping(false);
-    
     await getChatRef().add(msg);
 }
 
-// --- TYPEN ---
+// FEATURE 4: Edit & Delete Logic
+function openEditModal(id, text) {
+    editMsgId = id;
+    document.getElementById('editInput').value = text;
+    document.getElementById('editModal').style.display = 'flex';
+}
+async function saveEdit() {
+    const newText = document.getElementById('editInput').value;
+    if(newText && editMsgId) {
+        await getChatRef().doc(editMsgId).update({ text: newText, edited: true });
+        closeModal('editModal');
+    }
+}
+function openDeleteModal(id) {
+    delMsgId = id;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+async function confirmDelete() {
+    if(delMsgId) {
+        await getChatRef().doc(delMsgId).delete();
+        closeModal('deleteModal');
+    }
+}
+
+// --- TYPEN INDICATOR (FEATURE 1) ---
 async function setupTypingListener() {
     const ref = getMetaRef();
     typingUnsub = ref.onSnapshot(doc => {
         const indic = document.getElementById('typingIndicator');
-        
         if(doc.exists && doc.data().typingStatus) {
             const typers = Object.entries(doc.data().typingStatus)
                 .filter(([uid, name]) => uid !== user.uid)
@@ -485,12 +629,8 @@ async function setupTypingListener() {
             if(typers.length > 0) {
                 indic.style.display = 'block';
                 indic.innerText = `${typers.join(", ")} is aan het typen...`;
-            } else {
-                indic.style.display = 'none';
-            }
-        } else {
-            indic.style.display = 'none';
-        }
+            } else { indic.style.display = 'none'; }
+        } else { indic.style.display = 'none'; }
     });
 }
 
@@ -508,6 +648,7 @@ async function updateTyping(isTyping) {
 
     if(isTyping) {
         const update = {}; update[fieldPath] = myName;
+        // Merge true zorgt dat het document wordt aangemaakt als het niet bestaat (cruciaal voor prive)
         await ref.set(update, { merge: true });
     } else {
         const update = {}; update[fieldPath] = firebase.firestore.FieldValue.delete();
@@ -515,7 +656,7 @@ async function updateTyping(isTyping) {
     }
 }
 
-// --- INSTELLINGEN & LEDEN ---
+// --- SETTINGS (FEATURE 3: NESTED MENU) ---
 async function openChatSettings() {
     const modal = document.getElementById('groupSettingsModal');
     const content = document.getElementById('settingsContent');
@@ -525,7 +666,6 @@ async function openChatSettings() {
     const g = groupDoc.data();
     const isAdmin = g.owner === user.uid || (g.admins && g.admins.includes(user.uid));
 
-    // Leden namen ophalen als ze er niet zijn
     let membersHtml = '';
     for(const mid of g.members) {
         membersHtml += `<div style="padding:5px 0;">👤 ${mid === user.uid ? 'Jij' : 'Lid'}</div>`; 
@@ -567,7 +707,6 @@ async function openAddMemberMenu(currentMembersStr) {
     if(count === 0) html += `<div style="text-align:center; color:gray;">Geen vrienden om toe te voegen.</div>`;
     html += `</div>`;
     html += `<button class="btn full-btn" style="background:#334155" onclick="openChatSettings()">⬅ Terug naar Instellingen</button>`;
-    
     content.innerHTML = html;
 }
 
@@ -575,28 +714,46 @@ async function addMemberToGroup(uid, name) {
     await db.collection("groups").doc(activeChatId).update({
         members: firebase.firestore.FieldValue.arrayUnion(uid)
     });
-    // Systeem bericht
     await db.collection("groups").doc(activeChatId).collection("messages").add({
         text: `${document.getElementById('myName').innerText} heeft ${name} toegevoegd.`,
         type: 'system',
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     notify("Succes", `${name} is toegevoegd!`);
-    openChatSettings(); // Ververs menu
+    openChatSettings();
 }
 
-// --- UTILS (Images, Modals, etc) ---
+// --- UTILS & FRIEND REQUESTS ---
+async function sendFriendRequest(id, name, pic) {
+    const me = (await db.collection("users").doc(user.uid).get()).data();
+    // 1. Stuur naar ontvanger
+    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
+    // 2. Sla op bij mezelf (FEATURE 5)
+    await db.collection("users").doc(user.uid).collection("sent_requests").doc(id).set({ name: name, pic: pic || "" });
+    
+    notify("Verzonden", `Verzoek naar ${name}`);
+}
+
+async function acceptFriend(id, name, pic) {
+    const me = (await db.collection("users").doc(user.uid).get()).data();
+    await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
+    await db.collection("users").doc(id).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
+    await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
+    // Verwijder ook uit sent_requests bij de ander (optioneel, maar netjes)
+    db.collection("users").doc(id).collection("sent_requests").doc(user.uid).delete();
+    notify("Vrienden", `Je bent nu vrienden met ${name}`);
+}
+
+async function declineRequest(id) {
+    await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
+}
+
 function handleFileUpload(input) {
     const file = input.files[0];
     if(!file) return;
-    
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = (e) => {
-        // Simpele compressie/resize logic kan hier, maar voor nu sturen we base64
-        // Let op: Firestore heeft limiet. Beter is Storage, maar dit werkt voor kleine plaatjes.
-        sendMessage(e.target.result); 
-    };
+    reader.onload = (e) => sendMessage(e.target.result); 
 }
 
 function previewImage(inp, id) {
@@ -613,17 +770,10 @@ function previewImage(inp, id) {
 function createGroup() {
     const name = document.getElementById('newGroupName').value;
     if(!name) return;
-    
     db.collection("groups").add({
-        name: name,
-        owner: user.uid,
-        members: [user.uid],
-        pic: currentBase64 || "",
+        name: name, owner: user.uid, members: [user.uid], pic: currentBase64 || "",
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        closeModal('groupModal');
-        notify("Groep aangemaakt!");
-    });
+    }).then(() => { closeModal('groupModal'); notify("Groep aangemaakt!"); });
 }
 
 function openGroupModal() { 
@@ -632,11 +782,14 @@ function openGroupModal() {
     document.getElementById('groupModal').style.display = 'flex'; 
 }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// FEATURE 2: Image Modal Logic
 function openImage(src) {
     document.getElementById('imgViewer').src = src;
     document.getElementById('imgDownload').href = src;
     document.getElementById('imageModal').style.display = 'flex';
 }
+
 function notify(title, msg) {
     const c = document.getElementById('toast-container');
     const t = document.createElement('div');
@@ -648,7 +801,6 @@ function playNotificationSound() {
     audio.play().catch(e => {});
 }
 
-// ESC to close
 document.addEventListener('keydown', (e) => { if(e.key==="Escape") document.querySelectorAll('.modal').forEach(m => m.style.display='none'); });
 </script>
 </body>
