@@ -176,6 +176,7 @@
             border-radius: 20px;
             font-size: 12px;
             z-index: 20;
+            cursor: pointer;
         }
 
         .sync-status.syncing {
@@ -188,6 +189,10 @@
 
         .sync-status.offline {
             background: rgba(255, 71, 87, 0.3);
+        }
+
+        .sync-status.error {
+            background: rgba(255, 71, 87, 0.5);
         }
 
         @keyframes pulse {
@@ -496,6 +501,7 @@
             background: rgba(0,208,211,0.1);
             border-radius: 12px;
             border: 1px solid rgba(0,208,211,0.3);
+            text-align: left;
         }
 
         .cloud-sync-info .sync-title {
@@ -507,7 +513,8 @@
 
         .cloud-sync-info .sync-detail {
             color: rgba(255,255,255,0.7);
-            font-size: 12px;
+            font-size: 11px;
+            line-height: 1.6;
         }
 
         #close-settings {
@@ -785,6 +792,34 @@
             font-size: 18px;
             font-weight: 700;
         }
+
+        #loading-details {
+            margin-top: 10px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        /* Debug console */
+        #debug-log {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 400px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: none;
+        }
+
+        #debug-log.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -792,13 +827,17 @@
     <div id="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">Connecting to cloud...</div>
+        <div id="loading-details"></div>
     </div>
+
+    <!-- Debug Log -->
+    <div id="debug-log"></div>
 
     <div id="ui-overlay">
         <canvas id="bg-animation"></canvas>
         
         <!-- Cloud Sync Status -->
-        <div class="sync-status" id="sync-status">
+        <div class="sync-status" id="sync-status" onclick="testSave()">
             <svg class="sync-icon" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
             </svg>
@@ -924,11 +963,12 @@
                         <span id="account-games">0</span> games played • Best: <span id="account-best">0%</span>
                     </div>
                     <div>
+                        <button class="account-btn primary" id="test-save-btn">Test Save</button>
                         <button class="account-btn secondary" id="reset-stats-btn">Reset Stats</button>
                     </div>
                     <div class="cloud-sync-info">
-                        <div class="sync-title">☁️ Cloud Sync Active</div>
-                        <div class="sync-detail" id="cloud-sync-detail">Your progress is saved automatically</div>
+                        <div class="sync-title">☁️ Cloud Sync</div>
+                        <div class="sync-detail" id="cloud-sync-detail">Connecting...</div>
                     </div>
                 </div>
             </div>
@@ -965,6 +1005,36 @@
 
     <script>
 // ==========================================
+// DEBUG LOGGING
+// ==========================================
+const debugLog = document.getElementById('debug-log');
+let debugMessages = [];
+
+function debug(msg, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+    const fullMsg = `[${timestamp}] ${prefix} ${msg}`;
+    
+    console.log(fullMsg);
+    debugMessages.push(fullMsg);
+    if (debugMessages.length > 20) debugMessages.shift();
+    
+    debugLog.innerHTML = debugMessages.join('<br>');
+    debugLog.scrollTop = debugLog.scrollHeight;
+}
+
+// Show debug log with triple-click anywhere
+let clickCount = 0;
+document.addEventListener('click', () => {
+    clickCount++;
+    setTimeout(() => clickCount = 0, 500);
+    if (clickCount >= 3) {
+        debugLog.classList.toggle('visible');
+        clickCount = 0;
+    }
+});
+
+// ==========================================
 // FIREBASE CONFIGURATION & INITIALIZATION
 // ==========================================
 const firebaseConfig = {
@@ -977,9 +1047,18 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+let firebaseApp = null;
+let auth = null;
+let db = null;
+
+try {
+    firebaseApp = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    debug('Firebase initialized successfully', 'success');
+} catch (error) {
+    debug('Firebase init failed: ' + error.message, 'error');
+}
 
 // Firebase state
 let currentUser = null;
@@ -987,44 +1066,56 @@ let isOnline = navigator.onLine;
 let syncPending = false;
 let autoSaveInterval = null;
 let lastSaveTime = 0;
+let firebaseReady = false;
 
 // ==========================================
 // CLOUD SAVE MANAGER
 // ==========================================
 const CloudSave = {
-    // Get user document reference - saves directly to game-saves/paper-io-pixel/{userId}
+    // Get user document reference
     getUserDoc() {
-        if (!currentUser) return null;
-        // Structure: game-saves/paper-io-pixel/{userId}
-        return db.collection('game-saves').doc('paper-io-pixel').collection('players').doc(currentUser.uid);
+        if (!currentUser || !db) {
+            debug('getUserDoc: No user or db', 'error');
+            return null;
+        }
+        // Path: game-saves/paper-io-pixel/players/{userId}
+        const docRef = db.collection('game-saves').doc('paper-io-pixel').collection('players').doc(currentUser.uid);
+        debug('Doc path: ' + docRef.path);
+        return docRef;
     },
     
     // Save data to cloud
-    // Structure in Firebase:
-    // game-saves/paper-io-pixel/players/{userId}/
-    //   - stats: { highScore, gamesPlayed }
-    //   - profile: { playerName, playerColor }
-    //   - skins: { unlocked: [], selected: 'default' }
-    //   - settings: { botCount, speed, zoom, mapRadius }
-    //   - meta: { lastUpdated, deviceId, createdAt }
     async save(data) {
+        debug('CloudSave.save() called...');
+        
+        if (!db) {
+            debug('Firestore not initialized', 'error');
+            return false;
+        }
+        
+        if (!currentUser) {
+            debug('No user logged in', 'error');
+            return false;
+        }
+        
         const userDoc = this.getUserDoc();
         if (!userDoc) {
-            console.log('No user logged in, saving to localStorage only');
+            debug('Could not get user doc reference', 'error');
             return false;
         }
         
         try {
             updateSyncStatus('syncing');
+            debug('Preparing save data...');
             
-            // Structure the data properly for Firebase
+            // Structure the data for Firebase
             const saveData = {
                 stats: {
                     highScore: data.highScore || 0,
                     gamesPlayed: data.gamesPlayed || 0
                 },
                 profile: {
-                    playerName: data.playerName || '',
+                    playerName: data.playerName || 'Guest',
                     playerColor: data.playerColor || '#ff4757'
                 },
                 skins: {
@@ -1034,17 +1125,25 @@ const CloudSave = {
                 settings: data.settings || {},
                 meta: {
                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                    deviceId: getDeviceId()
+                    deviceId: getDeviceId(),
+                    savedAt: new Date().toISOString()
                 }
             };
             
+            debug('Saving to: ' + userDoc.path);
+            debug('Data: highScore=' + saveData.stats.highScore + ', games=' + saveData.stats.gamesPlayed);
+            
             await userDoc.set(saveData, { merge: true });
+            
+            lastSaveTime = Date.now();
             updateSyncStatus('synced');
-            console.log('Cloud save successful to:', userDoc.path);
+            debug('Save successful!', 'success');
             return true;
+            
         } catch (error) {
-            console.error('Cloud save failed:', error);
-            updateSyncStatus('offline');
+            debug('Save failed: ' + error.message, 'error');
+            debug('Error code: ' + error.code, 'error');
+            updateSyncStatus('error');
             syncPending = true;
             return false;
         }
@@ -1052,16 +1151,25 @@ const CloudSave = {
     
     // Load data from cloud
     async load() {
+        debug('CloudSave.load() called...');
+        
+        if (!db || !currentUser) {
+            debug('Cannot load: no db or user', 'error');
+            return null;
+        }
+        
         const userDoc = this.getUserDoc();
         if (!userDoc) return null;
         
         try {
+            debug('Loading from: ' + userDoc.path);
             const doc = await userDoc.get();
+            
             if (doc.exists) {
                 const rawData = doc.data();
-                console.log('Cloud data loaded from:', userDoc.path);
+                debug('Data loaded from cloud', 'success');
+                debug('Cloud highScore: ' + (rawData.stats?.highScore || 0));
                 
-                // Convert structured Firebase data back to flat format for the game
                 return {
                     highScore: rawData.stats?.highScore || 0,
                     gamesPlayed: rawData.stats?.gamesPlayed || 0,
@@ -1071,47 +1179,53 @@ const CloudSave = {
                     selectedSkin: rawData.skins?.selected || 'default',
                     settings: rawData.settings || {}
                 };
+            } else {
+                debug('No existing cloud data found');
+                return null;
             }
-            return null;
         } catch (error) {
-            console.error('Cloud load failed:', error);
+            debug('Load failed: ' + error.message, 'error');
             return null;
         }
     },
     
-    // Sync local and cloud data (merge taking highest values)
+    // Sync local and cloud data
     async syncData() {
+        debug('Syncing data...');
+        
         const cloudData = await this.load();
         const localData = getLocalSaveData();
         
         if (!cloudData && !localData) {
+            debug('No data found anywhere, using defaults');
             return getDefaultSaveData();
         }
         
         if (!cloudData) {
-            // Only local data exists, upload it
+            debug('Only local data exists, uploading...');
             await this.save(localData);
             return localData;
         }
         
-        if (!localData) {
-            // Only cloud data exists, use it
+        if (!localData || localData.gamesPlayed === 0) {
+            debug('Using cloud data');
             saveLocalData(cloudData);
             return cloudData;
         }
         
-        // Merge: take highest scores and most games
+        // Merge: take highest values
         const mergedData = {
             highScore: Math.max(cloudData.highScore || 0, localData.highScore || 0),
             gamesPlayed: Math.max(cloudData.gamesPlayed || 0, localData.gamesPlayed || 0),
-            playerName: cloudData.playerName || localData.playerName || '',
-            playerColor: cloudData.playerColor || localData.playerColor || '#ff4757',
+            playerName: localData.playerName || cloudData.playerName || '',
+            playerColor: localData.playerColor || cloudData.playerColor || '#ff4757',
             unlockedSkins: [...new Set([...(cloudData.unlockedSkins || []), ...(localData.unlockedSkins || [])])],
-            selectedSkin: cloudData.selectedSkin || localData.selectedSkin || 'default',
-            settings: { ...localData.settings, ...cloudData.settings }
+            selectedSkin: localData.selectedSkin || cloudData.selectedSkin || 'default',
+            settings: { ...cloudData.settings, ...localData.settings }
         };
         
-        // Save merged data back
+        debug('Merged data: highScore=' + mergedData.highScore + ', games=' + mergedData.gamesPlayed);
+        
         await this.save(mergedData);
         saveLocalData(mergedData);
         
@@ -1179,13 +1293,16 @@ function updateSyncStatus(status) {
     
     switch(status) {
         case 'syncing':
-            syncTextEl.textContent = 'Syncing...';
+            syncTextEl.textContent = 'Saving...';
             break;
         case 'synced':
-            syncTextEl.textContent = `Saved ${timeStr}`;
+            syncTextEl.textContent = 'Saved ' + timeStr;
             break;
         case 'offline':
             syncTextEl.textContent = 'Offline';
+            break;
+        case 'error':
+            syncTextEl.textContent = 'Error - Click to retry';
             break;
         default:
             syncTextEl.textContent = 'Connecting...';
@@ -1196,36 +1313,65 @@ function updateSyncStatus(status) {
 // AUTH & INITIALIZATION
 // ==========================================
 async function initializeAuth() {
+    const loadingDetails = document.getElementById('loading-details');
+    
+    if (!auth) {
+        debug('Auth not available', 'error');
+        loadingDetails.textContent = 'Firebase auth not available';
+        return;
+    }
+    
     return new Promise((resolve) => {
+        loadingDetails.textContent = 'Authenticating...';
+        
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 currentUser = user;
-                console.log('User authenticated:', user.uid);
+                firebaseReady = true;
+                debug('User authenticated: ' + user.uid.substring(0, 8) + '...', 'success');
+                loadingDetails.textContent = 'Loading your data...';
                 
-                // Sync data on login
-                const syncedData = await CloudSave.syncData();
-                applyLoadedData(syncedData);
-                updateSyncStatus('synced');
-            } else {
-                // Sign in anonymously
                 try {
-                    const result = await auth.signInAnonymously();
-                    currentUser = result.user;
-                    console.log('Anonymous auth successful:', currentUser.uid);
-                    
-                    // Sync data
                     const syncedData = await CloudSave.syncData();
                     applyLoadedData(syncedData);
                     updateSyncStatus('synced');
                 } catch (error) {
-                    console.error('Auth failed:', error);
-                    updateSyncStatus('offline');
-                    // Use local data only
+                    debug('Sync error: ' + error.message, 'error');
+                    applyLoadedData(getLocalSaveData());
+                }
+            } else {
+                debug('No user, signing in anonymously...');
+                loadingDetails.textContent = 'Creating anonymous account...';
+                
+                try {
+                    const result = await auth.signInAnonymously();
+                    currentUser = result.user;
+                    firebaseReady = true;
+                    debug('Anonymous sign-in successful: ' + currentUser.uid.substring(0, 8) + '...', 'success');
+                    loadingDetails.textContent = 'Loading your data...';
+                    
+                    const syncedData = await CloudSave.syncData();
+                    applyLoadedData(syncedData);
+                    updateSyncStatus('synced');
+                } catch (error) {
+                    debug('Auth error: ' + error.message, 'error');
+                    debug('Error code: ' + error.code, 'error');
+                    updateSyncStatus('error');
                     applyLoadedData(getLocalSaveData());
                 }
             }
             resolve();
         });
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+            if (!currentUser) {
+                debug('Auth timeout - using local data', 'error');
+                updateSyncStatus('offline');
+                applyLoadedData(getLocalSaveData());
+                resolve();
+            }
+        }, 10000);
     });
 }
 
@@ -1254,26 +1400,26 @@ function applyLoadedData(data) {
         if (data.settings.mapRadius) CONFIG.mapRadius = data.settings.mapRadius;
     }
     
-    // Update UI
     updateAccountTab();
+    debug('Data applied: highScore=' + highScore + ', games=' + gamesPlayed);
 }
 
-// Save progress (called after game ends, settings change, etc.)
+// Save progress function
 async function saveProgress(reason = 'manual') {
+    debug('saveProgress called: ' + reason);
+    
     const now = Date.now();
     
-    // Prevent saving too frequently (minimum 5 seconds between saves)
-    if (now - lastSaveTime < 5000 && reason === 'auto') {
-        console.log('Skipping auto-save, too soon since last save');
+    // Prevent saving too frequently
+    if (now - lastSaveTime < 3000 && reason === 'auto') {
+        debug('Skipping save, too soon');
         return;
     }
-    
-    lastSaveTime = now;
     
     const data = {
         highScore: highScore,
         gamesPlayed: gamesPlayed,
-        playerName: playerNameInput.value.trim(),
+        playerName: playerNameInput.value.trim() || 'Guest',
         playerColor: CONFIG.colors.player,
         unlockedSkins: JSON.parse(localStorage.getItem('paperio_skins') || '["default"]'),
         selectedSkin: localStorage.getItem('paperio_selected_skin') || 'default',
@@ -1286,12 +1432,6 @@ async function saveProgress(reason = 'manual') {
             screenTheme: currentScreenTheme
         }
     };
-    
-    console.log(`💾 Saving progress (${reason})...`, {
-        highScore: data.highScore,
-        gamesPlayed: data.gamesPlayed,
-        playerName: data.playerName
-    });
     
     // Save locally first
     saveLocalData(data);
@@ -1300,46 +1440,61 @@ async function saveProgress(reason = 'manual') {
     const success = await CloudSave.save(data);
     
     if (success) {
-        console.log(`✅ Cloud save successful (${reason})`);
+        debug('Progress saved to cloud (' + reason + ')', 'success');
     } else {
-        console.log(`⚠️ Cloud save failed, saved locally (${reason})`);
+        debug('Cloud save failed (' + reason + ')', 'error');
     }
     
     return success;
 }
 
-// Start auto-save interval (every 60 seconds)
-function startAutoSave() {
-    // Clear any existing interval
-    if (autoSaveInterval) {
-        clearInterval(autoSaveInterval);
+// Test save function (click on sync status or test button)
+async function testSave() {
+    debug('=== TEST SAVE ===');
+    debug('User: ' + (currentUser ? currentUser.uid.substring(0, 12) : 'NONE'));
+    debug('Firebase ready: ' + firebaseReady);
+    debug('DB: ' + (db ? 'OK' : 'NULL'));
+    
+    // Increment games played for test
+    gamesPlayed++;
+    document.getElementById('games-played').textContent = gamesPlayed;
+    
+    const success = await saveProgress('test');
+    
+    if (success) {
+        alert('✅ Save successful!\n\nCheck Firebase console:\ngame-saves/paper-io-pixel/players/' + currentUser.uid);
+    } else {
+        alert('❌ Save failed!\n\nCheck console for errors.');
     }
-    
-    // Save every 60 seconds while game is running
-    autoSaveInterval = setInterval(async () => {
-        if (gameRunning && !gamePaused && currentUser) {
-            console.log('⏰ Auto-save triggered (60 second interval)');
-            await saveProgress('auto');
-        }
-    }, 60000); // 60 seconds
-    
-    console.log('🔄 Auto-save started (every 60 seconds)');
 }
 
-// Stop auto-save interval
+// Auto-save functions
+function startAutoSave() {
+    if (autoSaveInterval) clearInterval(autoSaveInterval);
+    
+    autoSaveInterval = setInterval(async () => {
+        if (gameRunning && !gamePaused && firebaseReady) {
+            debug('Auto-save triggered');
+            await saveProgress('auto');
+        }
+    }, 60000);
+    
+    debug('Auto-save started (60s interval)');
+}
+
 function stopAutoSave() {
     if (autoSaveInterval) {
         clearInterval(autoSaveInterval);
         autoSaveInterval = null;
-        console.log('⏹️ Auto-save stopped');
+        debug('Auto-save stopped');
     }
 }
 
-// Online/offline handlers
+// Event listeners
 window.addEventListener('online', async () => {
     isOnline = true;
-    console.log('🌐 Back online - syncing pending data...');
-    if (syncPending) {
+    debug('Back online');
+    if (syncPending && firebaseReady) {
         await saveProgress('reconnected');
         syncPending = false;
     }
@@ -1347,43 +1502,24 @@ window.addEventListener('online', async () => {
 
 window.addEventListener('offline', () => {
     isOnline = false;
-    console.log('📴 Went offline');
+    debug('Went offline');
     updateSyncStatus('offline');
 });
 
-// Save before page closes/refreshes
-window.addEventListener('beforeunload', (e) => {
-    // Save synchronously to localStorage (cloud save might not complete in time)
+window.addEventListener('beforeunload', () => {
     const data = {
         highScore: highScore,
         gamesPlayed: gamesPlayed,
         playerName: playerNameInput.value.trim(),
-        playerColor: CONFIG.colors.player,
-        unlockedSkins: JSON.parse(localStorage.getItem('paperio_skins') || '["default"]'),
-        selectedSkin: localStorage.getItem('paperio_selected_skin') || 'default',
-        settings: {
-            botCount: CONFIG.botCount,
-            speed: CONFIG.speed,
-            zoom: CONFIG.zoom,
-            mapRadius: CONFIG.mapRadius,
-            playerColor: CONFIG.colors.player,
-            screenTheme: currentScreenTheme
-        }
+        playerColor: CONFIG.colors.player
     };
     saveLocalData(data);
-    console.log('🚨 Page closing - saved to localStorage');
-    
-    // Try to save to cloud (may not complete)
-    if (currentUser && navigator.sendBeacon) {
-        // Use sendBeacon for reliable save on page close
-        // Note: This won't work with Firestore, but we already saved locally
-    }
+    debug('Page closing - saved locally');
 });
 
-// Save when tab becomes hidden (user switches tabs or minimizes)
 document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'hidden' && gameRunning) {
-        console.log('👁️ Tab hidden - saving progress...');
+    if (document.visibilityState === 'hidden' && gameRunning && firebaseReady) {
+        debug('Tab hidden - saving');
         await saveProgress('tab_hidden');
     }
 });
@@ -1469,9 +1605,8 @@ let camera = { x: 0, y: 0 };
 
 let player = null;
 let bots = [];
-let territory = []; // 0 = empty, 1 = player, 2+ = bot index + 2
+let territory = [];
 
-// Cached values for score calculation
 let cachedTotalTiles = 0;
 
 // Stats
@@ -1489,11 +1624,9 @@ if (savedSettings.zoom) CONFIG.zoom = savedSettings.zoom;
 if (savedSettings.mapRadius) CONFIG.mapRadius = savedSettings.mapRadius;
 if (savedSettings.playerColor) CONFIG.colors.player = savedSettings.playerColor;
 
-// Load and apply start screen theme
 let currentScreenTheme = localStorage.getItem('paperio_screen_theme') || 'original';
 applyScreenTheme(currentScreenTheme);
 
-// Minimap
 let minimapNeedsUpdate = true;
 
 // ==========================================
@@ -1521,7 +1654,6 @@ function initSettingsPanel() {
     const mapSizeSelect = document.getElementById('setting-mapsize');
     const colorPicker = document.getElementById('setting-color');
 
-    // Set initial values
     botSlider.value = CONFIG.botCount;
     document.getElementById('bots-value').textContent = CONFIG.botCount;
     
@@ -1535,10 +1667,8 @@ function initSettingsPanel() {
     colorPicker.value = CONFIG.colors.player;
     selectedPlayerColor = CONFIG.colors.player;
 
-    // Update account tab
     updateAccountTab();
 
-    // Event listeners for sliders
     botSlider.addEventListener('input', (e) => {
         document.getElementById('bots-value').textContent = e.target.value;
     });
@@ -1551,13 +1681,11 @@ function initSettingsPanel() {
         document.getElementById('zoom-value').textContent = (e.target.value / 10).toFixed(1) + 'x';
     });
 
-    // Color picker sync
     colorPicker.addEventListener('input', (e) => {
         selectedPlayerColor = e.target.value;
         updateColorSelection(e.target.value);
     });
 
-    // Tab switching
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
@@ -1565,7 +1693,6 @@ function initSettingsPanel() {
         });
     });
 
-    // Color buttons
     document.querySelectorAll('.theme-color-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const color = btn.dataset.color;
@@ -1575,7 +1702,6 @@ function initSettingsPanel() {
         });
     });
 
-    // Screen theme buttons
     document.querySelectorAll('.screen-theme-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const theme = btn.dataset.screenTheme;
@@ -1585,7 +1711,6 @@ function initSettingsPanel() {
         });
     });
 
-    // Reset stats button
     document.getElementById('reset-stats-btn').addEventListener('click', async () => {
         if (confirm('Are you sure you want to reset all your stats?')) {
             localStorage.removeItem('paperio_games');
@@ -1595,16 +1720,14 @@ function initSettingsPanel() {
             document.getElementById('games-played').textContent = '0';
             document.getElementById('high-score').textContent = '0%';
             updateAccountTab();
-            
-            // Sync reset to cloud
-            await saveProgress();
+            await saveProgress('reset_stats');
         }
     });
 
-    // Update initial color selection
+    document.getElementById('test-save-btn').addEventListener('click', testSave);
+
     updateColorSelection(CONFIG.colors.player);
     
-    // Update initial screen theme selection
     document.querySelectorAll('.screen-theme-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
     });
@@ -1613,12 +1736,10 @@ function initSettingsPanel() {
 function switchTab(tabName) {
     currentTab = tabName;
     
-    // Update tab buttons
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
     
-    // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === 'tab-' + tabName);
     });
@@ -1637,21 +1758,20 @@ function updateAccountTab() {
     document.getElementById('account-games').textContent = gamesPlayed;
     document.getElementById('account-best').textContent = highScore + '%';
     
-    // Update cloud sync info
     const syncDetail = document.getElementById('cloud-sync-detail');
     if (currentUser) {
         const lastSaveStr = lastSaveTime > 0 
             ? new Date(lastSaveTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
             : 'Never';
         
-        syncDetail.innerHTML = `
-            <div>📍 User ID: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;font-size:10px;">${currentUser.uid.substring(0, 12)}...</code></div>
-            <div style="margin-top:5px;">💾 Path: game-saves/paper-io-pixel/players/${currentUser.uid.substring(0, 8)}...</div>
-            <div style="margin-top:5px;">🕐 Last save: ${lastSaveStr}</div>
-            <div style="margin-top:5px;">⏰ Auto-save: Every 60 seconds during gameplay</div>
-        `;
+        syncDetail.innerHTML = 
+            '✅ Connected<br>' +
+            '👤 ID: ' + currentUser.uid.substring(0, 12) + '...<br>' +
+            '📁 Path: game-saves/paper-io-pixel/players/...<br>' +
+            '🕐 Last save: ' + lastSaveStr + '<br>' +
+            '⏰ Auto-save: Every 60s during gameplay';
     } else {
-        syncDetail.textContent = 'Connecting to cloud...';
+        syncDetail.innerHTML = '⏳ Connecting to cloud...<br>Click "Test Save" to verify connection';
     }
 }
 
@@ -1659,16 +1779,14 @@ function openSettings() {
     settingsPanel.style.display = 'block';
     settingsOverlay.style.display = 'block';
     updateAccountTab();
-    switchTab('game'); // Always open on game tab
+    switchTab('game');
     
-    // Update screen theme selection
     document.querySelectorAll('.screen-theme-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
     });
 }
 
 async function closeSettings() {
-    // Save settings
     CONFIG.botCount = parseInt(document.getElementById('setting-bots').value);
     CONFIG.speed = parseInt(document.getElementById('setting-speed').value);
     CONFIG.botSpeed = CONFIG.speed * 0.875;
@@ -1676,7 +1794,6 @@ async function closeSettings() {
     CONFIG.mapRadius = parseInt(document.getElementById('setting-mapsize').value);
     CONFIG.colors.player = selectedPlayerColor;
 
-    // Save to localStorage
     localStorage.setItem('paperio_settings', JSON.stringify({
         botCount: CONFIG.botCount,
         speed: CONFIG.speed,
@@ -1689,8 +1806,7 @@ async function closeSettings() {
     settingsPanel.style.display = 'none';
     settingsOverlay.style.display = 'none';
     
-    // Sync to cloud
-    console.log('⚙️ Settings saved - syncing to cloud...');
+    debug('Settings saved - syncing to cloud');
     await saveProgress('settings_saved');
 }
 
@@ -1711,8 +1827,6 @@ resumeBtn.onclick = () => {
 quitBtn.onclick = async () => {
     gamePaused = false;
     gameRunning = false;
-    
-    // Stop auto-save when quitting
     stopAutoSave();
     
     pauseOverlay.style.display = 'none';
@@ -1723,12 +1837,10 @@ quitBtn.onclick = async () => {
     overlay.style.display = 'flex';
     animateMenuBackground();
     
-    // Save progress when quitting
-    console.log('🚪 Quit game - saving progress...');
+    debug('Quit game - saving');
     await saveProgress('quit_game');
 };
 
-// Skins button handlers (placeholder - opens alert for now)
 function openSkinsPanel() {
     alert('Skins panel coming soon! 🎨\nYour unlocked skins will be saved to the cloud.');
 }
@@ -1794,7 +1906,6 @@ function initGridData() {
         territory[x] = new Uint8Array(gridSize);
     }
     
-    // Pre-calculate total tiles inside the map for accurate percentage
     cachedTotalTiles = 0;
     for (let x = 0; x < gridSize; x++) {
         for (let y = 0; y < gridSize; y++) {
@@ -1833,7 +1944,6 @@ function getTerritory(gx, gy) {
     return 0;
 }
 
-// Check if a position overlaps with any existing territory
 function isPositionInAnyTerritory(worldX, worldY, checkRadius) {
     const { gx, gy } = worldToGrid(worldX, worldY);
     const gridRadius = Math.ceil(checkRadius / CONFIG.tileSize);
@@ -1864,7 +1974,7 @@ class Entity {
         this.isOutside = false;
         this.lastSafePos = { x: 0, y: 0 };
         this.alive = true;
-        this.territoryId = id + 1; // 1 = player, 2+ = bots
+        this.territoryId = id + 1;
         this.cachedScore = 0;
         this.scoreUpdateTimer = 0;
     }
@@ -1880,7 +1990,7 @@ class Entity {
 
     spawn(avoidX, avoidY, avoidDist) {
         let attempts = 0;
-        const startZoneRadius = 80; // Approximate size of start zone in world units
+        const startZoneRadius = 80;
         
         do {
             const angle = Math.random() * Math.PI * 2;
@@ -1889,13 +1999,8 @@ class Entity {
             this.y = mapCenterY + Math.sin(angle) * dist;
             attempts++;
             
-            // Check if too close to avoid position
             const tooCloseToAvoid = avoidX && Math.hypot(this.x - avoidX, this.y - avoidY) < avoidDist;
-            
-            // Check if overlapping any existing territory
             const overlapsTerritory = isPositionInAnyTerritory(this.x, this.y, startZoneRadius);
-            
-            // Check if too close to map edge
             const tooCloseToEdge = Math.hypot(this.x - mapCenterX, this.y - mapCenterY) > CONFIG.mapRadius - 150;
             
             if (!tooCloseToAvoid && !overlapsTerritory && !tooCloseToEdge) {
@@ -1994,8 +2099,6 @@ class Entity {
 
         this.floodFillCapture();
         minimapNeedsUpdate = true;
-        
-        // Force score recalculation after capture
         this.scoreUpdateTimer = 0;
     }
 
@@ -2003,7 +2106,6 @@ class Entity {
         const visited = new Uint8Array(gridSize * gridSize);
         const stack = [];
 
-        // Start from edges - mark all tiles reachable from outside
         for (let x = 0; x < gridSize; x++) {
             const terr1 = getTerritory(x, 0);
             if (terr1 !== this.territoryId) {
@@ -2029,7 +2131,6 @@ class Entity {
             }
         }
 
-        // Flood fill from edges - can go through empty OR other player's territory, but NOT our own
         while (stack.length > 0) {
             const idx = stack.pop();
             const x = idx % gridSize;
@@ -2045,7 +2146,6 @@ class Entity {
                     const nIdx = n.y * gridSize + n.x;
                     if (visited[nIdx] === 0) {
                         const terr = getTerritory(n.x, n.y);
-                        // Can flood through anything EXCEPT our own territory
                         if (terr !== this.territoryId) {
                             visited[nIdx] = 1;
                             stack.push(nIdx);
@@ -2055,7 +2155,6 @@ class Entity {
             }
         }
 
-        // Everything NOT visited and NOT already ours becomes ours (including enemy territory!)
         for (let x = 0; x < gridSize; x++) {
             for (let y = 0; y < gridSize; y++) {
                 const idx = y * gridSize + x;
@@ -2070,15 +2169,13 @@ class Entity {
     }
 
     calculateScore() {
-        // Use cached score if recently calculated
         this.scoreUpdateTimer--;
         if (this.scoreUpdateTimer > 0) {
             return this.cachedScore;
         }
-        this.scoreUpdateTimer = 30; // Recalculate every 30 frames
+        this.scoreUpdateTimer = 30;
         
         let count = 0;
-        // Use sampling for performance but with better coverage
         const step = 2;
         let sampledTotal = 0;
         
@@ -2093,7 +2190,6 @@ class Entity {
             }
         }
         
-        // Calculate percentage based on sampled area
         this.cachedScore = sampledTotal > 0 ? Math.round((count / sampledTotal) * 100 * 10) / 10 : 0;
         return this.cachedScore;
     }
@@ -2107,7 +2203,6 @@ class Entity {
         const minGY = Math.max(0, Math.floor(camY / CONFIG.tileSize) - 2);
         const maxGY = Math.min(gridSize - 1, Math.ceil((camY + canvas.height / CONFIG.zoom) / CONFIG.tileSize) + 2);
 
-        // Draw territory
         ctx.fillStyle = this.color;
         for (let x = minGX; x <= maxGX; x++) {
             for (let y = minGY; y <= maxGY; y++) {
@@ -2123,7 +2218,6 @@ class Entity {
     drawEntity(camX, camY) {
         if (!this.alive) return;
 
-        // Draw trail - ALWAYS visible when there's a trail
         if (this.trail.length > 1) {
             ctx.beginPath();
             ctx.lineCap = 'round';
@@ -2142,7 +2236,6 @@ class Entity {
             ctx.stroke();
         }
 
-        // Draw entity (the square)
         const screenX = (this.x - camX) * CONFIG.zoom;
         const screenY = (this.y - camY) * CONFIG.zoom;
 
@@ -2156,7 +2249,6 @@ class Entity {
         ctx.fillRect(-s / 2, -s / 2, s, s);
         ctx.restore();
 
-        // Draw name
         ctx.fillStyle = 'white';
         ctx.font = `bold ${14 * CONFIG.zoom}px 'Nunito', Arial`;
         ctx.textAlign = 'center';
@@ -2192,7 +2284,6 @@ class Player extends Entity {
     update() {
         if (!gameRunning || !this.alive || gamePaused) return;
 
-        // Input
         if (lastInputMethod === 'keyboard') {
             if (keys['a'] || keys['arrowleft']) this.angle -= CONFIG.turnSpeed;
             if (keys['d'] || keys['arrowright']) this.angle += CONFIG.turnSpeed;
@@ -2208,12 +2299,10 @@ class Player extends Entity {
             this.angle += angleDiff * 0.15;
         }
 
-        // Move
         this.x += Math.cos(this.angle) * CONFIG.speed;
         this.y += Math.sin(this.angle) * CONFIG.speed;
         this.handleBoundary();
 
-        // Check collision with bot trails - PLAYER kills the BOT
         for (let bot of bots) {
             if (bot.alive && bot.isOutside && bot.trail.length > 5) {
                 for (let i = 0; i < bot.trail.length - 3; i++) {
@@ -2226,7 +2315,6 @@ class Player extends Entity {
             }
         }
 
-        // Territory logic
         const { gx, gy } = worldToGrid(this.x, this.y);
         const onTerritory = getTerritory(gx, gy) === this.territoryId;
 
@@ -2241,7 +2329,6 @@ class Player extends Entity {
                 this.trail.push({ x: this.x, y: this.y });
             }
 
-            // Self collision
             if (this.trail.length > 20) {
                 for (let i = 0; i < this.trail.length - 15; i++) {
                     if (Math.hypot(this.x - this.trail[i].x, this.y - this.trail[i].y) < CONFIG.playerSize / 2) {
@@ -2260,7 +2347,6 @@ class Player extends Entity {
             }
         }
 
-        // Camera
         camera.x = this.x - (canvas.width / 2) / CONFIG.zoom;
         camera.y = this.y - (canvas.height / 2) / CONFIG.zoom;
     }
@@ -2268,8 +2354,6 @@ class Player extends Entity {
     async die() {
         this.alive = false;
         gameRunning = false;
-        
-        // Stop auto-save when game ends
         stopAutoSave();
 
         const score = this.calculateScore();
@@ -2286,23 +2370,22 @@ class Player extends Entity {
         overlay.style.display = 'flex';
         animateMenuBackground();
         
-        // Save progress to cloud on death
-        console.log('💀 Game over - saving progress...');
+        debug('Game over - saving');
         await saveProgress('game_over');
     }
 }
 
 // ==========================================
-// BOT CLASS - IMPROVED AI
+// BOT CLASS
 // ==========================================
 class Bot extends Entity {
     constructor(id, color, name) {
         super(id, color, name);
         this.targetAngle = 0;
         this.turnTimer = 0;
-        this.state = 'patrolling'; // 'patrolling', 'expanding', 'returning'
+        this.state = 'patrolling';
         this.stateTimer = 0;
-        this.curveDirection = 1; // 1 or -1 for curved movement
+        this.curveDirection = 1;
         this.curveStrength = 0;
         this.territoryCenter = { x: 0, y: 0 };
         this.expansionAngle = 0;
@@ -2327,12 +2410,11 @@ class Bot extends Entity {
         let nearestDist = Infinity;
         let nearestPoint = null;
         
-        // Search in expanding squares for efficiency
         for (let radius = 1; radius < 150; radius += 2) {
             let found = false;
             for (let dx = -radius; dx <= radius; dx++) {
                 for (let dy = -radius; dy <= radius; dy++) {
-                    if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue; // Only check perimeter
+                    if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
                     const checkX = gx + dx;
                     const checkY = gy + dy;
                     if (getTerritory(checkX, checkY) === this.territoryId) {
@@ -2348,7 +2430,7 @@ class Bot extends Entity {
                     }
                 }
             }
-            if (found) break; // Found territory at this radius
+            if (found) break;
         }
         return nearestPoint;
     }
@@ -2374,7 +2456,6 @@ class Bot extends Entity {
     }
 
     avoidDanger() {
-        // Avoid player trail
         if (player && player.alive && player.isOutside && player.trail.length > 3) {
             for (let t of player.trail) {
                 const dist = Math.hypot(this.x - t.x, this.y - t.y);
@@ -2386,7 +2467,6 @@ class Bot extends Entity {
             }
         }
         
-        // Avoid other bot trails
         for (let other of bots) {
             if (other !== this && other.alive && other.isOutside && other.trail.length > 3) {
                 for (let t of other.trail) {
@@ -2400,11 +2480,9 @@ class Bot extends Entity {
             }
         }
         
-        // Avoid player if they're close
         if (player && player.alive) {
             const distToPlayer = Math.hypot(this.x - player.x, this.y - player.y);
             if (distToPlayer < 150 && this.isOutside) {
-                // Run away from player
                 const awayAngle = Math.atan2(this.y - player.y, this.x - player.x);
                 this.targetAngle = awayAngle;
                 return true;
@@ -2423,26 +2501,21 @@ class Bot extends Entity {
         const { gx, gy } = worldToGrid(this.x, this.y);
         const onTerritory = getTerritory(gx, gy) === this.territoryId;
 
-        // State machine for smarter behavior
         if (this.state === 'patrolling') {
-            // Move in gentle curves on own territory
             if (this.turnTimer <= 0) {
                 this.curveDirection = Math.random() > 0.5 ? 1 : -1;
                 this.curveStrength = 0.015 + Math.random() * 0.025;
                 this.turnTimer = 30 + Math.random() * 50;
             }
             
-            // Gentle curving movement
             this.angle += this.curveDirection * this.curveStrength;
             
-            // Look ahead - if about to leave territory, turn back
             const lookAheadDist = 80;
             const lookAheadX = this.x + Math.cos(this.angle) * lookAheadDist;
             const lookAheadY = this.y + Math.sin(this.angle) * lookAheadDist;
             const { gx: laGx, gy: laGy } = worldToGrid(lookAheadX, lookAheadY);
             
             if (getTerritory(laGx, laGy) !== this.territoryId) {
-                // Turn back towards territory center
                 this.updateTerritoryCenter();
                 this.targetAngle = Math.atan2(this.territoryCenter.y - this.y, this.territoryCenter.x - this.x);
                 let angleDiff = this.targetAngle - this.angle;
@@ -2451,21 +2524,17 @@ class Bot extends Entity {
                 this.angle += angleDiff * 0.12;
             }
             
-            // Transition to expanding after patrol timer
             if (this.stateTimer <= 0) {
                 this.state = 'expanding';
-                // Pick a direction to expand - slightly away from current heading
                 this.expansionAngle = this.angle + (Math.random() - 0.5) * 0.8;
                 this.curveDirection = Math.random() > 0.5 ? 1 : -1;
                 this.curveStrength = 0.02 + Math.random() * 0.03;
                 this.maxTrailLength = 35 + Math.random() * 50;
-                this.stateTimer = 400; // Max time before forced return
+                this.stateTimer = 400;
             }
         } 
         else if (this.state === 'expanding') {
-            // Move out in an arc pattern to capture territory
             if (!this.avoidDanger()) {
-                // Start by going in expansion direction
                 if (this.trail.length < 10) {
                     let angleDiff = this.expansionAngle - this.angle;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
@@ -2473,64 +2542,52 @@ class Bot extends Entity {
                     this.angle += angleDiff * 0.08;
                 }
                 
-                // Then curve to make an arc shape
                 this.angle += this.curveDirection * this.curveStrength;
                 
-                // Occasionally adjust curve for varied patterns
                 if (this.turnTimer <= 0) {
-                    // Vary the curve strength
                     this.curveStrength = 0.015 + Math.random() * 0.035;
                     this.turnTimer = 20 + Math.random() * 30;
                 }
             } else {
-                // If avoiding danger, smooth turn
                 let angleDiff = this.targetAngle - this.angle;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 this.angle += angleDiff * 0.1;
             }
             
-            // Time to return? Check trail length or timer
             const shouldReturn = this.trail.length > this.maxTrailLength || 
                                  this.stateTimer <= 0 || 
                                  this.stateTimer <= 200 && this.trail.length > 20;
             
             if (shouldReturn && this.isOutside) {
                 this.state = 'returning';
-                this.stateTimer = 600; // Safety timer
+                this.stateTimer = 600;
                 this.returnTarget = this.findNearestTerritoryPoint();
-                // Reverse curve direction to arc back
                 this.curveDirection *= -1;
             }
         } 
         else if (this.state === 'returning') {
-            // Actively seek back to territory
             const inDanger = this.avoidDanger();
             
             if (!inDanger) {
-                // Update return target periodically
                 if (this.turnTimer <= 0 || !this.returnTarget) {
                     this.returnTarget = this.findNearestTerritoryPoint();
                     this.turnTimer = 15;
                 }
                 
                 if (this.returnTarget) {
-                    // Navigate towards nearest territory point
                     this.targetAngle = Math.atan2(
                         this.returnTarget.y - this.y, 
                         this.returnTarget.x - this.x
                     );
                     
-                    // Add slight curve to make path more natural
                     this.targetAngle += this.curveDirection * 0.15;
                     
-                    // Smooth turning towards target
                     let angleDiff = this.targetAngle - this.angle;
                     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                     this.angle += angleDiff * 0.15;
                 } else {
-                    // Fallback: go towards last known territory center
                     this.targetAngle = Math.atan2(
                         this.territoryCenter.y - this.y, 
                         this.territoryCenter.x - this.x
@@ -2541,26 +2598,22 @@ class Bot extends Entity {
                     this.angle += angleDiff * 0.12;
                 }
             } else {
-                // Avoiding danger - turn towards safety
                 let angleDiff = this.targetAngle - this.angle;
                 while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
                 while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
                 this.angle += angleDiff * 0.12;
             }
             
-            // Safety: if stuck too long outside, respawn
             if (this.stateTimer <= 0 && this.isOutside) {
                 this.respawn();
                 return;
             }
         }
 
-        // Move forward
         this.x += Math.cos(this.angle) * CONFIG.botSpeed;
         this.y += Math.sin(this.angle) * CONFIG.botSpeed;
         this.handleBoundary();
 
-        // Check collision with player trail - BOT kills the PLAYER
         if (player && player.alive && player.isOutside && player.trail.length > 5) {
             for (let i = 0; i < player.trail.length - 3; i++) {
                 const t = player.trail[i];
@@ -2571,7 +2624,6 @@ class Bot extends Entity {
             }
         }
 
-        // Check collision with other bot trails
         for (let other of bots) {
             if (other !== this && other.alive && this.checkTrailCollision(other.trail, other.isOutside)) {
                 this.respawn();
@@ -2579,7 +2631,6 @@ class Bot extends Entity {
             }
         }
 
-        // Territory logic
         if (!onTerritory) {
             if (!this.isOutside) {
                 this.trail = [{ x: this.lastSafePos.x, y: this.lastSafePos.y }];
@@ -2591,7 +2642,6 @@ class Bot extends Entity {
                 this.trail.push({ x: this.x, y: this.y });
             }
 
-            // Self collision check
             if (this.trail.length > 20) {
                 for (let i = 0; i < this.trail.length - 15; i++) {
                     if (Math.hypot(this.x - this.trail[i].x, this.y - this.trail[i].y) < CONFIG.playerSize / 2) {
@@ -2607,7 +2657,6 @@ class Bot extends Entity {
                 this.capture();
                 this.isOutside = false;
                 this.trail = [];
-                // Reset to patrolling after successful capture
                 this.state = 'patrolling';
                 this.stateTimer = 60 + Math.random() * 100;
                 this.updateTerritoryCenter();
@@ -2617,7 +2666,6 @@ class Bot extends Entity {
     }
 
     respawn() {
-        // Clear old territory
         for (let x = 0; x < gridSize; x++) {
             for (let y = 0; y < gridSize; y++) {
                 if (getTerritory(x, y) === this.territoryId) {
@@ -2652,13 +2700,11 @@ function drawMap() {
     const centerScreenY = (mapCenterY - camera.y) * CONFIG.zoom;
     const radiusScreen = CONFIG.mapRadius * CONFIG.zoom;
 
-    // Background
     ctx.beginPath();
     ctx.arc(centerScreenX, centerScreenY, radiusScreen, 0, Math.PI * 2);
     ctx.fillStyle = CONFIG.colors.mapBg;
     ctx.fill();
 
-    // Grid
     ctx.save();
     ctx.beginPath();
     ctx.arc(centerScreenX, centerScreenY, radiusScreen, 0, Math.PI * 2);
@@ -2681,7 +2727,6 @@ function drawMap() {
     ctx.stroke();
     ctx.restore();
 
-    // Boundary
     ctx.beginPath();
     ctx.arc(centerScreenX, centerScreenY, radiusScreen, 0, Math.PI * 2);
     ctx.strokeStyle = CONFIG.colors.boundary;
@@ -2695,7 +2740,6 @@ function drawMinimap() {
 
     minimapCtx.clearRect(0, 0, size, size);
 
-    // Background
     minimapCtx.beginPath();
     minimapCtx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
     minimapCtx.fillStyle = CONFIG.colors.mapBg;
@@ -2706,7 +2750,6 @@ function drawMinimap() {
     minimapCtx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
     minimapCtx.clip();
 
-    // Draw territories
     const step = Math.max(1, Math.floor(gridSize / 100));
     for (let x = 0; x < gridSize; x += step) {
         for (let y = 0; y < gridSize; y += step) {
@@ -2728,7 +2771,6 @@ function drawMinimap() {
         }
     }
 
-    // Draw bots
     for (let bot of bots) {
         if (bot.alive) {
             minimapCtx.fillStyle = bot.color;
@@ -2738,7 +2780,6 @@ function drawMinimap() {
         }
     }
 
-    // Draw player
     if (player && player.alive) {
         minimapCtx.fillStyle = 'white';
         minimapCtx.beginPath();
@@ -2752,7 +2793,6 @@ function drawMinimap() {
 
     minimapCtx.restore();
 
-    // Border
     minimapCtx.beginPath();
     minimapCtx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
     minimapCtx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -2788,7 +2828,6 @@ function updateLeaderboard() {
         leaderboardEntries.appendChild(div);
     }
 
-    // Update player score display
     if (player && player.alive) {
         scoreDisplay.textContent = player.calculateScore().toFixed(1) + '%';
     }
@@ -2803,7 +2842,6 @@ function gameLoop() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (gameRunning && !gamePaused) {
-        // Update
         player.update();
         for (let bot of bots) {
             bot.update();
@@ -2811,16 +2849,13 @@ function gameLoop() {
     }
 
     if (gameRunning) {
-        // Draw map background
         drawMap();
         
-        // FIRST: Draw ALL territories (so they're behind everything)
         player.drawTerritory(camera.x, camera.y);
         for (let bot of bots) {
             bot.drawTerritory(camera.x, camera.y);
         }
         
-        // THEN: Draw ALL entities (trails + squares + names) on TOP
         for (let bot of bots) {
             bot.drawEntity(camera.x, camera.y);
         }
@@ -2847,7 +2882,6 @@ async function startGame() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Update bot speed based on current speed setting
     CONFIG.botSpeed = CONFIG.speed * 0.875;
 
     initGridData();
@@ -2869,11 +2903,9 @@ async function startGame() {
     gameRunning = true;
     gamePaused = false;
     
-    // Start auto-save (every 60 seconds)
     startAutoSave();
     
-    // Save game start to cloud
-    console.log('🎮 Game started - saving initial progress...');
+    debug('Game started - saving');
     await saveProgress('game_start');
 }
 
@@ -2884,7 +2916,6 @@ window.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
     lastInputMethod = 'keyboard';
     
-    // Escape to pause
     if (e.key === 'Escape' && gameRunning) {
         gamePaused = !gamePaused;
         pauseOverlay.style.display = gamePaused ? 'flex' : 'none';
@@ -2927,23 +2958,23 @@ playerNameInput.addEventListener('keypress', (e) => {
 // INIT
 // ==========================================
 async function init() {
+    debug('Initializing game...');
+    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     minimap.style.display = 'none';
     initMenuBackground();
     
-    // Initialize Firebase auth and load cloud data
     await initializeAuth();
     
-    // Hide loading overlay
     loadingOverlay.style.display = 'none';
     
-    // Start animations
     animateMenuBackground();
     gameLoop();
+    
+    debug('Game ready!', 'success');
 }
 
-// Start the app
 init();
     </script>
 </body>
