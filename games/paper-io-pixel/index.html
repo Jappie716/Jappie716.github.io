@@ -20,6 +20,10 @@
             overflow: hidden;
         }
 
+        #ui-overlay.theme-original {
+            background: #2e3331;
+        }
+
         #bg-animation {
             position: absolute;
             top: 0; left: 0;
@@ -50,6 +54,25 @@
         }
 
         .game-title span { color: #ffd32a; }
+
+        .game-logo {
+            display: none;
+            max-width: 350px;
+            height: auto;
+            animation: titleBounce 2s ease-in-out infinite;
+        }
+
+        .theme-original .game-title {
+            display: none;
+        }
+
+        .theme-original .game-logo {
+            display: block;
+        }
+
+        .theme-original .subtitle {
+            display: none;
+        }
 
         @keyframes titleBounce {
             0%, 100% { transform: translateY(0); }
@@ -107,16 +130,22 @@
         #settings-btn {
             width: 60px;
             height: 60px;
-            font-size: 28px;
             cursor: pointer;
             background: rgba(255,255,255,0.2);
-            color: white;
             border: none;
             border-radius: 50%;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 12px;
+        }
+
+        #settings-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
         }
 
         #settings-btn:hover { 
@@ -134,6 +163,43 @@
         .stat-box .value { font-size: 28px; font-weight: 900; color: #ffd32a; }
         .stat-box .label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
 
+        /* Cloud sync indicator */
+        .sync-status {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 20;
+        }
+
+        .sync-status.syncing {
+            animation: pulse 1s infinite;
+        }
+
+        .sync-status.synced {
+            background: rgba(46, 213, 115, 0.3);
+        }
+
+        .sync-status.offline {
+            background: rgba(255, 71, 87, 0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .sync-icon {
+            width: 16px;
+            height: 16px;
+        }
+
         /* Settings Panel */
         #settings-panel {
             display: none;
@@ -141,37 +207,98 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9);
-            padding: 30px 40px;
+            background: linear-gradient(180deg, #2d2d44 0%, #1a1a2e 100%);
+            padding: 0;
             border-radius: 20px;
             z-index: 100;
-            min-width: 320px;
+            min-width: 380px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
         }
 
-        #settings-panel h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 28px;
-            color: #ffd32a;
+        .settings-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .settings-header img {
+            width: 32px;
+            height: 32px;
+            filter: brightness(0) invert(1);
+        }
+
+        .settings-header h2 {
+            margin: 0;
+            font-size: 24px;
+            color: white;
+        }
+
+        .settings-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            padding: 0;
+        }
+
+        .settings-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Nunito', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 3px solid transparent;
+        }
+
+        .settings-tab:hover {
+            color: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .settings-tab.active {
+            color: #00d2d3;
+            border-bottom-color: #00d2d3;
+            background: rgba(0,208,211,0.1);
+        }
+
+        .settings-content {
+            padding: 25px 30px;
+            min-height: 280px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .setting-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin: 20px 0;
+            margin: 18px 0;
             color: white;
         }
 
         .setting-row label {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 700;
         }
 
         .setting-row input[type="range"] {
-            width: 120px;
+            width: 100px;
             cursor: pointer;
+            accent-color: #00d2d3;
         }
 
         .setting-row .value-display {
@@ -188,14 +315,207 @@
             font-family: 'Nunito', sans-serif;
             font-weight: 700;
             cursor: pointer;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .setting-row input[type="color"] {
+            width: 50px;
+            height: 35px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .theme-colors {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .theme-color-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-color-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-color-btn.selected {
+            border-color: white;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+
+        .theme-section {
+            margin-bottom: 20px;
+        }
+
+        .theme-section-title {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+
+        /* Start Screen Theme Selection */
+        .screen-theme-options {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .screen-theme-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 12px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen-theme-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .screen-theme-btn.selected {
+            border-color: #00d2d3;
+            box-shadow: 0 0 20px rgba(0,208,211,0.4);
+        }
+
+        .screen-theme-btn .theme-preview {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screen-theme-btn.theme-standard .theme-preview {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .screen-theme-btn.theme-original .theme-preview {
+            background: #2e3331;
+        }
+
+        .screen-theme-btn .theme-preview-text {
+            font-family: 'Russo One', sans-serif;
+            font-size: 14px;
+            color: white;
+            text-shadow: 1px 1px 0px #e74c3c;
+        }
+
+        .screen-theme-btn .theme-preview-text span {
+            color: #ffd32a;
+        }
+
+        .screen-theme-btn .theme-preview img {
+            max-height: 40px;
+            width: auto;
+        }
+
+        .screen-theme-btn .theme-name {
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .account-section {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .account-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            font-weight: 900;
+        }
+
+        .account-name {
+            color: white;
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .account-stats {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .account-btn {
+            padding: 10px 25px;
+            margin: 5px;
+            font-size: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .account-btn.primary {
+            background: linear-gradient(180deg, #00d2d3 0%, #0abf9a 100%);
+            color: white;
+        }
+
+        .account-btn.secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .account-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .cloud-sync-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,208,211,0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(0,208,211,0.3);
+        }
+
+        .cloud-sync-info .sync-title {
+            color: #00d2d3;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .cloud-sync-info .sync-detail {
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
         }
 
         #close-settings {
             display: block;
-            width: 100%;
+            width: calc(100% - 60px);
             padding: 15px;
-            margin-top: 25px;
-            font-size: 18px;
+            margin: 0 30px 25px;
+            font-size: 16px;
             font-family: 'Nunito', sans-serif;
             font-weight: 900;
             cursor: pointer;
@@ -204,10 +524,13 @@
             border: none;
             border-radius: 30px;
             transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         #close-settings:hover {
             transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(0,208,211,0.4);
         }
 
         #settings-overlay {
@@ -248,7 +571,7 @@
 
         #leaderboard {
             position: absolute;
-            top: 20px;
+            top: 80px;
             right: 20px;
             background: rgba(0,0,0,0.5);
             color: white;
@@ -292,7 +615,8 @@
         #ingame-settings {
             position: absolute;
             top: 20px;
-            left: 20px;
+            left: auto;
+            right: 20px;
             width: 50px;
             height: 50px;
             font-size: 24px;
@@ -301,7 +625,7 @@
             color: white;
             border: none;
             border-radius: 50%;
-            z-index: 5;
+            z-index: 6;
             display: none;
             transition: all 0.2s;
         }
@@ -357,18 +681,140 @@
         #resume-btn:hover, #quit-btn:hover {
             transform: scale(1.05);
         }
+
+        /* Skins Button Styles */
+        .skins-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 900;
+            cursor: pointer;
+            background: linear-gradient(180deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 6px 0 #c74444, 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 15px;
+        }
+
+        .skins-btn img {
+            width: 24px;
+            height: 24px;
+            filter: brightness(0) invert(1);
+        }
+
+        .skins-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 9px 0 #c74444, 0 15px 25px rgba(0,0,0,0.25);
+        }
+
+        .skins-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #c74444, 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        /* In-game skins button */
+        .skins-btn.ingame {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            font-size: 14px;
+            margin-top: 0;
+            z-index: 5;
+            display: none;
+            background: rgba(0,0,0,0.5);
+            box-shadow: none;
+            border-radius: 25px;
+        }
+
+        .skins-btn.ingame img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .skins-btn.ingame:hover {
+            background: rgba(0,0,0,0.7);
+            transform: none;
+            box-shadow: none;
+        }
+
+        .skins-btn.ingame:active {
+            transform: scale(0.95);
+            box-shadow: none;
+        }
+
+        /* Loading overlay */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Connecting to cloud...</div>
+    </div>
+
     <div id="ui-overlay">
         <canvas id="bg-animation"></canvas>
+        
+        <!-- Cloud Sync Status -->
+        <div class="sync-status" id="sync-status">
+            <svg class="sync-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+            </svg>
+            <span id="sync-text">Connecting...</span>
+        </div>
+
         <div class="menu-content">
             <div class="game-title">PAPER<span>.IO</span></div>
+            <img class="game-logo" src="https://jappie716.github.io/games/paper-io-pixel/images/paperiopixellogo.png" alt="Paper.io Pixel">
             <div class="subtitle">Conquer the map</div>
             <input type="text" id="player-name" placeholder="Enter your name" maxlength="15">
             <div class="button-row">
                 <button id="start-btn">Play!</button>
-                <button id="settings-btn">⚙️</button>
+                <button id="settings-btn">
+                    <img src="https://jappie716.github.io/games/paper-io-pixel/images/settings.png" alt="Settings">
+                </button>
             </div>
             <div class="stats-container">
                 <div class="stat-box">
@@ -380,39 +826,114 @@
                     <div class="label">Games</div>
                 </div>
             </div>
+            <button id="menu-skins-btn" class="skins-btn">
+                <img src="https://jappie716.github.io/games/paper-io-pixel/images/skins.png" alt="Skins">
+                <span>Skins</span>
+            </button>
         </div>
     </div>
 
     <div id="settings-overlay"></div>
     <div id="settings-panel">
-        <h2>⚙️ Settings</h2>
-        <div class="setting-row">
-            <label>Bot Count</label>
-            <input type="range" id="setting-bots" min="1" max="20" value="10">
-            <span class="value-display" id="bots-value">10</span>
+        <div class="settings-header">
+            <img src="https://jappie716.github.io/games/paper-io-pixel/images/settings.png" alt="Settings">
+            <h2>Settings</h2>
         </div>
-        <div class="setting-row">
-            <label>Game Speed</label>
-            <input type="range" id="setting-speed" min="1" max="10" value="5">
-            <span class="value-display" id="speed-value">5</span>
+        
+        <div class="settings-tabs">
+            <button class="settings-tab active" data-tab="game">Game</button>
+            <button class="settings-tab" data-tab="theme">Theme</button>
+            <button class="settings-tab" data-tab="account">Account</button>
         </div>
-        <div class="setting-row">
-            <label>Zoom Level</label>
-            <input type="range" id="setting-zoom" min="10" max="30" value="18">
-            <span class="value-display" id="zoom-value">1.8x</span>
+        
+        <div class="settings-content">
+            <!-- Game Tab -->
+            <div class="tab-content active" id="tab-game">
+                <div class="setting-row">
+                    <label>Bot Count</label>
+                    <input type="range" id="setting-bots" min="1" max="20" value="10">
+                    <span class="value-display" id="bots-value">10</span>
+                </div>
+                <div class="setting-row">
+                    <label>Game Speed</label>
+                    <input type="range" id="setting-speed" min="1" max="10" value="5">
+                    <span class="value-display" id="speed-value">5</span>
+                </div>
+                <div class="setting-row">
+                    <label>Zoom Level</label>
+                    <input type="range" id="setting-zoom" min="10" max="30" value="18">
+                    <span class="value-display" id="zoom-value">1.8x</span>
+                </div>
+                <div class="setting-row">
+                    <label>Map Size</label>
+                    <select id="setting-mapsize">
+                        <option value="1500">Small</option>
+                        <option value="2000" selected>Medium</option>
+                        <option value="3000">Large</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Theme Tab -->
+            <div class="tab-content" id="tab-theme">
+                <div class="theme-section">
+                    <div class="theme-section-title">Start Screen Theme</div>
+                    <div class="screen-theme-options">
+                        <button class="screen-theme-btn theme-standard selected" data-screen-theme="standard">
+                            <div class="theme-preview">
+                                <div class="theme-preview-text">PAPER<span>.IO</span></div>
+                            </div>
+                            <div class="theme-name">Standard</div>
+                        </button>
+                        <button class="screen-theme-btn theme-original" data-screen-theme="original">
+                            <div class="theme-preview">
+                                <img src="https://jappie716.github.io/games/paper-io-pixel/images/paperiopixellogo.png" alt="Original">
+                            </div>
+                            <div class="theme-name">Original</div>
+                        </button>
+                    </div>
+                </div>
+                <div class="theme-section">
+                    <div class="theme-section-title">Player Color</div>
+                    <div class="theme-colors" id="player-colors">
+                        <button class="theme-color-btn selected" style="background: #ff4757;" data-color="#ff4757"></button>
+                        <button class="theme-color-btn" style="background: #2ed573;" data-color="#2ed573"></button>
+                        <button class="theme-color-btn" style="background: #1e90ff;" data-color="#1e90ff"></button>
+                        <button class="theme-color-btn" style="background: #ffd32a;" data-color="#ffd32a"></button>
+                        <button class="theme-color-btn" style="background: #a55eea;" data-color="#a55eea"></button>
+                        <button class="theme-color-btn" style="background: #ff6348;" data-color="#ff6348"></button>
+                        <button class="theme-color-btn" style="background: #fd79a8;" data-color="#fd79a8"></button>
+                        <button class="theme-color-btn" style="background: #00cec9;" data-color="#00cec9"></button>
+                    </div>
+                </div>
+                <div class="theme-section">
+                    <div class="theme-section-title">Custom Color</div>
+                    <div class="setting-row">
+                        <label>Pick your color</label>
+                        <input type="color" id="setting-color" value="#ff4757">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Tab -->
+            <div class="tab-content" id="tab-account">
+                <div class="account-section">
+                    <div class="account-avatar" id="account-avatar">?</div>
+                    <div class="account-name" id="account-name">Guest Player</div>
+                    <div class="account-stats">
+                        <span id="account-games">0</span> games played • Best: <span id="account-best">0%</span>
+                    </div>
+                    <div>
+                        <button class="account-btn secondary" id="reset-stats-btn">Reset Stats</button>
+                    </div>
+                    <div class="cloud-sync-info">
+                        <div class="sync-title">☁️ Cloud Sync Active</div>
+                        <div class="sync-detail" id="cloud-sync-detail">Your progress is saved automatically</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="setting-row">
-            <label>Map Size</label>
-            <select id="setting-mapsize">
-                <option value="1500">Small</option>
-                <option value="2000" selected>Medium</option>
-                <option value="3000">Large</option>
-            </select>
-        </div>
-        <div class="setting-row">
-            <label>Player Color</label>
-            <input type="color" id="setting-color" value="#ff4757">
-        </div>
+        
         <button id="close-settings">Save & Close</button>
     </div>
 
@@ -424,14 +945,319 @@
 
     <canvas id="gameCanvas"></canvas>
     <canvas id="minimap" width="150" height="150"></canvas>
-    <button id="ingame-settings">⚙️</button>
+    <button id="ingame-settings">
+        <img src="https://jappie716.github.io/games/paper-io-pixel/images/settings.png" alt="Settings" style="width: 24px; height: 24px; filter: brightness(0) invert(1);">
+    </button>
+    <button id="ingame-skins" class="skins-btn ingame">
+        <img src="https://jappie716.github.io/games/paper-io-pixel/images/skins.png" alt="Skins">
+        <span>Skins</span>
+    </button>
     <div id="score-display">0%</div>
     <div id="leaderboard">
         <h3>Leaderboard</h3>
         <div id="leaderboard-entries"></div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <script>
+// ==========================================
+// FIREBASE CONFIGURATION & INITIALIZATION
+// ==========================================
+const firebaseConfig = {
+    apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+    authDomain: "gameparadise-80490.firebaseapp.com",
+    projectId: "gameparadise-80490",
+    storageBucket: "gameparadise-80490.firebasestorage.app",
+    messagingSenderId: "335620903527",
+    appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Firebase state
+let currentUser = null;
+let isOnline = navigator.onLine;
+let syncPending = false;
+
+// ==========================================
+// CLOUD SAVE MANAGER
+// ==========================================
+const CloudSave = {
+    // Collection path
+    basePath: 'game-saves/paper-io-pixel/users',
+    
+    // Get user document reference
+    getUserDoc() {
+        if (!currentUser) return null;
+        return db.collection(this.basePath).doc(currentUser.uid);
+    },
+    
+    // Save data to cloud
+    async save(data) {
+        const userDoc = this.getUserDoc();
+        if (!userDoc) {
+            console.log('No user logged in, saving to localStorage only');
+            return false;
+        }
+        
+        try {
+            updateSyncStatus('syncing');
+            await userDoc.set({
+                ...data,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                deviceId: getDeviceId()
+            }, { merge: true });
+            updateSyncStatus('synced');
+            console.log('Cloud save successful');
+            return true;
+        } catch (error) {
+            console.error('Cloud save failed:', error);
+            updateSyncStatus('offline');
+            syncPending = true;
+            return false;
+        }
+    },
+    
+    // Load data from cloud
+    async load() {
+        const userDoc = this.getUserDoc();
+        if (!userDoc) return null;
+        
+        try {
+            const doc = await userDoc.get();
+            if (doc.exists) {
+                console.log('Cloud data loaded');
+                return doc.data();
+            }
+            return null;
+        } catch (error) {
+            console.error('Cloud load failed:', error);
+            return null;
+        }
+    },
+    
+    // Sync local and cloud data (merge taking highest values)
+    async syncData() {
+        const cloudData = await this.load();
+        const localData = getLocalSaveData();
+        
+        if (!cloudData && !localData) {
+            return getDefaultSaveData();
+        }
+        
+        if (!cloudData) {
+            // Only local data exists, upload it
+            await this.save(localData);
+            return localData;
+        }
+        
+        if (!localData) {
+            // Only cloud data exists, use it
+            saveLocalData(cloudData);
+            return cloudData;
+        }
+        
+        // Merge: take highest scores and most games
+        const mergedData = {
+            highScore: Math.max(cloudData.highScore || 0, localData.highScore || 0),
+            gamesPlayed: Math.max(cloudData.gamesPlayed || 0, localData.gamesPlayed || 0),
+            playerName: cloudData.playerName || localData.playerName || '',
+            playerColor: cloudData.playerColor || localData.playerColor || '#ff4757',
+            unlockedSkins: [...new Set([...(cloudData.unlockedSkins || []), ...(localData.unlockedSkins || [])])],
+            selectedSkin: cloudData.selectedSkin || localData.selectedSkin || 'default',
+            settings: { ...localData.settings, ...cloudData.settings }
+        };
+        
+        // Save merged data back
+        await this.save(mergedData);
+        saveLocalData(mergedData);
+        
+        return mergedData;
+    }
+};
+
+// ==========================================
+// LOCAL STORAGE HELPERS
+// ==========================================
+function getDeviceId() {
+    let deviceId = localStorage.getItem('paperio_device_id');
+    if (!deviceId) {
+        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('paperio_device_id', deviceId);
+    }
+    return deviceId;
+}
+
+function getLocalSaveData() {
+    return {
+        highScore: parseInt(localStorage.getItem('paperio_highscore') || '0'),
+        gamesPlayed: parseInt(localStorage.getItem('paperio_games') || '0'),
+        playerName: localStorage.getItem('paperio_name') || '',
+        playerColor: localStorage.getItem('paperio_player_color') || '#ff4757',
+        unlockedSkins: JSON.parse(localStorage.getItem('paperio_skins') || '["default"]'),
+        selectedSkin: localStorage.getItem('paperio_selected_skin') || 'default',
+        settings: JSON.parse(localStorage.getItem('paperio_settings') || '{}')
+    };
+}
+
+function getDefaultSaveData() {
+    return {
+        highScore: 0,
+        gamesPlayed: 0,
+        playerName: '',
+        playerColor: '#ff4757',
+        unlockedSkins: ['default'],
+        selectedSkin: 'default',
+        settings: {}
+    };
+}
+
+function saveLocalData(data) {
+    if (data.highScore !== undefined) localStorage.setItem('paperio_highscore', data.highScore);
+    if (data.gamesPlayed !== undefined) localStorage.setItem('paperio_games', data.gamesPlayed);
+    if (data.playerName !== undefined) localStorage.setItem('paperio_name', data.playerName);
+    if (data.playerColor !== undefined) localStorage.setItem('paperio_player_color', data.playerColor);
+    if (data.unlockedSkins !== undefined) localStorage.setItem('paperio_skins', JSON.stringify(data.unlockedSkins));
+    if (data.selectedSkin !== undefined) localStorage.setItem('paperio_selected_skin', data.selectedSkin);
+    if (data.settings !== undefined) localStorage.setItem('paperio_settings', JSON.stringify(data.settings));
+}
+
+// ==========================================
+// SYNC STATUS UI
+// ==========================================
+function updateSyncStatus(status) {
+    const syncStatusEl = document.getElementById('sync-status');
+    const syncTextEl = document.getElementById('sync-text');
+    
+    syncStatusEl.className = 'sync-status ' + status;
+    
+    switch(status) {
+        case 'syncing':
+            syncTextEl.textContent = 'Syncing...';
+            break;
+        case 'synced':
+            syncTextEl.textContent = 'Cloud synced';
+            break;
+        case 'offline':
+            syncTextEl.textContent = 'Offline';
+            break;
+        default:
+            syncTextEl.textContent = 'Connecting...';
+    }
+}
+
+// ==========================================
+// AUTH & INITIALIZATION
+// ==========================================
+async function initializeAuth() {
+    return new Promise((resolve) => {
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                console.log('User authenticated:', user.uid);
+                
+                // Sync data on login
+                const syncedData = await CloudSave.syncData();
+                applyLoadedData(syncedData);
+                updateSyncStatus('synced');
+            } else {
+                // Sign in anonymously
+                try {
+                    const result = await auth.signInAnonymously();
+                    currentUser = result.user;
+                    console.log('Anonymous auth successful:', currentUser.uid);
+                    
+                    // Sync data
+                    const syncedData = await CloudSave.syncData();
+                    applyLoadedData(syncedData);
+                    updateSyncStatus('synced');
+                } catch (error) {
+                    console.error('Auth failed:', error);
+                    updateSyncStatus('offline');
+                    // Use local data only
+                    applyLoadedData(getLocalSaveData());
+                }
+            }
+            resolve();
+        });
+    });
+}
+
+function applyLoadedData(data) {
+    if (!data) return;
+    
+    gamesPlayed = data.gamesPlayed || 0;
+    highScore = data.highScore || 0;
+    
+    document.getElementById('games-played').textContent = gamesPlayed;
+    document.getElementById('high-score').textContent = highScore + '%';
+    
+    if (data.playerName) {
+        playerNameInput.value = data.playerName;
+    }
+    
+    if (data.playerColor) {
+        CONFIG.colors.player = data.playerColor;
+        selectedPlayerColor = data.playerColor;
+    }
+    
+    if (data.settings) {
+        if (data.settings.botCount) CONFIG.botCount = data.settings.botCount;
+        if (data.settings.speed) CONFIG.speed = data.settings.speed;
+        if (data.settings.zoom) CONFIG.zoom = data.settings.zoom;
+        if (data.settings.mapRadius) CONFIG.mapRadius = data.settings.mapRadius;
+    }
+    
+    // Update UI
+    updateAccountTab();
+}
+
+// Save progress (called after game ends, settings change, etc.)
+async function saveProgress() {
+    const data = {
+        highScore: highScore,
+        gamesPlayed: gamesPlayed,
+        playerName: playerNameInput.value.trim(),
+        playerColor: CONFIG.colors.player,
+        unlockedSkins: JSON.parse(localStorage.getItem('paperio_skins') || '["default"]'),
+        selectedSkin: localStorage.getItem('paperio_selected_skin') || 'default',
+        settings: {
+            botCount: CONFIG.botCount,
+            speed: CONFIG.speed,
+            zoom: CONFIG.zoom,
+            mapRadius: CONFIG.mapRadius,
+            playerColor: CONFIG.colors.player
+        }
+    };
+    
+    // Save locally first
+    saveLocalData(data);
+    
+    // Then sync to cloud
+    await CloudSave.save(data);
+}
+
+// Online/offline handlers
+window.addEventListener('online', async () => {
+    isOnline = true;
+    if (syncPending) {
+        await saveProgress();
+        syncPending = false;
+    }
+});
+
+window.addEventListener('offline', () => {
+    isOnline = false;
+    updateSyncStatus('offline');
+});
+
 // ==========================================
 // ELEMENT REFERENCES
 // ==========================================
@@ -455,6 +1281,9 @@ const ingameSettingsBtn = document.getElementById('ingame-settings');
 const pauseOverlay = document.getElementById('pause-overlay');
 const resumeBtn = document.getElementById('resume-btn');
 const quitBtn = document.getElementById('quit-btn');
+const menuSkinsBtn = document.getElementById('menu-skins-btn');
+const ingameSkinsBtn = document.getElementById('ingame-skins');
+const loadingOverlay = document.getElementById('loading-overlay');
 
 // ==========================================
 // GAME CONFIG
@@ -530,12 +1359,31 @@ if (savedSettings.zoom) CONFIG.zoom = savedSettings.zoom;
 if (savedSettings.mapRadius) CONFIG.mapRadius = savedSettings.mapRadius;
 if (savedSettings.playerColor) CONFIG.colors.player = savedSettings.playerColor;
 
+// Load and apply start screen theme
+let currentScreenTheme = localStorage.getItem('paperio_screen_theme') || 'original';
+applyScreenTheme(currentScreenTheme);
+
 // Minimap
 let minimapNeedsUpdate = true;
 
 // ==========================================
+// SCREEN THEME FUNCTIONS
+// ==========================================
+function applyScreenTheme(themeName) {
+    currentScreenTheme = themeName;
+    if (themeName === 'original') {
+        overlay.classList.add('theme-original');
+    } else {
+        overlay.classList.remove('theme-original');
+    }
+}
+
+// ==========================================
 // SETTINGS PANEL
 // ==========================================
+let currentTab = 'game';
+let selectedPlayerColor = CONFIG.colors.player;
+
 function initSettingsPanel() {
     const botSlider = document.getElementById('setting-bots');
     const speedSlider = document.getElementById('setting-speed');
@@ -555,8 +1403,12 @@ function initSettingsPanel() {
     
     mapSizeSelect.value = CONFIG.mapRadius;
     colorPicker.value = CONFIG.colors.player;
+    selectedPlayerColor = CONFIG.colors.player;
 
-    // Event listeners
+    // Update account tab
+    updateAccountTab();
+
+    // Event listeners for sliders
     botSlider.addEventListener('input', (e) => {
         document.getElementById('bots-value').textContent = e.target.value;
     });
@@ -568,21 +1420,122 @@ function initSettingsPanel() {
     zoomSlider.addEventListener('input', (e) => {
         document.getElementById('zoom-value').textContent = (e.target.value / 10).toFixed(1) + 'x';
     });
+
+    // Color picker sync
+    colorPicker.addEventListener('input', (e) => {
+        selectedPlayerColor = e.target.value;
+        updateColorSelection(e.target.value);
+    });
+
+    // Tab switching
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+
+    // Color buttons
+    document.querySelectorAll('.theme-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const color = btn.dataset.color;
+            selectedPlayerColor = color;
+            colorPicker.value = color;
+            updateColorSelection(color);
+        });
+    });
+
+    // Screen theme buttons
+    document.querySelectorAll('.screen-theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const theme = btn.dataset.screenTheme;
+            document.querySelectorAll('.screen-theme-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            applyScreenTheme(theme);
+        });
+    });
+
+    // Reset stats button
+    document.getElementById('reset-stats-btn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to reset all your stats?')) {
+            localStorage.removeItem('paperio_games');
+            localStorage.removeItem('paperio_highscore');
+            gamesPlayed = 0;
+            highScore = 0;
+            document.getElementById('games-played').textContent = '0';
+            document.getElementById('high-score').textContent = '0%';
+            updateAccountTab();
+            
+            // Sync reset to cloud
+            await saveProgress();
+        }
+    });
+
+    // Update initial color selection
+    updateColorSelection(CONFIG.colors.player);
+    
+    // Update initial screen theme selection
+    document.querySelectorAll('.screen-theme-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
+    });
+}
+
+function switchTab(tabName) {
+    currentTab = tabName;
+    
+    // Update tab buttons
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === 'tab-' + tabName);
+    });
+}
+
+function updateColorSelection(color) {
+    document.querySelectorAll('.theme-color-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.color === color);
+    });
+}
+
+function updateAccountTab() {
+    const name = playerNameInput.value.trim() || 'Guest Player';
+    document.getElementById('account-name').textContent = name;
+    document.getElementById('account-avatar').textContent = name.charAt(0).toUpperCase();
+    document.getElementById('account-games').textContent = gamesPlayed;
+    document.getElementById('account-best').textContent = highScore + '%';
+    
+    // Update cloud sync info
+    const syncDetail = document.getElementById('cloud-sync-detail');
+    if (currentUser) {
+        syncDetail.textContent = `Device ID: ${getDeviceId().substring(0, 15)}...`;
+    } else {
+        syncDetail.textContent = 'Connecting to cloud...';
+    }
 }
 
 function openSettings() {
     settingsPanel.style.display = 'block';
     settingsOverlay.style.display = 'block';
+    updateAccountTab();
+    switchTab('game'); // Always open on game tab
+    
+    // Update screen theme selection
+    document.querySelectorAll('.screen-theme-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
+    });
 }
 
-function closeSettings() {
+async function closeSettings() {
     // Save settings
     CONFIG.botCount = parseInt(document.getElementById('setting-bots').value);
     CONFIG.speed = parseInt(document.getElementById('setting-speed').value);
     CONFIG.botSpeed = CONFIG.speed * 0.875;
     CONFIG.zoom = parseInt(document.getElementById('setting-zoom').value) / 10;
     CONFIG.mapRadius = parseInt(document.getElementById('setting-mapsize').value);
-    CONFIG.colors.player = document.getElementById('setting-color').value;
+    CONFIG.colors.player = selectedPlayerColor;
 
     // Save to localStorage
     localStorage.setItem('paperio_settings', JSON.stringify({
@@ -592,9 +1545,13 @@ function closeSettings() {
         mapRadius: CONFIG.mapRadius,
         playerColor: CONFIG.colors.player
     }));
+    localStorage.setItem('paperio_screen_theme', currentScreenTheme);
 
     settingsPanel.style.display = 'none';
     settingsOverlay.style.display = 'none';
+    
+    // Sync to cloud
+    await saveProgress();
 }
 
 settingsBtn.onclick = openSettings;
@@ -611,16 +1568,28 @@ resumeBtn.onclick = () => {
     pauseOverlay.style.display = 'none';
 };
 
-quitBtn.onclick = () => {
+quitBtn.onclick = async () => {
     gamePaused = false;
     gameRunning = false;
     pauseOverlay.style.display = 'none';
     scoreDisplay.style.display = 'none';
     leaderboard.style.display = 'none';
     ingameSettingsBtn.style.display = 'none';
+    ingameSkinsBtn.style.display = 'none';
     overlay.style.display = 'flex';
     animateMenuBackground();
+    
+    // Save progress when quitting
+    await saveProgress();
 };
+
+// Skins button handlers (placeholder - opens alert for now)
+function openSkinsPanel() {
+    alert('Skins panel coming soon! 🎨\nYour unlocked skins will be saved to the cloud.');
+}
+
+menuSkinsBtn.onclick = openSkinsPanel;
+ingameSkinsBtn.onclick = openSkinsPanel;
 
 initSettingsPanel();
 
@@ -1151,7 +2120,7 @@ class Player extends Entity {
         camera.y = this.y - (canvas.height / 2) / CONFIG.zoom;
     }
 
-    die() {
+    async die() {
         this.alive = false;
         gameRunning = false;
 
@@ -1165,8 +2134,12 @@ class Player extends Entity {
         scoreDisplay.style.display = 'none';
         leaderboard.style.display = 'none';
         ingameSettingsBtn.style.display = 'none';
+        ingameSkinsBtn.style.display = 'none';
         overlay.style.display = 'flex';
         animateMenuBackground();
+        
+        // Save progress to cloud on death
+        await saveProgress();
     }
 }
 
@@ -1714,7 +2687,7 @@ function gameLoop() {
 // ==========================================
 // START GAME
 // ==========================================
-function startGame() {
+async function startGame() {
     const name = playerNameInput.value.trim() || 'Player';
     localStorage.setItem('paperio_name', name);
 
@@ -1743,8 +2716,12 @@ function startGame() {
     leaderboard.style.display = 'block';
     minimap.style.display = 'block';
     ingameSettingsBtn.style.display = 'block';
+    ingameSkinsBtn.style.display = 'flex';
     gameRunning = true;
     gamePaused = false;
+    
+    // Save game start to cloud
+    await saveProgress();
 }
 
 // ==========================================
@@ -1796,12 +2773,25 @@ playerNameInput.addEventListener('keypress', (e) => {
 // ==========================================
 // INIT
 // ==========================================
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-minimap.style.display = 'none';
-initMenuBackground();
-animateMenuBackground();
-gameLoop();
+async function init() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    minimap.style.display = 'none';
+    initMenuBackground();
+    
+    // Initialize Firebase auth and load cloud data
+    await initializeAuth();
+    
+    // Hide loading overlay
+    loadingOverlay.style.display = 'none';
+    
+    // Start animations
+    animateMenuBackground();
+    gameLoop();
+}
+
+// Start the app
+init();
     </script>
 </body>
 </html>
