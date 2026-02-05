@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Paper.io 2</title>
+    <title>Game Paradise - Paper.io Pixel</title>
     <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -162,48 +162,6 @@
         }
         .stat-box .value { font-size: 28px; font-weight: 900; color: #ffd32a; }
         .stat-box .label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
-
-        /* Cloud sync indicator */
-        .sync-status {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0,0,0,0.3);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            z-index: 20;
-            cursor: pointer;
-        }
-
-        .sync-status.syncing {
-            animation: pulse 1s infinite;
-        }
-
-        .sync-status.synced {
-            background: rgba(46, 213, 115, 0.3);
-        }
-
-        .sync-status.offline {
-            background: rgba(255, 71, 87, 0.3);
-        }
-
-        .sync-status.error {
-            background: rgba(255, 71, 87, 0.5);
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .sync-icon {
-            width: 16px;
-            height: 16px;
-        }
 
         /* Settings Panel */
         #settings-panel {
@@ -484,6 +442,16 @@
         .account-btn.primary {
             background: linear-gradient(180deg, #00d2d3 0%, #0abf9a 100%);
             color: white;
+        }
+        
+        .account-btn.google-btn {
+            background: white;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px auto;
         }
 
         .account-btn.secondary {
@@ -798,52 +766,18 @@
             font-size: 12px;
             opacity: 0.7;
         }
-
-        /* Debug console */
-        #debug-log {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: #0f0;
-            font-family: monospace;
-            font-size: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            max-width: 400px;
-            max-height: 150px;
-            overflow-y: auto;
-            z-index: 9999;
-            display: none;
-        }
-
-        #debug-log.visible {
-            display: block;
-        }
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
     <div id="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">Connecting to cloud...</div>
         <div id="loading-details"></div>
     </div>
 
-    <!-- Debug Log -->
-    <div id="debug-log"></div>
-
     <div id="ui-overlay">
         <canvas id="bg-animation"></canvas>
         
-        <!-- Cloud Sync Status -->
-        <div class="sync-status" id="sync-status" onclick="testSave()">
-            <svg class="sync-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
-            </svg>
-            <span id="sync-text">Connecting...</span>
-        </div>
-
         <div class="menu-content">
             <div class="game-title">PAPER<span>.IO</span></div>
             <img class="game-logo" src="https://jappie716.github.io/games/paper-io-pixel/images/paperiopixellogo.png" alt="Paper.io Pixel">
@@ -886,7 +820,6 @@
         </div>
         
         <div class="settings-content">
-            <!-- Game Tab -->
             <div class="tab-content active" id="tab-game">
                 <div class="setting-row">
                     <label>Bot Count</label>
@@ -913,7 +846,6 @@
                 </div>
             </div>
             
-            <!-- Theme Tab -->
             <div class="tab-content" id="tab-theme">
                 <div class="theme-section">
                     <div class="theme-section-title">Start Screen Theme</div>
@@ -954,7 +886,6 @@
                 </div>
             </div>
             
-            <!-- Account Tab -->
             <div class="tab-content" id="tab-account">
                 <div class="account-section">
                     <div class="account-avatar" id="account-avatar">?</div>
@@ -963,11 +894,14 @@
                         <span id="account-games">0</span> games played • Best: <span id="account-best">0%</span>
                     </div>
                     <div>
-                        <button class="account-btn primary" id="test-save-btn">Test Save</button>
+                         <button class="account-btn google-btn" id="login-google-btn">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px;height:18px;filter:none;">
+                            Sign in with Google
+                        </button>
                         <button class="account-btn secondary" id="reset-stats-btn">Reset Stats</button>
                     </div>
                     <div class="cloud-sync-info">
-                        <div class="sync-title">☁️ Cloud Sync</div>
+                        <div class="sync-title">☁️ Cloud Save Status</div>
                         <div class="sync-detail" id="cloud-sync-detail">Connecting...</div>
                     </div>
                 </div>
@@ -998,42 +932,11 @@
         <div id="leaderboard-entries"></div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script>
-// ==========================================
-// DEBUG LOGGING
-// ==========================================
-const debugLog = document.getElementById('debug-log');
-let debugMessages = [];
-
-function debug(msg, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
-    const fullMsg = `[${timestamp}] ${prefix} ${msg}`;
-    
-    console.log(fullMsg);
-    debugMessages.push(fullMsg);
-    if (debugMessages.length > 20) debugMessages.shift();
-    
-    debugLog.innerHTML = debugMessages.join('<br>');
-    debugLog.scrollTop = debugLog.scrollHeight;
-}
-
-// Show debug log with triple-click anywhere
-let clickCount = 0;
-document.addEventListener('click', () => {
-    clickCount++;
-    setTimeout(() => clickCount = 0, 500);
-    if (clickCount >= 3) {
-        debugLog.classList.toggle('visible');
-        clickCount = 0;
-    }
-});
-
 // ==========================================
 // FIREBASE CONFIGURATION & INITIALIZATION
 // ==========================================
@@ -1050,185 +953,119 @@ const firebaseConfig = {
 let firebaseApp = null;
 let auth = null;
 let db = null;
+let currentUser = null;
+let firebaseReady = false;
 
 try {
     firebaseApp = firebase.initializeApp(firebaseConfig);
     auth = firebase.auth();
     db = firebase.firestore();
-    debug('Firebase initialized successfully', 'success');
+    console.log('Firebase initialized successfully');
 } catch (error) {
-    debug('Firebase init failed: ' + error.message, 'error');
+    console.error('Firebase init failed: ' + error.message);
 }
-
-// Firebase state
-let currentUser = null;
-let isOnline = navigator.onLine;
-let syncPending = false;
-let autoSaveInterval = null;
-let lastSaveTime = 0;
-let firebaseReady = false;
 
 // ==========================================
 // CLOUD SAVE MANAGER
 // ==========================================
 const CloudSave = {
-    // Get user document reference
+    // Get user document reference - AANGEPAST VOOR JOUW RULES
     getUserDoc() {
-        if (!currentUser || !db) {
-            debug('getUserDoc: No user or db', 'error');
-            return null;
-        }
-        // Path: game-saves/paper-io-pixel/players/{userId}
-        const docRef = db.collection('game-saves').doc('paper-io-pixel').collection('players').doc(currentUser.uid);
-        debug('Doc path: ' + docRef.path);
-        return docRef;
+        if (!currentUser || !db) return null;
+        // Path: users/{userId}/saveData/paperio2
+        return db.collection('users').doc(currentUser.uid).collection('saveData').doc('paperio2');
     },
     
     // Save data to cloud
-    async save(data) {
-        debug('CloudSave.save() called...');
-        
-        if (!db) {
-            debug('Firestore not initialized', 'error');
-            return false;
-        }
-        
-        if (!currentUser) {
-            debug('No user logged in', 'error');
-            return false;
-        }
+    async save(data, silent = false) {
+        if (!db || !currentUser) return false;
         
         const userDoc = this.getUserDoc();
-        if (!userDoc) {
-            debug('Could not get user doc reference', 'error');
-            return false;
-        }
+        if (!userDoc) return false;
         
         try {
-            updateSyncStatus('syncing');
-            debug('Preparing save data...');
+            if(!silent) document.getElementById('cloud-sync-detail').textContent = 'Saving...';
             
             // Structure the data for Firebase
             const saveData = {
-                stats: {
-                    highScore: data.highScore || 0,
-                    gamesPlayed: data.gamesPlayed || 0
-                },
-                profile: {
-                    playerName: data.playerName || 'Guest',
-                    playerColor: data.playerColor || '#ff4757'
-                },
-                skins: {
-                    unlocked: data.unlockedSkins || ['default'],
-                    selected: data.selectedSkin || 'default'
-                },
+                highScore: data.highScore || 0,
+                gamesPlayed: data.gamesPlayed || 0,
+                playerName: data.playerName || 'Guest',
+                playerColor: data.playerColor || '#ff4757',
+                unlockedSkins: data.unlockedSkins || ['default'],
+                selectedSkin: data.selectedSkin || 'default',
                 settings: data.settings || {},
-                meta: {
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
-                    deviceId: getDeviceId(),
-                    savedAt: new Date().toISOString()
-                }
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
             };
-            
-            debug('Saving to: ' + userDoc.path);
-            debug('Data: highScore=' + saveData.stats.highScore + ', games=' + saveData.stats.gamesPlayed);
             
             await userDoc.set(saveData, { merge: true });
             
-            lastSaveTime = Date.now();
-            updateSyncStatus('synced');
-            debug('Save successful!', 'success');
+            if(!silent) {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('cloud-sync-detail').textContent = '✅ Saved at ' + timeStr;
+            }
             return true;
             
         } catch (error) {
-            debug('Save failed: ' + error.message, 'error');
-            debug('Error code: ' + error.code, 'error');
-            updateSyncStatus('error');
-            syncPending = true;
+            console.error('Save failed: ' + error.message);
+            if(!silent) document.getElementById('cloud-sync-detail').textContent = 'Error saving';
             return false;
         }
     },
     
     // Load data from cloud
     async load() {
-        debug('CloudSave.load() called...');
-        
-        if (!db || !currentUser) {
-            debug('Cannot load: no db or user', 'error');
-            return null;
-        }
-        
+        if (!db || !currentUser) return null;
         const userDoc = this.getUserDoc();
         if (!userDoc) return null;
         
         try {
-            debug('Loading from: ' + userDoc.path);
             const doc = await userDoc.get();
-            
             if (doc.exists) {
                 const rawData = doc.data();
-                debug('Data loaded from cloud', 'success');
-                debug('Cloud highScore: ' + (rawData.stats?.highScore || 0));
-                
                 return {
-                    highScore: rawData.stats?.highScore || 0,
-                    gamesPlayed: rawData.stats?.gamesPlayed || 0,
-                    playerName: rawData.profile?.playerName || '',
-                    playerColor: rawData.profile?.playerColor || '#ff4757',
-                    unlockedSkins: rawData.skins?.unlocked || ['default'],
-                    selectedSkin: rawData.skins?.selected || 'default',
+                    highScore: rawData.highScore || 0,
+                    gamesPlayed: rawData.gamesPlayed || 0,
+                    playerName: rawData.playerName || '',
+                    playerColor: rawData.playerColor || '#ff4757',
+                    unlockedSkins: rawData.unlockedSkins || ['default'],
+                    selectedSkin: rawData.selectedSkin || 'default',
                     settings: rawData.settings || {}
                 };
-            } else {
-                debug('No existing cloud data found');
-                return null;
             }
+            return null;
         } catch (error) {
-            debug('Load failed: ' + error.message, 'error');
+            console.error('Load failed: ' + error.message);
             return null;
         }
     },
     
     // Sync local and cloud data
     async syncData() {
-        debug('Syncing data...');
-        
         const cloudData = await this.load();
         const localData = getLocalSaveData();
         
-        if (!cloudData && !localData) {
-            debug('No data found anywhere, using defaults');
-            return getDefaultSaveData();
-        }
+        if (!cloudData && !localData) return getDefaultSaveData();
         
+        // If logged in first time and no cloud data, upload local data
         if (!cloudData) {
-            debug('Only local data exists, uploading...');
-            await this.save(localData);
+            await this.save(localData, true);
             return localData;
         }
         
-        if (!localData || localData.gamesPlayed === 0) {
-            debug('Using cloud data');
-            saveLocalData(cloudData);
-            return cloudData;
-        }
-        
-        // Merge: take highest values
+        // If we have cloud data, merge (take best scores)
         const mergedData = {
             highScore: Math.max(cloudData.highScore || 0, localData.highScore || 0),
             gamesPlayed: Math.max(cloudData.gamesPlayed || 0, localData.gamesPlayed || 0),
-            playerName: localData.playerName || cloudData.playerName || '',
-            playerColor: localData.playerColor || cloudData.playerColor || '#ff4757',
+            playerName: cloudData.playerName || localData.playerName || '',
+            playerColor: cloudData.playerColor || localData.playerColor || '#ff4757',
             unlockedSkins: [...new Set([...(cloudData.unlockedSkins || []), ...(localData.unlockedSkins || [])])],
-            selectedSkin: localData.selectedSkin || cloudData.selectedSkin || 'default',
+            selectedSkin: cloudData.selectedSkin || 'default',
             settings: { ...cloudData.settings, ...localData.settings }
         };
         
-        debug('Merged data: highScore=' + mergedData.highScore + ', games=' + mergedData.gamesPlayed);
-        
-        await this.save(mergedData);
         saveLocalData(mergedData);
-        
         return mergedData;
     }
 };
@@ -1236,15 +1073,6 @@ const CloudSave = {
 // ==========================================
 // LOCAL STORAGE HELPERS
 // ==========================================
-function getDeviceId() {
-    let deviceId = localStorage.getItem('paperio_device_id');
-    if (!deviceId) {
-        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('paperio_device_id', deviceId);
-    }
-    return deviceId;
-}
-
 function getLocalSaveData() {
     return {
         highScore: parseInt(localStorage.getItem('paperio_highscore') || '0'),
@@ -1280,100 +1108,58 @@ function saveLocalData(data) {
 }
 
 // ==========================================
-// SYNC STATUS UI
-// ==========================================
-function updateSyncStatus(status) {
-    const syncStatusEl = document.getElementById('sync-status');
-    const syncTextEl = document.getElementById('sync-text');
-    
-    syncStatusEl.className = 'sync-status ' + status;
-    
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-    
-    switch(status) {
-        case 'syncing':
-            syncTextEl.textContent = 'Saving...';
-            break;
-        case 'synced':
-            syncTextEl.textContent = 'Saved ' + timeStr;
-            break;
-        case 'offline':
-            syncTextEl.textContent = 'Offline';
-            break;
-        case 'error':
-            syncTextEl.textContent = 'Error - Click to retry';
-            break;
-        default:
-            syncTextEl.textContent = 'Connecting...';
-    }
-}
-
-// ==========================================
 // AUTH & INITIALIZATION
 // ==========================================
 async function initializeAuth() {
     const loadingDetails = document.getElementById('loading-details');
     
     if (!auth) {
-        debug('Auth not available', 'error');
         loadingDetails.textContent = 'Firebase auth not available';
         return;
     }
     
     return new Promise((resolve) => {
-        loadingDetails.textContent = 'Authenticating...';
-        
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 currentUser = user;
                 firebaseReady = true;
-                debug('User authenticated: ' + user.uid.substring(0, 8) + '...', 'success');
-                loadingDetails.textContent = 'Loading your data...';
+                loadingDetails.textContent = 'Syncing data...';
                 
                 try {
                     const syncedData = await CloudSave.syncData();
                     applyLoadedData(syncedData);
-                    updateSyncStatus('synced');
+                    document.getElementById('cloud-sync-detail').textContent = '✅ Logged in as ' + (user.email || 'Guest');
+                    document.getElementById('login-google-btn').textContent = 'Signed in (' + user.email + ')';
+                    document.getElementById('login-google-btn').disabled = true;
                 } catch (error) {
-                    debug('Sync error: ' + error.message, 'error');
+                    console.error('Sync error', error);
                     applyLoadedData(getLocalSaveData());
                 }
             } else {
-                debug('No user, signing in anonymously...');
-                loadingDetails.textContent = 'Creating anonymous account...';
-                
+                // Anonymous sign in by default so game works
+                loadingDetails.textContent = 'Starting guest session...';
                 try {
                     const result = await auth.signInAnonymously();
-                    currentUser = result.user;
-                    firebaseReady = true;
-                    debug('Anonymous sign-in successful: ' + currentUser.uid.substring(0, 8) + '...', 'success');
-                    loadingDetails.textContent = 'Loading your data...';
-                    
-                    const syncedData = await CloudSave.syncData();
-                    applyLoadedData(syncedData);
-                    updateSyncStatus('synced');
+                    // Will trigger onAuthStateChanged again
                 } catch (error) {
-                    debug('Auth error: ' + error.message, 'error');
-                    debug('Error code: ' + error.code, 'error');
-                    updateSyncStatus('error');
+                    console.error('Anon auth error', error);
                     applyLoadedData(getLocalSaveData());
+                    resolve();
                 }
             }
             resolve();
         });
-        
-        // Timeout after 10 seconds
-        setTimeout(() => {
-            if (!currentUser) {
-                debug('Auth timeout - using local data', 'error');
-                updateSyncStatus('offline');
-                applyLoadedData(getLocalSaveData());
-                resolve();
-            }
-        }, 10000);
     });
 }
+
+// Google Login Handler
+document.getElementById('login-google-btn').addEventListener('click', () => {
+    if(!auth) return;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch((error) => {
+        alert("Login failed: " + error.message);
+    });
+});
 
 function applyLoadedData(data) {
     if (!data) return;
@@ -1401,22 +1187,13 @@ function applyLoadedData(data) {
     }
     
     updateAccountTab();
-    debug('Data applied: highScore=' + highScore + ', games=' + gamesPlayed);
 }
 
-// Save progress function
-async function saveProgress(reason = 'manual') {
-    debug('saveProgress called: ' + reason);
-    
-    const now = Date.now();
-    
-    // Prevent saving too frequently
-    if (now - lastSaveTime < 3000 && reason === 'auto') {
-        debug('Skipping save, too soon');
-        return;
-    }
-    
-    const data = {
+// ==========================================
+// GAME LOOP DATA GATHERING
+// ==========================================
+function getCurrentGameData() {
+    return {
         highScore: highScore,
         gamesPlayed: gamesPlayed,
         playerName: playerNameInput.value.trim() || 'Guest',
@@ -1432,100 +1209,48 @@ async function saveProgress(reason = 'manual') {
             screenTheme: currentScreenTheme
         }
     };
-    
-    // Save locally first
-    saveLocalData(data);
-    
-    // Then sync to cloud
-    const success = await CloudSave.save(data);
-    
-    if (success) {
-        debug('Progress saved to cloud (' + reason + ')', 'success');
-    } else {
-        debug('Cloud save failed (' + reason + ')', 'error');
-    }
-    
-    return success;
 }
 
-// Test save function (click on sync status or test button)
-async function testSave() {
-    debug('=== TEST SAVE ===');
-    debug('User: ' + (currentUser ? currentUser.uid.substring(0, 12) : 'NONE'));
-    debug('Firebase ready: ' + firebaseReady);
-    debug('DB: ' + (db ? 'OK' : 'NULL'));
-    
-    // Increment games played for test
-    gamesPlayed++;
-    document.getElementById('games-played').textContent = gamesPlayed;
-    
-    const success = await saveProgress('test');
-    
-    if (success) {
-        alert('✅ Save successful!\n\nCheck Firebase console:\ngame-saves/paper-io-pixel/players/' + currentUser.uid);
-    } else {
-        alert('❌ Save failed!\n\nCheck console for errors.');
-    }
-}
+// ==========================================
+// AUTO SAVE (EVERY 15 SECONDS)
+// ==========================================
+let autoSaveInterval = null;
 
-// Auto-save functions
 function startAutoSave() {
     if (autoSaveInterval) clearInterval(autoSaveInterval);
     
+    // Save every 15 seconds silently
     autoSaveInterval = setInterval(async () => {
-        if (gameRunning && !gamePaused && firebaseReady) {
-            debug('Auto-save triggered');
-            await saveProgress('auto');
+        if (gameRunning && !gamePaused && firebaseReady && currentUser) {
+            // Save locally first
+            const data = getCurrentGameData();
+            saveLocalData(data);
+            // Then cloud (silent = true)
+            await CloudSave.save(data, true);
         }
-    }, 60000);
-    
-    debug('Auto-save started (60s interval)');
+    }, 15000);
 }
 
 function stopAutoSave() {
     if (autoSaveInterval) {
         clearInterval(autoSaveInterval);
         autoSaveInterval = null;
-        debug('Auto-save stopped');
     }
 }
 
-// Event listeners
-window.addEventListener('online', async () => {
-    isOnline = true;
-    debug('Back online');
-    if (syncPending && firebaseReady) {
-        await saveProgress('reconnected');
-        syncPending = false;
-    }
-});
-
-window.addEventListener('offline', () => {
-    isOnline = false;
-    debug('Went offline');
-    updateSyncStatus('offline');
-});
-
-window.addEventListener('beforeunload', () => {
-    const data = {
-        highScore: highScore,
-        gamesPlayed: gamesPlayed,
-        playerName: playerNameInput.value.trim(),
-        playerColor: CONFIG.colors.player
-    };
+// Manual Save (when closing settings or game over)
+async function saveProgress(reason = 'manual') {
+    const data = getCurrentGameData();
     saveLocalData(data);
-    debug('Page closing - saved locally');
-});
-
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'hidden' && gameRunning && firebaseReady) {
-        debug('Tab hidden - saving');
-        await saveProgress('tab_hidden');
-    }
-});
+    
+    // For manual saves (game over, settings close), we do show status if settings open
+    // but keep it silent if called during quick actions
+    const silent = reason === 'auto';
+    await CloudSave.save(data, silent);
+}
 
 // ==========================================
-// ELEMENT REFERENCES
+// ELEMENT REFERENCES & GAME LOGIC (UNCHANGED)
 // ==========================================
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -1551,9 +1276,7 @@ const menuSkinsBtn = document.getElementById('menu-skins-btn');
 const ingameSkinsBtn = document.getElementById('ingame-skins');
 const loadingOverlay = document.getElementById('loading-overlay');
 
-// ==========================================
 // GAME CONFIG
-// ==========================================
 const CONFIG = {
     mapRadius: 2000,
     tileSize: 10,
@@ -1586,9 +1309,6 @@ const BOT_NAMES = [
     'Blake', 'Drew', 'Skyler', 'Charlie'
 ];
 
-// ==========================================
-// GAME STATE
-// ==========================================
 let gameRunning = false;
 let gamePaused = false;
 let mousePos = { x: 0, y: 0 };
@@ -1606,17 +1326,14 @@ let camera = { x: 0, y: 0 };
 let player = null;
 let bots = [];
 let territory = [];
-
 let cachedTotalTiles = 0;
 
-// Stats
 let gamesPlayed = parseInt(localStorage.getItem('paperio_games') || '0');
 let highScore = parseInt(localStorage.getItem('paperio_highscore') || '0');
 document.getElementById('games-played').textContent = gamesPlayed;
 document.getElementById('high-score').textContent = highScore + '%';
 playerNameInput.value = localStorage.getItem('paperio_name') || '';
 
-// Load saved settings
 const savedSettings = JSON.parse(localStorage.getItem('paperio_settings') || '{}');
 if (savedSettings.botCount) CONFIG.botCount = savedSettings.botCount;
 if (savedSettings.speed) CONFIG.speed = savedSettings.speed;
@@ -1629,9 +1346,6 @@ applyScreenTheme(currentScreenTheme);
 
 let minimapNeedsUpdate = true;
 
-// ==========================================
-// SCREEN THEME FUNCTIONS
-// ==========================================
 function applyScreenTheme(themeName) {
     currentScreenTheme = themeName;
     if (themeName === 'original') {
@@ -1641,9 +1355,7 @@ function applyScreenTheme(themeName) {
     }
 }
 
-// ==========================================
-// SETTINGS PANEL
-// ==========================================
+// SETTINGS PANEL LOGIC
 let currentTab = 'game';
 let selectedPlayerColor = CONFIG.colors.player;
 
@@ -1656,13 +1368,10 @@ function initSettingsPanel() {
 
     botSlider.value = CONFIG.botCount;
     document.getElementById('bots-value').textContent = CONFIG.botCount;
-    
     speedSlider.value = Math.round(CONFIG.speed);
     document.getElementById('speed-value').textContent = Math.round(CONFIG.speed);
-    
     zoomSlider.value = Math.round(CONFIG.zoom * 10);
     document.getElementById('zoom-value').textContent = CONFIG.zoom.toFixed(1) + 'x';
-    
     mapSizeSelect.value = CONFIG.mapRadius;
     colorPicker.value = CONFIG.colors.player;
     selectedPlayerColor = CONFIG.colors.player;
@@ -1724,10 +1433,7 @@ function initSettingsPanel() {
         }
     });
 
-    document.getElementById('test-save-btn').addEventListener('click', testSave);
-
     updateColorSelection(CONFIG.colors.player);
-    
     document.querySelectorAll('.screen-theme-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
     });
@@ -1735,11 +1441,9 @@ function initSettingsPanel() {
 
 function switchTab(tabName) {
     currentTab = tabName;
-    
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tab === tabName);
     });
-    
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === 'tab-' + tabName);
     });
@@ -1758,21 +1462,7 @@ function updateAccountTab() {
     document.getElementById('account-games').textContent = gamesPlayed;
     document.getElementById('account-best').textContent = highScore + '%';
     
-    const syncDetail = document.getElementById('cloud-sync-detail');
-    if (currentUser) {
-        const lastSaveStr = lastSaveTime > 0 
-            ? new Date(lastSaveTime).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-            : 'Never';
-        
-        syncDetail.innerHTML = 
-            '✅ Connected<br>' +
-            '👤 ID: ' + currentUser.uid.substring(0, 12) + '...<br>' +
-            '📁 Path: game-saves/paper-io-pixel/players/...<br>' +
-            '🕐 Last save: ' + lastSaveStr + '<br>' +
-            '⏰ Auto-save: Every 60s during gameplay';
-    } else {
-        syncDetail.innerHTML = '⏳ Connecting to cloud...<br>Click "Test Save" to verify connection';
-    }
+    // Status text update handled by sync functions
 }
 
 function openSettings() {
@@ -1780,7 +1470,6 @@ function openSettings() {
     settingsOverlay.style.display = 'block';
     updateAccountTab();
     switchTab('game');
-    
     document.querySelectorAll('.screen-theme-btn').forEach(btn => {
         btn.classList.toggle('selected', btn.dataset.screenTheme === currentScreenTheme);
     });
@@ -1806,7 +1495,6 @@ async function closeSettings() {
     settingsPanel.style.display = 'none';
     settingsOverlay.style.display = 'none';
     
-    debug('Settings saved - syncing to cloud');
     await saveProgress('settings_saved');
 }
 
@@ -1837,7 +1525,6 @@ quitBtn.onclick = async () => {
     overlay.style.display = 'flex';
     animateMenuBackground();
     
-    debug('Quit game - saving');
     await saveProgress('quit_game');
 };
 
@@ -1850,9 +1537,7 @@ ingameSkinsBtn.onclick = openSkinsPanel;
 
 initSettingsPanel();
 
-// ==========================================
-// MENU BACKGROUND
-// ==========================================
+// MENU BACKGROUND ANIMATION
 let menuBlocks = [];
 
 function initMenuBackground() {
@@ -1894,9 +1579,7 @@ function animateMenuBackground() {
     requestAnimationFrame(animateMenuBackground);
 }
 
-// ==========================================
-// GRID FUNCTIONS
-// ==========================================
+// GAME ENTITIES AND LOGIC (GAMEPLAY CODE)
 function initGridData() {
     gridSize = Math.ceil((CONFIG.mapRadius * 2) / CONFIG.tileSize);
     mapCenterX = CONFIG.mapRadius;
@@ -1958,9 +1641,6 @@ function isPositionInAnyTerritory(worldX, worldY, checkRadius) {
     return false;
 }
 
-// ==========================================
-// BASE ENTITY CLASS
-// ==========================================
 class Entity {
     constructor(id, color, name) {
         this.id = id;
@@ -2259,9 +1939,6 @@ class Entity {
     }
 }
 
-// ==========================================
-// PLAYER CLASS
-// ==========================================
 class Player extends Entity {
     constructor() {
         super(0, CONFIG.colors.player, 'Player');
@@ -2370,14 +2047,10 @@ class Player extends Entity {
         overlay.style.display = 'flex';
         animateMenuBackground();
         
-        debug('Game over - saving');
         await saveProgress('game_over');
     }
 }
 
-// ==========================================
-// BOT CLASS
-// ==========================================
 class Bot extends Entity {
     constructor(id, color, name) {
         super(id, color, name);
@@ -2678,9 +2351,6 @@ class Bot extends Entity {
     }
 }
 
-// ==========================================
-// CREATE BOTS
-// ==========================================
 function createBots() {
     bots = [];
     for (let i = 0; i < CONFIG.botCount; i++) {
@@ -2692,9 +2362,6 @@ function createBots() {
     }
 }
 
-// ==========================================
-// DRAW FUNCTIONS
-// ==========================================
 function drawMap() {
     const centerScreenX = (mapCenterX - camera.x) * CONFIG.zoom;
     const centerScreenY = (mapCenterY - camera.y) * CONFIG.zoom;
@@ -2833,9 +2500,6 @@ function updateLeaderboard() {
     }
 }
 
-// ==========================================
-// GAME LOOP
-// ==========================================
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = CONFIG.colors.bg;
@@ -2868,9 +2532,6 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// ==========================================
-// START GAME
-// ==========================================
 async function startGame() {
     const name = playerNameInput.value.trim() || 'Player';
     localStorage.setItem('paperio_name', name);
@@ -2905,13 +2566,9 @@ async function startGame() {
     
     startAutoSave();
     
-    debug('Game started - saving');
     await saveProgress('game_start');
 }
 
-// ==========================================
-// EVENT LISTENERS
-// ==========================================
 window.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
     lastInputMethod = 'keyboard';
@@ -2954,12 +2611,7 @@ playerNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') startGame();
 });
 
-// ==========================================
-// INIT
-// ==========================================
 async function init() {
-    debug('Initializing game...');
-    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     minimap.style.display = 'none';
@@ -2971,8 +2623,6 @@ async function init() {
     
     animateMenuBackground();
     gameLoop();
-    
-    debug('Game ready!', 'success');
 }
 
 init();
