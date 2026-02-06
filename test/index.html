@@ -43,15 +43,14 @@
             background: #0f172a; color: white; margin-bottom: 20px; outline: none;
         }
 
-        /* NIEUW: Container die scrollt voor de categorieën */
+        /* Container die scrollt voor de categorieën */
         .sidebar-menu {
-            flex: 1; /* Vult de overgebleven ruimte */
-            overflow-y: auto; /* Alleen dit gedeelte scrollt */
+            flex: 1; 
+            overflow-y: auto; 
             margin-bottom: 10px;
-            padding-right: 5px; /* Ruimte voor scrollbar */
+            padding-right: 5px;
         }
 
-        /* Scrollbar styling voor sidebar menu */
         .sidebar-menu::-webkit-scrollbar { width: 5px; }
         .sidebar-menu::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
@@ -63,11 +62,13 @@
         .category-btn:hover { background: #1e293b; color: white; }
         .category-btn.active { background: var(--primary); color: white; font-weight: bold; }
         
-        /* NIEUW: Notificatie Badge */
+        /* Notificatie Badge */
         .badge {
             background: #ef4444; color: white; font-size: 11px; font-weight: bold;
             padding: 2px 6px; border-radius: 10px; margin-left: auto;
+            animation: pulse 2s infinite;
         }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
 
         /* --- MAIN CONTENT --- */
         .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
@@ -111,7 +112,7 @@
         .modal-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 99999; }
-        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; }
+        .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; cursor: pointer; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
@@ -256,6 +257,8 @@ let currentUser = null;
 let favorites = {};
 let allGames = {};
 let currentFilter = "all";
+let lastUnreadCount = 0;
+let originalTitle = document.title;
 
 function notify(msg, type = 'success') {
     const container = document.getElementById('toast-container');
@@ -263,6 +266,7 @@ function notify(msg, type = 'success') {
     t.className = 'toast';
     t.style.borderLeftColor = type === 'success' ? '#22c55e' : '#ef4444';
     t.innerHTML = msg;
+    t.onclick = () => { if(type==='msg') location.href = 'chat.html'; t.remove(); };
     container.appendChild(t);
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 500); }, 3000);
 }
@@ -273,33 +277,63 @@ auth.onAuthStateChanged(user => {
         document.getElementById("authBtn").textContent = "Uitloggen";
         document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? "inline-block" : "none";
         loadFavorites();
-        checkUnreadMessages(); // Start listener voor notificaties
+        
+        // Permissies vragen
+        if (Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+        checkUnreadMessages();
     } else {
         document.getElementById("authBtn").textContent = "Inloggen";
         document.getElementById("adminBtn").style.display = "none";
         favorites = {};
         renderGames();
         document.getElementById('chatBadge').style.display = 'none';
+        document.title = originalTitle;
     }
 });
 
-// NIEUW: Functie voor chat notificaties
+// NIEUW: Uitgebreide notificatie functie
 function checkUnreadMessages() {
     if(!currentUser) return;
     
-    // Luister naar ongelezen berichten voor de gebruiker
     db.collection("messages")
       .where("to", "==", currentUser.uid)
       .where("read", "==", false)
       .onSnapshot(snap => {
           const count = snap.size;
           const badge = document.getElementById('chatBadge');
+          
           if(count > 0) {
               badge.style.display = 'inline-block';
               badge.innerText = count;
+              
+              // Verander TABBLAD titel
+              document.title = `(${count}) Game Paradise`;
+
+              // Als er NIEUWE berichten zijn bijgekomen:
+              if (count > lastUnreadCount) {
+                  // Geluidje
+                  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                  audio.volume = 0.5;
+                  audio.play().catch(e => {});
+
+                  // Desktop Melding
+                  if (Notification.permission === "granted" && document.hidden) {
+                      new Notification("Nieuw bericht!", {
+                          body: `Je hebt ${count} ongelezen berichten op Game Paradise.`,
+                          icon: "https://i.imgur.com/CeRZ8na.png"
+                      });
+                  }
+                  
+                  // Toast melding in de app
+                  notify("💬 Nieuw bericht ontvangen!", "msg");
+              }
           } else {
               badge.style.display = 'none';
+              document.title = originalTitle;
           }
+          lastUnreadCount = count;
       });
 }
 
