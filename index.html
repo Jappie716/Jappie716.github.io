@@ -32,15 +32,29 @@
         .sidebar {
             width: 260px; min-width: 260px; background: var(--sidebar-bg);
             padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
-            /* AANGEPAST: Scrollbaar maken voor kleine schermen */
-            overflow-y: auto;
+            height: 100vh;
         }
-        .logo { font-size: 22px; font-weight: bold; color: var(--accent); margin-bottom: 25px; text-align: center; }
+        
+        .logo { font-size: 22px; font-weight: bold; color: var(--accent); margin-bottom: 25px; text-align: center; flex-shrink: 0; }
 
+        .search-box { flex-shrink: 0; }
         .search-box input {
             width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #1e293b;
             background: #0f172a; color: white; margin-bottom: 20px; outline: none;
         }
+
+        /* NIEUW: Container die scrollt voor de categorieën */
+        .sidebar-menu {
+            flex: 1; /* Vult de overgebleven ruimte */
+            overflow-y: auto; /* Alleen dit gedeelte scrollt */
+            margin-bottom: 10px;
+            padding-right: 5px; /* Ruimte voor scrollbar */
+        }
+
+        /* Scrollbar styling voor sidebar menu */
+        .sidebar-menu::-webkit-scrollbar { width: 5px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .sidebar-menu::-webkit-scrollbar-track { background: transparent; }
 
         .category-btn {
             padding: 12px; border-radius: 10px; margin-bottom: 5px; cursor: pointer;
@@ -49,6 +63,12 @@
         .category-btn:hover { background: #1e293b; color: white; }
         .category-btn.active { background: var(--primary); color: white; font-weight: bold; }
         
+        /* NIEUW: Notificatie Badge */
+        .badge {
+            background: #ef4444; color: white; font-size: 11px; font-weight: bold;
+            padding: 2px 6px; border-radius: 10px; margin-left: auto;
+        }
+
         /* --- MAIN CONTENT --- */
         .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -101,20 +121,24 @@
 
 <div class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
+  
   <div class="search-box">
     <input id="searchInput" type="search" name="search_query" placeholder="Zoek games..." autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
   </div>
-  <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
-  <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
-  
-  <div id="categoryList"></div>
 
-  <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="margin-top:auto; border: 1px solid #10b981; color: #34d399; text-align: center;">
+  <div class="sidebar-menu">
+      <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
+      <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
+      <div id="categoryList"></div>
+  </div>
+
+  <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="border: 1px solid #10b981; color: #34d399; text-align: center;">
       🛠️ Support
   </div>
 
-  <div class="category-btn" onclick="checkChatAccess()" style="margin-top:10px; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">
+  <div class="category-btn" onclick="checkChatAccess()" style="margin-top:5px; border: 1px solid #2563eb; color: #60a5fa; text-align: center;">
       💬 GP Chat
+      <span id="chatBadge" class="badge" style="display:none">0</span>
   </div>
 </div>
 
@@ -249,13 +273,35 @@ auth.onAuthStateChanged(user => {
         document.getElementById("authBtn").textContent = "Uitloggen";
         document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? "inline-block" : "none";
         loadFavorites();
+        checkUnreadMessages(); // Start listener voor notificaties
     } else {
         document.getElementById("authBtn").textContent = "Inloggen";
         document.getElementById("adminBtn").style.display = "none";
         favorites = {};
         renderGames();
+        document.getElementById('chatBadge').style.display = 'none';
     }
 });
+
+// NIEUW: Functie voor chat notificaties
+function checkUnreadMessages() {
+    if(!currentUser) return;
+    
+    // Luister naar ongelezen berichten voor de gebruiker
+    db.collection("messages")
+      .where("to", "==", currentUser.uid)
+      .where("read", "==", false)
+      .onSnapshot(snap => {
+          const count = snap.size;
+          const badge = document.getElementById('chatBadge');
+          if(count > 0) {
+              badge.style.display = 'inline-block';
+              badge.innerText = count;
+          } else {
+              badge.style.display = 'none';
+          }
+      });
+}
 
 document.getElementById("authBtn").onclick = () => {
     if (currentUser) {
@@ -388,16 +434,13 @@ document.getElementById("searchInput").oninput = renderGames;
 loadGames();
 loadCategories();
 
-// NIEUW: De functie die de chat beveiligt
 function checkChatAccess() {
-    // We gebruiken 'currentUser' omdat jouw Firebase-script die naam gebruikt
     if (!currentUser) {
         notify("❌ Je moet ingelogd zijn om te chatten!");
         setTimeout(() => {
             document.getElementById('loginModal').style.display = 'flex';
         }, 1000);
     } else {
-        // Als currentUser bestaat (je bent ingelogd), dan ga je naar de chat
         location.href = 'chat.html';
     }
 }
