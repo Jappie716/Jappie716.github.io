@@ -42,6 +42,7 @@
             background: #0f172a; color: white; margin-bottom: 20px; outline: none;
         }
 
+        /* Scrollable Category Menu */
         .sidebar-menu {
             flex: 1; overflow-y: auto; margin-bottom: 10px; padding-right: 5px;
         }
@@ -55,6 +56,10 @@
         .category-btn:hover { background: #1e293b; color: white; }
         .category-btn.active { background: var(--primary); color: white; font-weight: bold; }
         
+        /* Sidebar Footer Buttons (Fixed at bottom) */
+        .sidebar-footer { flex-shrink: 0; border-top: 1px solid #1e293b; padding-top: 10px; }
+
+        /* Badge */
         .badge {
             background: #ef4444; color: white; font-size: 11px; font-weight: bold;
             padding: 2px 6px; border-radius: 10px; margin-left: auto;
@@ -93,7 +98,6 @@
 
         /* --- SKELETON LOADING --- */
         .skeleton { animation: pulse 1.5s infinite; background: #1e293b; width: 100%; height: 100%; border-radius: 15px; }
-        .skeleton-text { height: 15px; background: #334155; margin-top: 10px; border-radius: 4px; width: 80%; }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
         /* --- MODALS & TOASTS --- */
@@ -128,18 +132,23 @@
   <div class="sidebar-menu">
       <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
       <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
-      <div class="category-btn" onclick="openUpdatesModal()" style="color: #facc15;">🔔 Updates</div>
       <div style="height: 1px; background: #1e293b; margin: 10px 0;"></div>
       <div id="categoryList"></div>
   </div>
 
-  <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="border: 1px solid #10b981; color: #34d399; justify-content: center;">
-      🛠️ Support
-  </div>
+  <div class="sidebar-footer">
+      <div class="category-btn" onclick="openUpdatesModal()" style="color: #facc15;">
+          🔔 Updates
+      </div>
 
-  <div class="category-btn" onclick="checkChatAccess()" style="margin-top:5px; border: 1px solid #2563eb; color: #60a5fa; justify-content: center;">
-      💬 GP Chat
-      <span id="chatBadge" class="badge" style="display:none">0</span>
+      <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="border: 1px solid #10b981; color: #34d399;">
+          🛠️ Support
+      </div>
+
+      <div class="category-btn" onclick="checkChatAccess()" style="border: 1px solid #2563eb; color: #60a5fa;">
+          💬 GP Chat
+          <span id="chatBadge" class="badge" style="display:none">0</span>
+      </div>
   </div>
 </div>
 
@@ -237,7 +246,6 @@ let allGames = {};
 let currentFilter = "all";
 let gamesLoading = true;
 
-// Notificatie systeem
 function notify(msg, type = 'success') {
     const container = document.getElementById('toast-container');
     const t = document.createElement('div');
@@ -254,7 +262,7 @@ auth.onAuthStateChanged(user => {
         document.getElementById("authBtn").textContent = "Uitloggen";
         document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? "inline-block" : "none";
         loadFavorites();
-        initChatBadge(); // Start listener
+        initChatBadge(); 
     } else {
         document.getElementById("authBtn").textContent = "Inloggen";
         document.getElementById("adminBtn").style.display = "none";
@@ -264,78 +272,21 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-/* --- CHAT BADGE LOGIC --- */
+// Chat Badge Listener
 function initChatBadge() {
     if(!currentUser) return;
-    
-    // We checken hier: Friends (privé) en Groups
-    let unreadCount = 0;
     const badge = document.getElementById('chatBadge');
     
-    // 1. Check Groups
-    db.collection("groups").where("members", "array-contains", currentUser.uid).onSnapshot(snap => {
-        let groupUnreads = 0;
-        snap.forEach(doc => {
-            // Check laatste bericht in deze groep
-            db.collection("groups").doc(doc.id).collection("messages")
-                .orderBy("timestamp", "desc").limit(1)
-                .onSnapshot(msgSnap => {
-                    if(!msgSnap.empty) {
-                        const m = msgSnap.docs[0].data();
-                        // Als laatste bericht niet van mij is, en nieuwer dan mijn lastSeen?
-                        // (Versimpeld: we tonen een dot als het laatste bericht niet van ons is)
-                        if (m.uid !== currentUser.uid) { 
-                            // In een perfect systeem zouden we 'lastRead' per chat opslaan.
-                            // Voor nu tellen we chats waar het laatste bericht niet van ons is.
-                            groupUnreads++; // Dit is een simpele benadering voor notificaties
-                            updateTotalBadge();
-                        }
-                    }
-                });
-        });
-    });
-
-    // 2. Check Private Chats (Vrienden)
-    db.collection("users").doc(currentUser.uid).collection("friends").onSnapshot(snap => {
-        snap.forEach(fDoc => {
-            const chatId = [currentUser.uid, fDoc.id].sort().join("_");
-            db.collection("private_chats").doc(chatId).collection("messages")
-                .orderBy("timestamp", "desc").limit(1)
-                .onSnapshot(msgSnap => {
-                    if(!msgSnap.empty) {
-                        const m = msgSnap.docs[0].data();
-                        if (m.uid !== currentUser.uid) {
-                             // Hier zouden we moeten checken of we het gelezen hebben
-                             // Voor nu laten we dit even zitten om de code niet te zwaar te maken op de homepagina
-                             // Als je chat.html opent, resetten de notificaties.
-                        }
-                    }
-                });
-        });
-    });
-
-    // Omdat de chat logica complex is om volledig te dupliceren, 
-    // luisteren we hier simpel naar het 'messages' field als dat zou bestaan,
-    // of we gebruiken een simpele listener naar de algemene chat voor activiteit.
-    
-    // VERBETERDE VERSIE: Gebruik een eenvoudige listener op 'chats' (Global)
+    // Check global chat voor activiteit (simpel voorbeeld)
     db.collection("chats").orderBy("timestamp", "desc").limit(1).onSnapshot(s => {
         if(!s.empty && s.docs[0].data().uid !== currentUser.uid) {
-            // Nieuw bericht in global chat!
             badge.innerText = "!"; 
             badge.style.display = 'inline-block';
         }
     });
-
-    function updateTotalBadge() {
-        // In een echte app zou je unread counts in je user profile opslaan
-        // Voor nu zetten we gewoon een "!" als er iets is.
-        badge.innerText = "!"; 
-        badge.style.display = 'inline-block';
-    }
 }
 
-/* --- UPDATES LOGIC --- */
+// Updates Laden
 function openUpdatesModal() {
     document.getElementById('updatesModal').style.display = 'flex';
     const list = document.getElementById('updatesList');
@@ -392,10 +343,9 @@ document.getElementById("forgotPasswordSubmit").onclick = () => {
     document.getElementById("forgotPasswordModal").style.display = "flex";
 };
 
-/* --- GAMES LOGIC --- */
 function loadGames() {
     gamesLoading = true;
-    renderGames(); // Toon skeletons
+    renderGames(); 
     db.collection("games").onSnapshot(snap => {
         allGames = {};
         snap.forEach(doc => allGames[doc.id] = doc.data());
@@ -480,13 +430,12 @@ function renderGames() {
         // Filter Logic
         if (currentFilter === "favorites" && !isFav) return;
         
-        // Multi-Category Check
+        // Multi-Category Check (ondersteunt oude en nieuwe data)
         if (currentFilter !== "all" && currentFilter !== "favorites") {
-            // Ondersteuning voor oude (string) en nieuwe (array) data structuur
             if (Array.isArray(g.categories)) {
                 if (!g.categories.includes(currentFilter)) return;
             } else {
-                if (g.category !== currentFilter) return; // Fallback
+                if (g.category !== currentFilter) return;
             }
         }
 
