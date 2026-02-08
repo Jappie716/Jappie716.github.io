@@ -29,12 +29,16 @@
         .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 25px; }
         
         /* Form & Preview */
-        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
         .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .success { background: var(--success); color: white; width: 100%; margin-bottom: 10px; }
         .danger { background: var(--danger); color: white; }
+        
+        /* Checkbox Container for Multi-Categories */
+        .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; padding: 10px; border: 1px solid #334155; border-radius: 10px; background: #0f172a; }
+        .cat-option { display: flex; align-items: center; gap: 5px; background: #1e293b; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+        .cat-option input { width: auto; margin: 0; }
 
-        /* De Preview Afbeelding */
         .preview-container { text-align: center; margin-bottom: 15px; background: #020617; border-radius: 10px; padding: 10px; border: 1px dashed #334155; }
         #editPreview { max-width: 100%; max-height: 150px; border-radius: 8px; display: none; margin: 0 auto; }
         #previewPlaceholder { color: #475569; font-size: 14px; padding: 20px; }
@@ -58,6 +62,7 @@
     <button class="nav-btn" id="btn-editor" onclick="showTab('editor')">✏️ Game Editor</button>
     <button class="nav-btn" id="btn-games" onclick="showTab('games')">🎮 Games Lijst</button>
     <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
+    <button class="nav-btn" id="btn-updates" onclick="showTab('updates')">🔔 Updates</button>
     <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
     
     <div style="margin-top: auto;">
@@ -71,9 +76,7 @@
         <div class="card">
             <h2>Welkom Admin</h2>
             <p>Gebruik het linker menu om de website te beheren.</p>
-            <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">
-                Laden statistieken...
-            </div>
+            <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">Laden...</div>
         </div>
     </div>
 
@@ -82,7 +85,7 @@
             <h3 id="editorTitle">Nieuwe Game Toevoegen</h3>
             
             <div class="preview-container">
-                <div id="previewPlaceholder">Afbeelding preview verschijnt hier...</div>
+                <div id="previewPlaceholder">Afbeelding preview...</div>
                 <img id="editPreview" src="" alt="Preview">
             </div>
 
@@ -90,17 +93,19 @@
             <input id="editTitle" placeholder="Titel van de game">
             <input id="editImg" placeholder="Afbeelding URL" oninput="updatePreview(this.value)">
             <input id="editLink" value="games/" placeholder="Link naar game map">
-            <select id="editCat"></select>
             
-            <label style="display:flex; align-items:center; gap:10px; margin-bottom:20px; cursor:pointer;">
-                <input type="checkbox" id="editHasSave" style="width:auto; margin:0">
-                <span>Slaat voortgang op (💾 icoon tonen)</span>
+            <p style="margin-bottom:5px; font-size:14px; color:#94a3b8;">Categorieën (Selecteer meerdere):</p>
+            <div id="catCheckboxes" class="checkbox-container">
+                </div>
+            
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                <input type="checkbox" id="editHasSave" style="width:auto; margin:0"> <span>Slaat voortgang op (💾)</span>
             </label>
-<label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
-    <input type="checkbox" id="editHasInfo" style="width:auto; margin:0">
-    <span>Heeft extra info (❓ icoon tonen)</span>
-</label>
-<input id="editInfoText" placeholder="Informatie tekst voor de game">
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                <input type="checkbox" id="editHasInfo" style="width:auto; margin:0"> <span>Heeft extra info (❓)</span>
+            </label>
+            <textarea id="editInfoText" placeholder="Informatie tekst..." rows="3"></textarea>
+
             <button class="btn success" onclick="saveGame()">💾 Opslaan</button>
             <button class="btn" style="width:100%; background:transparent; color:#94a3b8" onclick="resetEditor()">Schoonmaken</button>
         </div>
@@ -108,8 +113,9 @@
 
     <div id="gamesSection" class="section">
         <div class="card">
+            <input type="text" id="gameSearch" placeholder="🔍 Zoek game op titel..." onkeyup="filterGamesTable()">
             <table>
-                <thead><tr><th>Beeld</th><th>Titel</th><th>Save</th><th>Acties</th></tr></thead>
+                <thead><tr><th>Beeld</th><th>Titel</th><th>Cat</th><th>Acties</th></tr></thead>
                 <tbody id="gamesList"></tbody>
             </table>
         </div>
@@ -121,6 +127,19 @@
             <button class="btn success" onclick="addCategory()">Toevoegen</button>
         </div>
         <div id="categoriesList"></div>
+    </div>
+
+    <div id="updatesSection" class="section">
+        <div class="card">
+            <h3>Nieuwe Update Plaatsen</h3>
+            <input id="updateTitle" placeholder="Titel van update">
+            <textarea id="updateContent" placeholder="Beschrijving van de update..." rows="3"></textarea>
+            <button class="btn success" onclick="postUpdate()">Publiceren</button>
+        </div>
+        <div class="card">
+            <h3>Recente Updates</h3>
+            <div id="updatesList"></div>
+        </div>
     </div>
 
     <div id="chatSection" class="section">
@@ -169,17 +188,14 @@ function updatePreview(url) {
     const img = document.getElementById('editPreview');
     const placeholder = document.getElementById('previewPlaceholder');
     if (url.length > 5) {
-        img.src = url;
-        img.style.display = 'block';
-        placeholder.style.display = 'none';
+        img.src = url; img.style.display = 'block'; placeholder.style.display = 'none';
     } else {
-        img.style.display = 'none';
-        placeholder.style.display = 'block';
+        img.style.display = 'none'; placeholder.style.display = 'block';
     }
 }
 
 function init() {
-    // Games laden
+    // Games
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
         list.innerHTML = "";
@@ -187,10 +203,11 @@ function init() {
         s.forEach(doc => {
             count++;
             const g = doc.data();
-            list.innerHTML += `<tr>
+            const catDisplay = Array.isArray(g.categories) ? g.categories.join(", ") : g.category;
+            list.innerHTML += `<tr class="game-row">
                 <td><img src="${g.image}" class="thumb"></td>
-                <td><b>${g.title}</b></td>
-                <td>${g.hasSave ? '💾' : '-'}</td>
+                <td class="game-title-cell"><b>${g.title}</b></td>
+                <td><small>${catDisplay}</small></td>
                 <td>
                     <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
                     <button class="btn danger" onclick="deleteItem('games','${doc.id}')">🗑️</button>
@@ -203,23 +220,47 @@ function init() {
     // Categorieën
     db.collection("categories").onSnapshot(s => {
         const list = document.getElementById('categoriesList');
-        const select = document.getElementById('editCat');
-        list.innerHTML = ""; select.innerHTML = "";
+        const box = document.getElementById('catCheckboxes');
+        list.innerHTML = ""; box.innerHTML = "";
+        
         s.forEach(doc => {
-            list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                <span>${doc.data().name}</span>
-                <button class="btn danger" onclick="deleteItem('categories','${doc.id}')">X</button>
+            const d = doc.data();
+            list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; margin-bottom:5px;">
+                <span>${d.name} (${doc.id})</span>
+                <button class="btn danger" style="padding:5px 10px;" onclick="deleteItem('categories','${doc.id}')">X</button>
             </div>`;
-            select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+            
+            box.innerHTML += `
+                <label class="cat-option">
+                    <input type="checkbox" value="${doc.id}" name="gameCategory">
+                    ${d.name}
+                </label>`;
+        });
+    });
+
+    // Updates
+    db.collection("updates").orderBy("timestamp", "desc").onSnapshot(s => {
+        const list = document.getElementById('updatesList');
+        list.innerHTML = "";
+        s.forEach(doc => {
+            const d = doc.data();
+            const date = d.timestamp ? d.timestamp.toDate().toLocaleDateString() : '';
+            list.innerHTML += `
+                <div style="border-bottom:1px solid #334155; padding:10px; position:relative;">
+                    <button onclick="deleteItem('updates', '${doc.id}')" style="position:absolute; right:0; top:10px; color:red; background:none; border:none; cursor:pointer;">🗑️</button>
+                    <small style="color:var(--accent)">${date}</small>
+                    <div style="font-weight:bold">${d.title}</div>
+                    <div style="font-size:13px; color:gray;">${d.content}</div>
+                </div>`;
         });
     });
 
     // Chat
-    db.collection("chats").orderBy("timestamp", "desc").limit(30).onSnapshot(s => {
+    db.collection("chats").orderBy("timestamp", "desc").limit(20).onSnapshot(s => {
         const list = document.getElementById('adminChatList');
         list.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div class="card">
+            list.innerHTML += `<div class="card" style="padding:10px;">
                 <b>${doc.data().user}:</b> ${doc.data().text} 
                 <button class="btn danger" style="float:right; padding:5px" onclick="deleteItem('chats','${doc.id}')">X</button>
             </div>`;
@@ -227,18 +268,31 @@ function init() {
     });
 }
 
+function filterGamesTable() {
+    const term = document.getElementById('gameSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('.game-row');
+    rows.forEach(row => {
+        const title = row.querySelector('.game-title-cell').innerText.toLowerCase();
+        row.style.display = title.includes(term) ? '' : 'none';
+    });
+}
+
 function saveGame() {
     const id = document.getElementById('editId').value;
     if(!id) return notify("ID is verplicht!");
     
+    const checkboxes = document.querySelectorAll('input[name="gameCategory"]:checked');
+    const categories = Array.from(checkboxes).map(c => c.value);
+
     const data = {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
-        category: document.getElementById('editCat').value,
+        categories: categories, 
+        category: categories[0] || 'all', 
         hasSave: document.getElementById('editHasSave').checked,
-        hasInfo: document.getElementById('editHasInfo').checked, // Nieuw
-        infoText: document.getElementById('editInfoText').value // Nieuw
+        hasInfo: document.getElementById('editHasInfo').checked,
+        infoText: document.getElementById('editInfoText').value
     };
     
     db.collection("games").doc(id).set(data, {merge:true}).then(() => {
@@ -255,13 +309,32 @@ function editGame(id) {
         document.getElementById('editTitle').value = g.title;
         document.getElementById('editImg').value = g.image;
         document.getElementById('editLink').value = g.link;
-        document.getElementById('editCat').value = g.category;
         document.getElementById('editHasSave').checked = g.hasSave || false;
-        document.getElementById('editHasInfo').checked = g.hasInfo || false; // Nieuw
-        document.getElementById('editInfoText').value = g.infoText || ""; // Nieuw
+        document.getElementById('editHasInfo').checked = g.hasInfo || false;
+        document.getElementById('editInfoText').value = g.infoText || "";
+        
+        const cats = Array.isArray(g.categories) ? g.categories : [g.category];
+        document.querySelectorAll('input[name="gameCategory"]').forEach(cb => {
+            cb.checked = cats.includes(cb.value);
+        });
+
         updatePreview(g.image);
         showTab('editor');
     });
+}
+
+function postUpdate() {
+    const title = document.getElementById('updateTitle').value;
+    const content = document.getElementById('updateContent').value;
+    if(!title || !content) return alert("Vul alles in!");
+    
+    db.collection("updates").add({
+        title, content, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+        notify("Update geplaatst!");
+        document.getElementById('updateTitle').value = "";
+        document.getElementById('updateContent').value = "";
+    }).catch(err => alert("Fout: " + err.message));
 }
 
 function resetEditor() {
@@ -269,9 +342,8 @@ function resetEditor() {
     document.getElementById('editId').disabled = false;
     document.getElementById('editTitle').value = "";
     document.getElementById('editImg').value = "";
-    document.getElementById('editHasSave').checked = false;
-    document.getElementById('editHasInfo').checked = false; // Nieuw
-    document.getElementById('editInfoText').value = ""; // Nieuw
+    document.getElementById('editInfoText').value = "";
+    document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
     updatePreview("");
 }
 
@@ -282,11 +354,11 @@ function addCategory() {
 }
 
 function deleteItem(col, id) {
-    if(confirm("Zeker weten?")) db.collection(col).doc(id).delete().then(() => notify("Item verwijderd."));
+    if(confirm("Zeker weten verwijderen?")) db.collection(col).doc(id).delete().then(() => notify("Verwijderd."));
 }
 
 async function clearAllChat() {
-    if(confirm("Hele chat wissen? Dit kan niet ongedaan worden gemaakt!")) {
+    if(confirm("Hele chat wissen?")) {
         const snap = await db.collection("chats").get();
         snap.forEach(doc => doc.ref.delete());
         notify("Chat leeggemaakt.");
