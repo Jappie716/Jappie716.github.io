@@ -305,7 +305,7 @@ function openUpdatesModal() {
             const date = d.timestamp ? d.timestamp.toDate().toLocaleDateString('nl-NL') : 'Onbekend';
             list.innerHTML += `
                 <div class="update-item">
-                    <span class="update-date">📅 ${date}</span>
+                    <span class="update-date"> ${date}</span>
                     <h3 style="margin:0 0 5px 0; color:white;">${d.title}</h3>
                     <p style="margin:0; color:#cbd5e1; font-size:14px;">${d.content}</p>
                 </div>
