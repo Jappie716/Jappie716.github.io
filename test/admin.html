@@ -195,7 +195,7 @@ function updatePreview(url) {
 }
 
 function init() {
-    // 1. Games Laden
+    // Games
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
         list.innerHTML = "";
@@ -217,7 +217,7 @@ function init() {
         document.getElementById('stats').innerText = `Totaal games: ${count}`;
     });
 
-    // 2. Categorieën Laden & Vullen in Editor
+    // Categorieën
     db.collection("categories").onSnapshot(s => {
         const list = document.getElementById('categoriesList');
         const box = document.getElementById('catCheckboxes');
@@ -225,13 +225,11 @@ function init() {
         
         s.forEach(doc => {
             const d = doc.data();
-            // Lijst voor beheer
             list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; margin-bottom:5px;">
                 <span>${d.name} (${doc.id})</span>
                 <button class="btn danger" style="padding:5px 10px;" onclick="deleteItem('categories','${doc.id}')">X</button>
             </div>`;
             
-            // Checkboxes voor editor
             box.innerHTML += `
                 <label class="cat-option">
                     <input type="checkbox" value="${doc.id}" name="gameCategory">
@@ -240,7 +238,7 @@ function init() {
         });
     });
 
-    // 3. Updates Laden
+    // Updates
     db.collection("updates").orderBy("timestamp", "desc").onSnapshot(s => {
         const list = document.getElementById('updatesList');
         list.innerHTML = "";
@@ -257,7 +255,7 @@ function init() {
         });
     });
 
-    // 4. Chat
+    // Chat
     db.collection("chats").orderBy("timestamp", "desc").limit(20).onSnapshot(s => {
         const list = document.getElementById('adminChatList');
         list.innerHTML = "";
@@ -283,7 +281,6 @@ function saveGame() {
     const id = document.getElementById('editId').value;
     if(!id) return notify("ID is verplicht!");
     
-    // Verzamel geselecteerde categorieën
     const checkboxes = document.querySelectorAll('input[name="gameCategory"]:checked');
     const categories = Array.from(checkboxes).map(c => c.value);
 
@@ -291,8 +288,8 @@ function saveGame() {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
-        categories: categories, // Array opslaan
-        category: categories[0] || 'all', // Fallback voor oude code
+        categories: categories, 
+        category: categories[0] || 'all', 
         hasSave: document.getElementById('editHasSave').checked,
         hasInfo: document.getElementById('editHasInfo').checked,
         infoText: document.getElementById('editInfoText').value
@@ -316,7 +313,6 @@ function editGame(id) {
         document.getElementById('editHasInfo').checked = g.hasInfo || false;
         document.getElementById('editInfoText').value = g.infoText || "";
         
-        // Categorieën aanvinken
         const cats = Array.isArray(g.categories) ? g.categories : [g.category];
         document.querySelectorAll('input[name="gameCategory"]').forEach(cb => {
             cb.checked = cats.includes(cb.value);
@@ -338,7 +334,7 @@ function postUpdate() {
         notify("Update geplaatst!");
         document.getElementById('updateTitle').value = "";
         document.getElementById('updateContent').value = "";
-    });
+    }).catch(err => alert("Fout: " + err.message));
 }
 
 function resetEditor() {
