@@ -71,21 +71,18 @@
         .auth-btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; }
         .admin-btn { background: #1e293b; margin-right: 10px; border: 1px solid #334155; color: white; }
 
-        /* --- GAME GRID (TERUG NAAR ORIGINEEL) --- */
+        /* --- GAME GRID --- */
         .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
         
         .game-card {
             background: var(--card-bg); border-radius: 15px; overflow: hidden;
             transition: 0.3s; border: 1px solid #1e293b; cursor: pointer;
             position: relative;
-            /* Geen vaste height op de card zelf, laat content bepalen, of zoals origineel */
         }
         .game-card:hover { transform: translateY(-8px); border-color: var(--primary); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
-        /* Originele Image Styling */
         .game-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
         
-        /* Originele Text Styling (Geen glas overlay meer) */
         .game-card h3 { 
             margin: 0; padding: 12px; font-size: 14px; 
             display: flex; align-items: center; justify-content: space-between; 
@@ -129,7 +126,13 @@
   <div class="logo">🎮 Game Paradise</div>
   
   <div class="search-box">
-    <input id="searchInput" type="search" name="game_search_query_no_autofill" placeholder="Zoek games..." autocomplete="off">
+    <input 
+        id="searchInput" 
+        type="search" 
+        placeholder="Zoek games..." 
+        readonly 
+        onfocus="this.removeAttribute('readonly');"
+    >
   </div>
 
   <div class="sidebar-menu">
@@ -141,15 +144,15 @@
 
   <div class="sidebar-footer">
       <div class="category-btn" onclick="openUpdatesModal()" style="border: 1px solid #eab308; color: #facc15; justify-content: center;">
-           Updates
+          🔔 Updates
       </div>
 
       <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="border: 1px solid #10b981; color: #34d399; justify-content: center;">
-           Support
+          🛠️ Support
       </div>
 
       <div class="category-btn" onclick="checkChatAccess()" style="border: 1px solid #2563eb; color: #60a5fa; justify-content: center;">
-        Chat
+          💬 GP Chat
           <span id="chatBadge" class="badge" style="display:none">0</span>
       </div>
   </div>
@@ -159,7 +162,7 @@
     <div class="topbar">
         <h2 id="sectionTitle" class="section-title">Alle Games</h2>
         <div>
-            <button id="adminBtn" class="auth-btn admin-btn" style="display:none" onclick="location.href='admin.html'">Admin</button>
+            <button id="adminBtn" class="auth-btn admin-btn" style="display:none" onclick="location.href='admin.html'">⚙️ Admin</button>
             <button id="authBtn" class="auth-btn">Inloggen</button>
         </div>
     </div>
@@ -173,7 +176,7 @@
 
 <div id="updatesModal" class="modal">
     <div class="modal-box" style="width: 500px; max-height: 80vh; overflow-y: auto;">
-        <h2 style="color: #facc15;"> Laatste Updates</h2>
+        <h2 style="color: #facc15;">🔔 Laatste Updates</h2>
         <div id="updatesList" style="margin-top: 20px;">Laden...</div>
         <button onclick="document.getElementById('updatesModal').style.display='none'" style="background: transparent; color: var(--text-dim);">Sluiten</button>
     </div>
@@ -182,8 +185,9 @@
 <div id="loginModal" class="modal">
     <div class="modal-box">
         <h2>Inloggen</h2>
-        <input id="emailInput" type="email" name="login_email" placeholder="E-mail">
-        <input id="passwordInput" type="password" name="login_password" placeholder="Wachtwoord">
+        <input id="emailInput" type="email" name="email" autocomplete="username" placeholder="E-mail">
+        <input id="passwordInput" type="password" name="password" autocomplete="current-password" placeholder="Wachtwoord">
+        
         <button id="loginSubmit" style="background: var(--primary); color: white;">Inloggen</button>
         <button id="registerSubmit" style="background: #16a34a; color: white;">Account aanvragen</button>
         <button id="forgotPasswordSubmit" style="background: #334155; color: white;">Wachtwoord vergeten</button>
@@ -305,7 +309,7 @@ function openUpdatesModal() {
             const date = d.timestamp ? d.timestamp.toDate().toLocaleDateString('nl-NL') : 'Onbekend';
             list.innerHTML += `
                 <div class="update-item">
-                    <span class="update-date"> ${date}</span>
+                    <span class="update-date">📅 ${date}</span>
                     <h3 style="margin:0 0 5px 0; color:white;">${d.title}</h3>
                     <p style="margin:0; color:#cbd5e1; font-size:14px;">${d.content}</p>
                 </div>
@@ -414,7 +418,7 @@ function toggleFavorite(id, e) {
 function renderGames() {
     const grid = document.getElementById("gameGrid");
     
-    // LOADING STATE (Skeletons aangepast aan nieuwe hoogte)
+    // LOADING STATE 
     if(gamesLoading) {
         grid.innerHTML = "";
         for(let i=0; i<8; i++) {
