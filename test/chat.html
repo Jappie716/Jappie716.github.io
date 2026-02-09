@@ -250,14 +250,31 @@
     </div>
 </div>
 
-<div id="deleteOptionsModal" class="modal">
+<div id="messageOptionsModal" class="modal">
     <div class="modal-box" style="text-align:center;">
-        <h3>Bericht Opties</h3>
-        <p style="color:gray; font-size:13px; margin-bottom:20px;">Wat wil je doen met dit bericht?</p>
-        <button class="btn btn-danger" onclick="confirmDeleteMessage()" style="width:100%; margin-bottom:10px;">🗑 Verwijder voor iedereen</button>
-        <button class="btn" style="background:#334155; width:100%;" onclick="closeModal('deleteOptionsModal')">Annuleren</button>
+        <div id="msgOptionButtons">
+            <h3>Bericht Opties</h3>
+            <p style="color:gray; font-size:13px; margin-bottom:20px;">Wat wil je doen?</p>
+            
+            <button class="btn" onclick="startEditMessage()" style="width:100%; margin-bottom:10px;">✎ Bericht Bewerken</button>
+            <button class="btn btn-danger" onclick="confirmDeleteMessage()" style="width:100%; margin-bottom:10px;">🗑 Verwijderen</button>
+            <button class="btn" style="background:#334155; width:100%;" onclick="closeModal('messageOptionsModal')">Annuleren</button>
+        </div>
+
+        <div id="msgEditInputView" style="display:none;">
+            <h3>Bericht Bewerken</h3>
+            <textarea id="editMsgText" style="width:100%; height:80px; padding:10px; border-radius:8px; border:1px solid #1e293b; background:#020617; color:white; resize:none; margin-bottom:10px;"></textarea>
+            <div id="editError" class="error-text">Bericht bevat niet toegestane woorden.</div>
+            
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="saveEditMessage()" style="width:100%;">Opslaan</button>
+                <button class="btn" style="background:#334155; width:100%;" onclick="resetMessageModal()">Terug</button>
+            </div>
+        </div>
+        
         <p id="deleteError" style="color:var(--danger); font-size:11px; margin-top:10px; display:none;"></p>
     </div>
+</div>
 </div>
 
 <div id="confirmModal" class="modal" style="z-index: 3000;">
@@ -803,12 +820,18 @@ function renderMessagesFromCache() {
         } else if (m.image) {
             content = `${nameSpan}<img src="${m.image}" onclick="openImage('${m.image}')">`;
         } else {
-            content = `${nameSpan}${linkify(m.text)}`;
+            content = `${nameSpan}${linkify(m.text)}${editedLabel}`;
         }
         
         let deleteBtn = "";
         if (m.uid === user.uid && m.type !== 'system') {
-            deleteBtn = `<div class="delete-btn" title="Opties" onclick="openDeleteMenu('${doc.id}')">✖</div>`;
+            // AANGEPAST: Ander icoontje en nieuwe functie aanroep
+// We voegen ook (bewerkt) toe als het bericht is aangepast
+const editedLabel = m.isEdited ? " <span style='font-size:9px; color:gray; font-style:italic;'>(bewerkt)</span>" : "";
+
+if (m.uid === user.uid && m.type !== 'system') {
+    deleteBtn = `<div class="delete-btn" title="Opties" onclick="openMessageOptions('${doc.id}')">⋮</div>`;
+}
         }
 
         let footerHtml = "";
@@ -908,14 +931,75 @@ async function pushMsg(data) {
     else await db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages").add(payload);
 }
 
-function openDeleteMenu(mid) {
-    messageToDeleteId = mid;
+// --- NIEUWE LOGICA VOOR BEWERKEN & VERWIJDEREN ---
+
+let selectedMessageId = null;
+let selectedMessageText = "";
+
+function openMessageOptions(mid) {
+    selectedMessageId = mid;
+    
+    // Haal de tekst op uit de lokale cache (currentSnap)
+    const doc = window.currentSnap.docs.find(d => d.id === mid);
+    if(doc) {
+        const data = doc.data();
+        // Als het een plaatje is, mag je alleen verwijderen (geen tekst om te bewerken)
+        if(data.image) {
+             confirmDeleteMessage(); // Direct naar verwijder bevestiging
+             return;
+        }
+        selectedMessageText = data.text;
+    }
+
+    resetMessageModal();
+    document.getElementById('messageOptionsModal').style.display = 'flex';
+}
+
+function resetMessageModal() {
+    document.getElementById('msgOptionButtons').style.display = 'block';
+    document.getElementById('msgEditInputView').style.display = 'none';
     document.getElementById('deleteError').style.display = 'none';
-    document.getElementById('deleteOptionsModal').style.display = 'flex';
+}
+
+function startEditMessage() {
+    document.getElementById('msgOptionButtons').style.display = 'none';
+    document.getElementById('msgEditInputView').style.display = 'block';
+    document.getElementById('editMsgText').value = selectedMessageText;
+    document.getElementById('editError').style.display = 'none';
+}
+
+async function saveEditMessage() {
+    const newText = document.getElementById('editMsgText').value.trim();
+    if(!newText) return;
+
+    if (checkProfanity(newText)) {
+        document.getElementById('editError').style.display = 'block';
+        return;
+    }
+
+    let ref;
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+
+    try {
+        // Update het bericht en voeg (bewerkt) toe als flag indien gewenst, 
+        // of gewoon de tekst updaten.
+        await ref.doc(selectedMessageId).update({ 
+            text: newText,
+            isEdited: true // Optioneel: zodat je in CSS eventueel '(bewerkt)' kan tonen
+        });
+        closeModal('messageOptionsModal');
+    } catch(e) {
+        alert("Fout bij opslaan: " + e.message);
+    }
 }
 
 async function confirmDeleteMessage() {
-    if(!messageToDeleteId) return;
+    // Als we nog in het hoofdmenu zitten van de modal, toon dan direct de bevestiging
+    // Of voer de delete uit. In dit geval voeren we hem uit omdat de gebruiker al op "Verwijderen" klikte.
+    
+    if(!selectedMessageId) return;
     
     let ref;
     if(chatType === 'global') ref = db.collection("chats");
@@ -923,8 +1007,8 @@ async function confirmDeleteMessage() {
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
     
     try {
-        await ref.doc(messageToDeleteId).delete();
-        closeModal('deleteOptionsModal');
+        await ref.doc(selectedMessageId).delete();
+        closeModal('messageOptionsModal');
     } catch(e) {
         document.getElementById('deleteError').style.display = 'block';
         document.getElementById('deleteError').innerText = "Fout: " + e.message;
