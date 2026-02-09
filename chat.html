@@ -164,7 +164,6 @@
 
         #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
         
-        /* Error text for profanity filter */
         .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
     </style>
 </head>
@@ -297,7 +296,7 @@
     <button class="btn" onclick="closeModal('groupModal')" style="width:100%; background:#334155; margin-top:5px;">Annuleren</button>
 </div></div>
 
-<div id="addMemberModal" class="modal"><div class="modal-box">
+<div id="addMemberModal" class="modal" style="z-index: 2000;"><div class="modal-box">
     <h3>Lid Toevoegen</h3>
     <div id="addMemberList" style="max-height:200px; overflow-y:auto; margin-bottom:15px; border:1px solid #1e293b; border-radius:8px; padding:10px;">Laden...</div>
     <button class="btn" onclick="closeModal('addMemberModal')" style="width:100%; background:#334155;">Sluiten</button>
@@ -318,7 +317,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// FILTER WOORDENLIJST
 const badWords = [
     "kanker", "hoer", "slet", "tyfus", "tering", "kut", "neuk", "lul", 
     "pik", "verdomme", "godver", "nigger", "neger", "hitler", "nazi", 
@@ -346,7 +344,7 @@ let messageToDeleteId = null;
 let typingTimeout = null;
 let msgLimit = 50; 
 
-// NIEUW: Voor live gebruikersnamen updates
+// AANGEPAST: Set om bij te houden wie we al live tracken
 let observedUsers = new Set(); 
 
 auth.onAuthStateChanged(u => {
@@ -403,22 +401,36 @@ function initApp() {
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
 
-// LIVE NAAM FUNCTIE
-// Deze functie zorgt ervoor dat we luisteren naar gebruikersprofielen
-// Zodra een profiel verandert, updaten we direct de HTML in de chat
+// AANGEPAST: Functie om gebruikersnamen live te updaten
 function listenToUserUpdates(uid) {
-    if (observedUsers.has(uid)) return; // We luisteren al
+    if (observedUsers.has(uid)) return;
     observedUsers.add(uid);
 
     db.collection("users").doc(uid).onSnapshot(doc => {
         if (doc.exists) {
             const data = doc.data();
             const newName = data.name;
-            // Zoek alle elementen met de class 'user-name-UID' en pas tekst aan
+
+            // 1. Update naam in berichten
             const elements = document.querySelectorAll(`.user-name-${uid}`);
             elements.forEach(el => {
                 el.innerText = newName;
             });
+
+            // 2. Update Sidebar en Header als het een vriend is
+            if(chatDataMap.has(uid)) {
+                const c = chatDataMap.get(uid);
+                if (c.name !== newName) {
+                    c.name = newName;
+                    c.pic = data.pic || c.pic;
+                    chatDataMap.set(uid, c);
+                    renderSidebar();
+                    
+                    if(activeChatId === uid) {
+                        document.getElementById('activeChatName').innerText = newName;
+                    }
+                }
+            }
         }
     });
 }
@@ -449,6 +461,7 @@ async function subscribeToChats() {
         const chatId = [user.uid, doc.id].sort().join("_");
         setupListener(doc.id, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
         
+        // AANGEPAST: Live update voor vrienden in de sidebar
         db.collection("users").doc(doc.id).onSnapshot(s => {
             const data = s.data();
             const now = Date.now();
@@ -457,8 +470,12 @@ async function subscribeToChats() {
             
             if(chatDataMap.has(doc.id)) {
                 const c = chatDataMap.get(doc.id);
+                
+                // Update naam direct
+                c.name = data.name; 
                 c.online = isOnline;
                 c.pic = data.pic || c.pic;
+                
                 chatDataMap.set(doc.id, c);
                 renderSidebar();
                 
@@ -466,6 +483,9 @@ async function subscribeToChats() {
                     document.getElementById('activeStatus').style.display = 'block';
                     document.getElementById('activeStatus').innerText = isOnline ? 'Online' : 'Offline';
                     document.getElementById('activeStatus').style.color = isOnline ? 'var(--online)' : 'gray';
+                    
+                    // Update header ook direct
+                    document.getElementById('activeChatName').innerText = c.name;
                     document.getElementById('activeChatImg').src = c.pic;
                 }
             }
@@ -743,7 +763,7 @@ function loadMoreMessages() {
     });
 }
 
-
+// AANGEPAST: Render messages met live naam-update ondersteuning
 function renderMessagesFromCache() {
     if(!window.currentSnap) return;
     const box = document.getElementById('chatMessages');
@@ -758,8 +778,9 @@ function renderMessagesFromCache() {
         let className = m.uid === user.uid ? 'sent' : 'received';
         let timeStr = "";
 
+        // Start listening voor deze user
         if(m.uid && m.uid !== 'system') {
-            listenToUserUpdates(m.uid); // Zorg dat we live updates ontvangen van deze gebruiker
+            listenToUserUpdates(m.uid);
         }
 
         if(m.timestamp) {
@@ -773,8 +794,7 @@ function renderMessagesFromCache() {
             }
         }
 
-        // We voegen een class 'user-name-UID' toe aan de naam span
-        // Hierdoor kunnen we via JavaScript direct de naam updaten als die verandert
+        // Naam span met ID class zodat we hem kunnen updaten
         const nameSpan = `<span class="sender user-name-${m.uid}">${m.user}</span>`;
 
         if (m.type === 'system') {
@@ -976,7 +996,7 @@ async function openChatSettings() {
         html += `</div>`;
 
         if(isOwner) {
-            // AANGEPAST: Geen argumenten meer nodig, functie haalt zelf de live data op
+            // AANGEPAST: Geen parameters meer nodig, functie regelt zelf data
             html += `<button class="btn full-btn" onclick="openAddMemberModal()">+ Lid Toevoegen</button>`;
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Groep Verwijderen', 'Zeker weten?', deleteGroup)">Groep Verwijderen</button>`;
         } else {
@@ -988,23 +1008,21 @@ async function openChatSettings() {
     }
 }
 
-// HERSCHREVEN: Haal altijd de VERS VAN DE PERS groepsdata op.
-// Dit zorgt ervoor dat als iemand gekicked is of weg is gegaan, ze weer in de lijst verschijnen.
+// AANGEPAST: Haalt verse groepsleden op zodat ex-leden weer in de lijst staan
 async function openAddMemberModal() {
     const list = document.getElementById('addMemberList');
     document.getElementById('addMemberModal').style.display = 'flex';
     list.innerHTML = "Laden...";
 
-    // 1. Haal huidige groepsleden op (vers)
+    // 1. Verse data ophalen
     const gDoc = await db.collection("groups").doc(activeChatId).get();
     const currentMembers = gDoc.exists ? gDoc.data().members : [];
 
-    // 2. Haal vrienden op
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     let content = "";
     
     friendsSnap.forEach(doc => {
-        // Als vriend NIET in de huidige ledenlijst staat, toon hem dan
+        // Filter: Alleen tonen als vriend NIET in de ledenlijst zit
         if(!currentMembers.includes(doc.id)) {
             content += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #334155;">
@@ -1013,7 +1031,7 @@ async function openAddMemberModal() {
                 </div>`;
         }
     });
-    list.innerHTML = content || "<div style='text-align:center; color:gray'>Al je vrienden zitten er al in!</div>";
+    list.innerHTML = content || "<div style='text-align:center; color:gray'>Iedereen zit er al in!</div>";
 }
 
 async function addMemberToGroup(newId, newName) {
