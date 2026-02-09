@@ -128,14 +128,13 @@
 
         .input-row { display: flex; gap: 10px; align-items: flex-end; width: 100%; }
         
-        /* AANGEPAST: Textarea styling voor auto-scaling */
         .chat-input textarea { 
             flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; 
             background: var(--bg); color: white; outline: none; 
             resize: none; font-family: inherit; 
             height: 44px; 
             min-height: 44px; 
-            max-height: 150px; /* Maximale hoogte */
+            max-height: 150px;
             overflow-y: auto;
             line-height: 1.4;
         }
@@ -158,13 +157,15 @@
         .member-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .full-btn { width: 100%; margin-top: 5px; }
 
-        /* Scrollbar styling */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
+        
+        /* Error text for profanity filter */
+        .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -188,6 +189,7 @@
         <button class="btn btn-sm" onclick="document.getElementById('setupFile').click()" style="margin:0 auto;">Upload Foto</button>
         <input type="file" id="setupFile" hidden accept="image/*" onchange="previewImage(this, 'setupPreview')">
         <input type="text" id="setupName" placeholder="Je naam...">
+        <div id="setupError" class="error-text">Naam bevat niet toegestane woorden.</div>
         <button class="btn" onclick="completeSetup()" style="width:100%; margin-top:15px;">Start ➤</button>
     </div>
 </div>
@@ -276,6 +278,7 @@
     <button class="btn btn-sm" onclick="document.getElementById('editFile').click()" style="margin:10px auto; display:block;">Wijzig Foto</button>
     <input type="file" id="editFile" hidden accept="image/*" onchange="previewImage(this, 'editPreview')">
     <input type="text" id="editName">
+    <div id="profileError" class="error-text">Naam bevat niet toegestane woorden.</div>
     <button class="btn" onclick="saveProfile()" style="width:100%">Opslaan</button>
     <button class="btn" onclick="closeModal('profileModal')" style="width:100%; background:#334155; margin-top:5px;">Sluiten</button>
 </div></div>
@@ -315,6 +318,19 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+// FILTER WOORDENLIJST
+const badWords = [
+    "kanker", "hoer", "slet", "tyfus", "tering", "kut", "neuk", "lul", 
+    "pik", "verdomme", "godver", "nigger", "neger", "hitler", "nazi", 
+    "kkr", "mongool", "autist", "bitch", "fuck", "asshole", "klootzak"
+];
+
+function checkProfanity(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    return badWords.some(word => lower.includes(word));
+}
+
 let user = null;
 let activeChatId = null;
 let chatType = null;
@@ -328,7 +344,10 @@ let titleInterval = null;
 let ignoreInitialGroups = true;
 let messageToDeleteId = null;
 let typingTimeout = null;
-let msgLimit = 50; // AANTAL BERICHTEN OM TE LADEN
+let msgLimit = 50; 
+
+// NIEUW: Voor live gebruikersnamen updates
+let observedUsers = new Set(); 
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
@@ -382,6 +401,26 @@ function initApp() {
     });
     subscribeToChats();
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
+}
+
+// LIVE NAAM FUNCTIE
+// Deze functie zorgt ervoor dat we luisteren naar gebruikersprofielen
+// Zodra een profiel verandert, updaten we direct de HTML in de chat
+function listenToUserUpdates(uid) {
+    if (observedUsers.has(uid)) return; // We luisteren al
+    observedUsers.add(uid);
+
+    db.collection("users").doc(uid).onSnapshot(doc => {
+        if (doc.exists) {
+            const data = doc.data();
+            const newName = data.name;
+            // Zoek alle elementen met de class 'user-name-UID' en pas tekst aan
+            const elements = document.querySelectorAll(`.user-name-${uid}`);
+            elements.forEach(el => {
+                el.innerText = newName;
+            });
+        }
+    });
 }
 
 async function subscribeToChats() {
@@ -593,7 +632,7 @@ function getFormattedDate(date) {
 // --- OPEN CHAT LOGICA ---
 async function openChat(id, name, pic, type) {
     activeChatId = id; chatType = type;
-    msgLimit = 50; // Reset limiet bij openen nieuwe chat
+    msgLimit = 50; 
     
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
     if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
@@ -604,12 +643,10 @@ async function openChat(id, name, pic, type) {
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('settingsBtn').style.display = type === 'global' ? 'none' : 'block';
     
-    // Reset input height
     const txtArea = document.getElementById('messageInput');
     txtArea.value = "";
     txtArea.style.height = "44px";
 
-    // Scroll listener toevoegen voor history
     document.getElementById('chatMessages').onscroll = checkScroll;
     
     const statusEl = document.getElementById('activeStatus');
@@ -644,21 +681,18 @@ function setupChatListeners() {
         ref = docRef.collection("messages");
     }
 
-    // 1. Luister naar TYPEN (met namen)
     typingUnsub = docRef.onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
             const typingMap = data.typingStatus || {};
             
-            // Haal namen van anderen op
             const typerNames = Object.keys(typingMap)
-                .filter(uid => uid !== user.uid) // Filter mezelf eruit
+                .filter(uid => uid !== user.uid)
                 .map(uid => typingMap[uid]);
 
             const ind = document.getElementById('typingIndicator');
             
             if(typerNames.length > 0) {
-                // Maak string: "Jan is aan het typen" of "Jan, Piet zijn aan het typen"
                 const text = typerNames.join(", ") + (typerNames.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
                 ind.innerText = text;
                 ind.classList.add('active');
@@ -668,32 +702,28 @@ function setupChatListeners() {
         }
     });
 
-    // 2. Berichten luisteren (met msgLimit voor history)
     msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(msgLimit).onSnapshot(snap => {
         window.currentSnap = snap;
         renderMessagesFromCache();
     });
 }
 
-// History Scroll Functie
 function checkScroll() {
     const box = document.getElementById('chatMessages');
     if (box.scrollTop === 0 && window.currentSnap && window.currentSnap.size >= msgLimit) {
-        // We zitten bovenaan én er zijn mogelijk meer berichten
         loadMoreMessages();
     }
 }
 
 function loadMoreMessages() {
     const oldLimit = msgLimit;
-    msgLimit += 50; // Laad 50 extra
+    msgLimit += 50; 
     document.getElementById('loadingOld').style.display = 'block';
     
-    // Bewaar huidige scroll positie tov onderkant
     const box = document.getElementById('chatMessages');
     const oldHeight = box.scrollHeight;
     
-    if(msgUnsub) msgUnsub(); // Stop huidige listener
+    if(msgUnsub) msgUnsub();
 
     let ref;
     if(chatType === 'global') ref = db.collection("chats");
@@ -706,7 +736,6 @@ function loadMoreMessages() {
         
         document.getElementById('loadingOld').style.display = 'none';
         
-        // Herstel scroll positie zodat je niet verspringt
         if (oldLimit !== msgLimit) {
             const newHeight = box.scrollHeight;
             box.scrollTop = newHeight - oldHeight;
@@ -718,7 +747,6 @@ function loadMoreMessages() {
 function renderMessagesFromCache() {
     if(!window.currentSnap) return;
     const box = document.getElementById('chatMessages');
-    // Bewaar of we beneden zijn voor auto-scroll bij nieuwe berichten
     const isAtBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 100;
     
     box.innerHTML = "";
@@ -729,6 +757,10 @@ function renderMessagesFromCache() {
         let content = "";
         let className = m.uid === user.uid ? 'sent' : 'received';
         let timeStr = "";
+
+        if(m.uid && m.uid !== 'system') {
+            listenToUserUpdates(m.uid); // Zorg dat we live updates ontvangen van deze gebruiker
+        }
 
         if(m.timestamp) {
             const date = m.timestamp.toDate();
@@ -741,14 +773,17 @@ function renderMessagesFromCache() {
             }
         }
 
+        // We voegen een class 'user-name-UID' toe aan de naam span
+        // Hierdoor kunnen we via JavaScript direct de naam updaten als die verandert
+        const nameSpan = `<span class="sender user-name-${m.uid}">${m.user}</span>`;
+
         if (m.type === 'system') {
             className = 'system';
             content = m.text;
         } else if (m.image) {
-            // AANGEPAST: Nu met openImage functie ipv window.open
-            content = `<span class="sender">${m.user}</span><img src="${m.image}" onclick="openImage('${m.image}')">`;
+            content = `${nameSpan}<img src="${m.image}" onclick="openImage('${m.image}')">`;
         } else {
-            content = `<span class="sender">${m.user}</span>${linkify(m.text)}`;
+            content = `${nameSpan}${linkify(m.text)}`;
         }
         
         let deleteBtn = "";
@@ -764,28 +799,23 @@ function renderMessagesFromCache() {
         box.innerHTML += `<div class="msg ${className}">${deleteBtn}${content}${footerHtml}</div>`;
     });
 
-    // Alleen naar beneden scrollen als we al beneden waren of als het de eerste laad is
     if (msgLimit === 50 || isAtBottom) {
         box.scrollTop = box.scrollHeight;
     }
 }
 
-// --- TEXTAREA & SHIFT+ENTER & AUTO-SIZE ---
 function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault(); 
         sendMessage();
     }
-    // Bij Shift+Enter gebeurt default (nieuwe regel) -> handleTyping regelt resize
 }
 
 function handleTyping() {
-    // 1. Auto-resize textarea
     const tx = document.getElementById('messageInput');
-    tx.style.height = 'auto'; // Reset
-    tx.style.height = (tx.scrollHeight) + 'px'; // Set to content height
+    tx.style.height = 'auto'; 
+    tx.style.height = (tx.scrollHeight) + 'px';
     
-    // 2. Typing indicator logica
     if(typingTimeout) clearTimeout(typingTimeout);
     updateTyping(true);
     typingTimeout = setTimeout(() => {
@@ -793,7 +823,6 @@ function handleTyping() {
     }, 2000);
 }
 
-// Aangepast: Sla nu NAAM op ipv alleen ID in een Map
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
     let ref;
@@ -803,13 +832,9 @@ async function updateTyping(isTyping) {
 
     const myName = document.getElementById('myName').innerText;
     
-    // NIEUW: We gebruiken nu een specifieke object structuur voor .set met merge
-    // Dit zorgt ervoor dat het document wordt aangemaakt als het niet bestaat (voor prive chats)
     const field = {};
     field[user.uid] = isTyping ? myName : firebase.firestore.FieldValue.delete();
 
-    // Als we typen, updaten we de naam. Als we stoppen, deleten we de field.
-    // .set met merge: true fixt het probleem dat prive chat documenten soms niet bestaan
     await ref.set({ typingStatus: field }, { merge: true });
 }
 
@@ -847,7 +872,7 @@ async function sendMessage() {
     if(!txt) return;
     
     inp.value = "";
-    inp.style.height = "44px"; // Reset hoogte na zenden
+    inp.style.height = "44px"; 
 
     updateTyping(false);
     if(typingTimeout) clearTimeout(typingTimeout);
@@ -938,7 +963,6 @@ async function openChatSettings() {
                 if(uDoc.exists) mName = uDoc.data().name;
             }
             
-            // ADMIN ACTIES: Kick & Make Admin
             html += `<div class="member-row">
                 <span>${mName} ${gData.owner === mid ? '👑' : ''}</span>
                 <div style="display:flex; gap:5px;">
@@ -952,7 +976,8 @@ async function openChatSettings() {
         html += `</div>`;
 
         if(isOwner) {
-            html += `<button class="btn full-btn" onclick="openAddMemberModal('${gData.members.join(",")}')">+ Lid Toevoegen</button>`;
+            // AANGEPAST: Geen argumenten meer nodig, functie haalt zelf de live data op
+            html += `<button class="btn full-btn" onclick="openAddMemberModal()">+ Lid Toevoegen</button>`;
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Groep Verwijderen', 'Zeker weten?', deleteGroup)">Groep Verwijderen</button>`;
         } else {
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Verlaten', 'Groep verlaten?', leaveGroup)">Groep Verlaten</button>`;
@@ -963,15 +988,23 @@ async function openChatSettings() {
     }
 }
 
-async function openAddMemberModal(currentMembersStr) {
-    const currentMembers = currentMembersStr.split(",");
+// HERSCHREVEN: Haal altijd de VERS VAN DE PERS groepsdata op.
+// Dit zorgt ervoor dat als iemand gekicked is of weg is gegaan, ze weer in de lijst verschijnen.
+async function openAddMemberModal() {
     const list = document.getElementById('addMemberList');
     document.getElementById('addMemberModal').style.display = 'flex';
     list.innerHTML = "Laden...";
 
+    // 1. Haal huidige groepsleden op (vers)
+    const gDoc = await db.collection("groups").doc(activeChatId).get();
+    const currentMembers = gDoc.exists ? gDoc.data().members : [];
+
+    // 2. Haal vrienden op
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     let content = "";
+    
     friendsSnap.forEach(doc => {
+        // Als vriend NIET in de huidige ledenlijst staat, toon hem dan
         if(!currentMembers.includes(doc.id)) {
             content += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #334155;">
@@ -1026,7 +1059,7 @@ async function leaveGroup() {
 async function kickMember(mid, mName) {
     await sendSystemMessage(`${mName} is verwijderd door de beheerder.`);
     await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(mid) });
-    openChatSettings(); // Ververs de lijst
+    openChatSettings(); 
 }
 async function transferOwner(newId, newName) {
     await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`);
@@ -1071,11 +1104,23 @@ async function createGroup() {
 async function completeSetup() {
     const name = document.getElementById('setupName').value;
     if(!name) return;
+
+    if (checkProfanity(name)) {
+        document.getElementById('setupError').style.display = 'block';
+        return;
+    }
+
     await db.collection("users").doc(user.uid).set({ name, pic: currentBase64 || "", email: user.email });
     location.reload();
 }
 async function saveProfile() {
     const name = document.getElementById('editName').value;
+
+    if (checkProfanity(name)) {
+        document.getElementById('profileError').style.display = 'block';
+        return;
+    }
+
     const update = { name };
     if(currentBase64) update.pic = currentBase64;
     await db.collection("users").doc(user.uid).update(update);
@@ -1087,7 +1132,6 @@ function switchTab(t, el) {
 }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-// NIEUW: Functie om image modal te openen
 function openImage(src) {
     document.getElementById('imgViewer').src = src;
     document.getElementById('imgDownload').href = src;
@@ -1098,6 +1142,7 @@ function openProfile() {
     currentBase64 = null;
     document.getElementById('editName').value = document.getElementById('myName').innerText;
     document.getElementById('editPreview').src = document.getElementById('myAvatar').src;
+    document.getElementById('profileError').style.display = 'none';
     document.getElementById('profileModal').style.display = 'flex'; 
 }
 function openGroupModal() {
