@@ -1585,6 +1585,9 @@ class Player extends Entity {
     }
 }
 
+// ----------------------------------------------------
+// SMART BOT AI LOGIC (PLAYER-LIKE BEHAVIOR)
+// ----------------------------------------------------
 class Bot extends Entity {
     constructor(id, color, name) { super(id, color, name); this.reset(); }
     
@@ -1593,73 +1596,114 @@ class Bot extends Entity {
         this.mode = 'expand';
         this.targetAngle = Math.random() * Math.PI * 2;
         this.timer = 0;
-        this.maxTrail = 20 + Math.random() * 30; // Randomize personality to prevent flower patterns
+        this.bravery = 30 + Math.random() * 50; // Randomize aggression
     }
     
     respawn() { 
-        // Clear old territory
         for(let x=0;x<gridSize;x++)for(let y=0;y<gridSize;y++)if(getTerritory(x,y)===this.territoryId)setTerritory(x,y,0); 
         this.reset(); 
         minimapNeedsUpdate=true; 
     }
     
+    // Scan for threats (enemies near my tail) and victims (enemies I can kill)
+    scan() {
+        let threat = null;
+        let victim = null;
+        let minThreatDist = 200; // Awareness radius
+        let minVictimDist = 300; // Attack radius
+
+        const potentialTargets = [player, ...bots].filter(e => e !== this && e.alive);
+
+        for (let other of potentialTargets) {
+            // Check if they are a threat to ME
+            if (this.isOutside && this.trail.length > 2) {
+                // If enemy head is close to any point on my trail
+                for (let p of this.trail) {
+                    const d = Math.hypot(other.x - p.x, other.y - p.y);
+                    if (d < minThreatDist) {
+                        threat = other;
+                        minThreatDist = d;
+                    }
+                }
+            }
+
+            // Check if they are a VICTIM for me
+            if (other.isOutside && other.trail.length > 2) {
+                // Find closest point on their trail
+                for (let p of other.trail) {
+                    const d = Math.hypot(this.x - p.x, this.y - p.y);
+                    if (d < minVictimDist) {
+                        victim = { entity: other, x: p.x, y: p.y }; // Target specific trail point
+                        minVictimDist = d;
+                    }
+                }
+            }
+        }
+        return { threat, victim };
+    }
+
     update() {
         if(!this.alive || gamePaused) return;
 
         const {gx,gy} = worldToGrid(this.x,this.y);
         const onTerritory = getTerritory(gx,gy)===this.territoryId;
+        const scanResult = this.scan();
 
-        // -- 1. BEHAVIOR LOGIC --
-        if (this.isOutside) {
-            // Logic: If trail gets too long, switch to RETURN mode
-            if (this.trail.length >= this.maxTrail) {
-                this.mode = 'return';
-            }
-        } else {
-            // Logic: Inside territory. Switch to EXPAND mode.
-            this.mode = 'expand';
-            
-            // Randomly change max trail length when starting a new run for variety
-            if (this.trail.length === 0 && Math.random() < 0.05) {
-                 this.maxTrail = 20 + Math.random() * 40;
-            }
-        }
-
-        // -- 2. SET TARGET ANGLE --
-        if (this.mode === 'return') {
-            // Target: Head towards the point where we left safety (to close the loop)
+        // -- DECISION TREE --
+        
+        // 1. FLEE: Enemy is chasing my tail!
+        if (scanResult.threat) {
+            this.mode = 'flee';
+            // Run to nearest point we visited safely
             const dx = this.lastSafePos.x - this.x;
             const dy = this.lastSafePos.y - this.y;
             this.targetAngle = Math.atan2(dy, dx);
-        } else {
-            // Target: Expand / Wander
+        }
+        // 2. ATTACK: Enemy vulnerable nearby!
+        else if (scanResult.victim) {
+            this.mode = 'attack';
+            const dx = scanResult.victim.x - this.x;
+            const dy = scanResult.victim.y - this.y;
+            this.targetAngle = Math.atan2(dy, dx);
+        }
+        // 3. RETURN: Trail getting too long
+        else if (this.isOutside && this.trail.length > this.bravery) {
+            this.mode = 'return';
+            const dx = this.lastSafePos.x - this.x;
+            const dy = this.lastSafePos.y - this.y;
+            this.targetAngle = Math.atan2(dy, dx);
+        }
+        // 4. EXPAND: Normal gameplay
+        else {
+            this.mode = 'expand';
             this.timer--;
             if (this.timer <= 0) {
-                this.timer = Math.random() * 30 + 10;
-                // Add small random turn to wander naturally
-                this.targetAngle += (Math.random() - 0.5) * 1.5;
+                this.timer = Math.random() * 20 + 10;
+                // Add jitter to look human
+                this.targetAngle += (Math.random() - 0.5) * 1.0; 
             }
             
-            // Boundary avoidance (Soft steer away from map edge)
+            // Soft boundary avoidance
             const dist = Math.hypot(this.x - mapCenterX, this.y - mapCenterY);
-            if (dist > CONFIG.mapRadius - 200) {
-                const angleToCenter = Math.atan2(mapCenterY - this.y, mapCenterX - this.x);
-                this.targetAngle = angleToCenter;
+            if (dist > CONFIG.mapRadius - 150) {
+                this.targetAngle = Math.atan2(mapCenterY - this.y, mapCenterX - this.x);
             }
         }
 
-        // -- 3. SMOOTH ROTATION --
+        // -- SMOOTH ROTATION --
         let diff = this.targetAngle - this.angle;
         while(diff < -Math.PI) diff += Math.PI*2;
         while(diff > Math.PI) diff -= Math.PI*2;
-        this.angle += diff * 0.1; // Smooth turning factor
+        // Turn faster if fleeing or attacking
+        const turnSpeed = (this.mode === 'flee' || this.mode === 'attack') ? 0.15 : 0.08;
+        this.angle += diff * turnSpeed;
 
-        // -- 4. APPLY MOVEMENT --
+        // -- MOVEMENT --
         this.x += Math.cos(this.angle)*CONFIG.botSpeed; 
         this.y += Math.sin(this.angle)*CONFIG.botSpeed; 
         this.handleBoundary();
 
-        // -- 5. TRAIL UPDATE (Same as Player) --
+        // -- TRAIL LOGIC --
         if(!onTerritory) {
             if(!this.isOutside) { this.trail = [{x:this.lastSafePos.x,y:this.lastSafePos.y}]; this.isOutside=true; }
             if(this.trail.length === 0 || Math.hypot(this.x-this.trail[this.trail.length-1].x, this.y-this.trail[this.trail.length-1].y)>CONFIG.minTrailDist) {
@@ -1672,7 +1716,8 @@ class Bot extends Entity {
                 this.capture(); 
                 this.isOutside=false; 
                 this.trail=[]; 
-                this.mode = 'expand'; // Force mode reset on capture
+                // Randomly change bravery after a capture
+                this.bravery = 30 + Math.random() * 50;
             }
         }
     }
