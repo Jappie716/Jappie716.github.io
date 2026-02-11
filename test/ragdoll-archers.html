@@ -9,29 +9,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/styyyle.css">
   
   <script src="game.js" defer></script>
-
-  <style>
-    /* Simpele styling voor de login overlay */
-    #auth-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); z-index: 9999;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      color: white; font-family: sans-serif;
-    }
-    #auth-btn {
-      padding: 15px 30px; font-size: 18px; background: #4285F4; color: white;
-      border: none; border-radius: 5px; cursor: pointer; margin-top: 20px;
-    }
-    #status-msg { margin-top: 10px; font-size: 14px; color: #ccc; }
-  </style>
 </head>
 <body>
-
-  <div id="auth-overlay">
-    <h1>Game Paradise</h1>
-    <p>Log in om je voortgang op te slaan</p>
-    <div id="status-msg"></div>
-  </div>
 
   <div id="unity-container" class="unity-desktop">
     <canvas id="unity-canvas"></canvas>
@@ -55,7 +34,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
-    // 1. CONFIGURATIE
+    // --- 1. FIREBASE CONFIGURATIE ---
     const firebaseConfig = {
         apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
         authDomain: "gameparadise-80490.firebaseapp.com",
@@ -65,15 +44,14 @@
         appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
     };
 
-    // Initialiseer Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Game Config (Uit je originele bestand)
+    // --- 2. GAME INSTELLINGEN ---
     const buildUrl = "Build";
     const loaderUrl = "https://cdn.jsdelivr.net/gh/bubbls/ruffle@7117cc5006472d782b65d96abd375597d6273242/v11121212.js";
-    const unityConfig = {
+    const config = {
       dataUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/6697b6deba8b617c67b69c55dcd07cb1.data.unityweb",
       frameworkUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/0be3c3ee7115b26e1ae28e643afdf1f2.js.unityweb",
       codeUrl: "https://cdn.jsdelivr.net/gh/bubbls/ruffle@04dd5345a30d6ebf4b0e2cc385568750cd56ed5a/b3397c29f6878557c1c614cbf9e196ea.wasm.unityweb",
@@ -83,176 +61,70 @@
       productVersion: "0.1",
     };
 
-    // Naam van de database in de browser (IndexedDB) die Unity gebruikt
-    // Unity format is meestal: companyName-productName
+    // Naamgeving voor IndexedDB (Waar Unity lokaal opslaat)
     const DB_NAME = "Ericetto-Ragdoll Archers"; 
-    const STORE_NAME = "PlayerPrefs"; // Unity slaat preferences hierin op
-    const GAME_ID = "ragdoll-archers"; // ID voor Firestore document
+    const STORE_NAME = "PlayerPrefs"; 
+    const GAME_ID = "ragdoll-archers"; 
 
-    const authOverlay = document.getElementById('auth-overlay');
-    const authBtn = document.getElementById('auth-btn');
-    const statusMsg = document.getElementById('status-msg');
     let currentUser = null;
+    let gameStarted = false;
 
-    // 2. AUTHENTICATIE LOGICA
-    authBtn.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(error => {
-            statusMsg.innerText = "Error: " + error.message;
-        });
-    });
-
+    // --- 3. START LOGICA (AUTO LOGIN) ---
+    
+    // Check direct of er een user ingelogd is vanuit de homepage
     auth.onAuthStateChanged(async (user) => {
+        // Voorkom dubbele start
+        if (gameStarted) return;
+        gameStarted = true;
+
         if (user) {
+            console.log("Gebruiker herkend:", user.uid);
             currentUser = user;
-            statusMsg.innerText = `Welkom, ${user.displayName}. Save data laden...`;
-            authBtn.style.display = 'none';
-            
-            // Start het synchronisatie proces
+            // Probeer save data te laden VOORDAT Unity start
             try {
                 await loadGameFromFirebase();
-                statusMsg.innerText = "Data geladen! Game start...";
-                setTimeout(() => {
-                    authOverlay.style.display = 'none';
-                    startGame(); // Start Unity pas NA het laden
-                }, 1000);
             } catch (e) {
-                console.error("Fout bij laden:", e);
-                statusMsg.innerText = "Kon save niet laden, game start nieuw.";
-                setTimeout(() => {
-                    authOverlay.style.display = 'none';
-                    startGame();
-                }, 2000);
+                console.error("Kon save niet laden, start nieuw spel", e);
             }
+        } else {
+            console.log("Geen gebruiker ingelogd, spel start zonder cloud save.");
         }
+
+        // Start het spel (met of zonder save data)
+        initUnityGame();
     });
 
-    // 3. DATABASE BRUG FUNCTIES (IndexedDB <-> Firestore)
+    // --- 4. DATA FUNCTIES ---
 
-    // Haal data uit Firestore en injecteer in IndexedDB
     async function loadGameFromFirebase() {
         if (!currentUser) return;
-        
         const docRef = db.collection('users').doc(currentUser.uid).collection('saveData').doc(GAME_ID);
         const doc = await docRef.get();
 
         if (doc.exists) {
             const data = doc.data();
-            console.log("Save gevonden in Firebase:", data);
-            
-            // Schrijf naar IndexedDB
+            // Injecteer data in de browser database
             await writeToIndexedDB(data.playerPrefs || []);
-        } else {
-            console.log("Geen save gevonden, nieuwe game.");
+            console.log("Cloud save geladen.");
         }
     }
 
-    // Lees IndexedDB en stuur naar Firestore
     async function saveGameToFirebase() {
         if (!currentUser) return;
-
+        
+        // Lees de lokale browser database
         const prefs = await readFromIndexedDB();
         if (prefs && prefs.length > 0) {
-            const docRef = db.collection('users').doc(currentUser.uid).collection('saveData').doc(GAME_ID);
-            
-            await docRef.set({
+            await db.collection('users').doc(currentUser.uid).collection('saveData').doc(GAME_ID).set({
                 lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
                 playerPrefs: prefs
             }, { merge: true });
-            
-            console.log("Game opgeslagen in Firebase.");
+            console.log("Voortgang opgeslagen in cloud.");
         }
     }
 
-    // Helper: Schrijf array van keys/values naar IndexedDB
-    function writeToIndexedDB(items) {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 1); // Versie 1 is vaak standaard bij Unity
-            
-            request.onupgradeneeded = function(event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.createObjectStore(STORE_NAME);
-                }
-            };
-
-            request.onsuccess = function(event) {
-                const db = event.target.result;
-                // Unity maakt soms de store nog niet aan bij eerste load, checken:
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.close();
-                    // Als store niet bestaat, moeten we versie verhogen om hem aan te maken
-                    const verReq = indexedDB.open(DB_NAME, 2);
-                    verReq.onupgradeneeded = (ev) => {
-                        ev.target.result.createObjectStore(STORE_NAME);
-                    };
-                    verReq.onsuccess = (ev) => {
-                        const db2 = ev.target.result;
-                        performWrite(db2, items, resolve, reject);
-                    };
-                    return;
-                }
-                performWrite(db, items, resolve, reject);
-            };
-            request.onerror = (e) => reject(e);
-        });
-    }
-
-    function performWrite(db, items, resolve, reject) {
-        const transaction = db.transaction([STORE_NAME], "readwrite");
-        const objectStore = transaction.objectStore(STORE_NAME);
-        
-        // Eerst alles wissen om conflicten te voorkomen? 
-        // Liever overschrijven.
-        items.forEach(item => {
-            objectStore.put(item.value, item.key);
-        });
-
-        transaction.oncomplete = () => {
-            db.close();
-            resolve();
-        };
-        transaction.onerror = (e) => reject(e);
-    }
-
-    // Helper: Lees alles uit IndexedDB
-    function readFromIndexedDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME);
-            
-            request.onsuccess = function(event) {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    db.close();
-                    resolve([]); // Store bestaat nog niet (nog niet gespeeld)
-                    return;
-                }
-
-                const transaction = db.transaction([STORE_NAME], "readonly");
-                const objectStore = transaction.objectStore(STORE_NAME);
-                const items = [];
-
-                const cursorRequest = objectStore.openCursor();
-                cursorRequest.onsuccess = function(e) {
-                    const cursor = e.target.result;
-                    if (cursor) {
-                        items.push({ key: cursor.key, value: cursor.value });
-                        cursor.continue();
-                    } else {
-                        db.close();
-                        resolve(items);
-                    }
-                };
-            };
-            request.onerror = (e) => {
-                // Database bestaat waarschijnlijk niet, dat is oké
-                resolve([]);
-            };
-        });
-    }
-
-    // 4. UNITY START EN SAVE LOOP
-    function startGame() {
+    // --- 5. UNITY START ---
+    function initUnityGame() {
         const container = document.querySelector("#unity-container");
         const canvas = document.querySelector("#unity-canvas");
         const loadingCover = document.querySelector("#loading-cover");
@@ -260,7 +132,7 @@
         const progressBarFull = document.querySelector("#unity-progress-bar-full");
 
         if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-            container.className = "unity-mobile";
+          container.className = "unity-mobile";
         }
         
         loadingCover.style.display = "";
@@ -268,37 +140,76 @@
         const unityLoader = document.createElement("script");
         unityLoader.src = loaderUrl;
         unityLoader.onload = () => {
-            createUnityInstance(canvas, unityConfig, (progress) => {
-                progressBarEmpty.style.display = "";
-                progressBarFull.style.width = `${100 * progress}%`;
-            }).then((unityInstance) => {
-                window.unityInstance = unityInstance;
-                loadingCover.style.display = "none";
-                
-                // --- START AUTO-SAVE LOOP ---
-                // Elke 15 seconden kijken of er lokale data is en uploaden
-                setInterval(() => {
-                    saveGameToFirebase();
-                }, 15000);
-
-            }).catch((message) => {
-                alert(message);
-            });
+          createUnityInstance(canvas, config, (progress) => {
+            progressBarEmpty.style.display = "";
+            progressBarFull.style.width = `${100 * progress}%`;
+          }).then((unityInstance) => {
+            window.unityInstance = unityInstance;
+            loadingCover.style.display = "none";
+            
+            // Start Auto-Save Loop (elke 15 seconden)
+            if (currentUser) {
+                setInterval(saveGameToFirebase, 15000);
+            }
+          }).catch((message) => {
+            alert(message);
+          });
         };
         document.body.appendChild(unityLoader);
 
         document.addEventListener("pointerdown", () => {
-            container.focus();
-            window.focus();
-            canvas.focus();
+          container.focus();
+          window.focus();
+          canvas.focus();
         });
     }
 
-    // Opslaan als de gebruiker het tabblad sluit
+    // Save bij afsluiten
     window.addEventListener("beforeunload", () => {
         saveGameToFirebase();
     });
 
+    // --- 6. INDEXEDDB HELPERS (Browser Opslag) ---
+    function writeToIndexedDB(items) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 2); // Versie 2 forceert update indien nodig
+            request.onupgradeneeded = (ev) => {
+                const db = ev.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            request.onsuccess = (ev) => {
+                const db = ev.target.result;
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                items.forEach(item => store.put(item.value, item.key));
+                transaction.oncomplete = () => { db.close(); resolve(); };
+                transaction.onerror = (e) => reject(e);
+            };
+            request.onerror = (e) => reject(e);
+        });
+    }
+
+    function readFromIndexedDB() {
+        return new Promise((resolve) => {
+            const request = indexedDB.open(DB_NAME);
+            request.onsuccess = (ev) => {
+                const db = ev.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) { db.close(); resolve([]); return; }
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const items = [];
+                const cursorReq = store.openCursor();
+                cursorReq.onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (cursor) { items.push({ key: cursor.key, value: cursor.value }); cursor.continue(); }
+                    else { db.close(); resolve(items); }
+                };
+            };
+            request.onerror = () => resolve([]);
+        });
+    }
   </script>
 </body>
 </html>
