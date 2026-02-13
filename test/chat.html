@@ -188,8 +188,11 @@
             background: var(--card-bg); border: 1px solid var(--primary); 
             color: var(--primary); border-radius: 50%; width: 22px; height: 22px; 
             display: none; align-items: center; justify-content: center; 
-            font-size: 12px; cursor: pointer; z-index: 10;
+            font-size: 10px; cursor: pointer; z-index: 10;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            font-weight: bold;
+            line-height: 0;
+            padding-bottom: 2px;
         }
         .msg:hover .opts-btn { display: flex; }
 
@@ -688,19 +691,10 @@ async function renderDiscover(list, term) {
     
     list.innerHTML = ""; 
 
-    let query;
-
-    if (term && term.length > 0) {
-        // Zoek modus
-        const searchName = term.charAt(0).toUpperCase() + term.slice(1);
-        query = db.collection("users")
-                  .where('name', '>=', searchName)
-                  .where('name', '<=', searchName + '\uf8ff')
-                  .limit(50);
-    } else {
-        // Standaard: Nieuwste eerst (vereist joinedAt veld)
-        query = db.collection("users").orderBy("joinedAt", "desc").limit(50);
-    }
+    // We halen een grotere lijst op (limit 200) zonder specifieke orderBy anders dan standaard
+    // om te voorkomen dat nieuwe gebruikers zonder 'joinedAt' onzichtbaar zijn.
+    // Client-side filtering is betrouwbaarder voor "iedereen behalve vrienden".
+    let query = db.collection("users").limit(200);
 
     query.get().then(snap => {
         if (snap.empty) {
@@ -708,35 +702,47 @@ async function renderDiscover(list, term) {
             return;
         }
 
-        let count = 0;
+        let users = [];
         snap.forEach(doc => {
             const d = doc.data();
+            // Filter jezelf en vrienden eruit
             if(doc.id === user.uid || myFriends.includes(doc.id)) return;
+            
+            // Filter op zoekterm
             if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
 
-            count++;
-            list.innerHTML += `
-                <div class="item">
-                    <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
-                    <div class="item-info">
-                        <h4>${d.name}</h4>
-                        <p style="font-size:10px; color:gray;">
-                            ${d.status === 'online' ? '🟢 Online' : '⚪ Offline'} • 
-                            ${d.joinedAt ? 'Lid' : 'Speler'}
-                        </p>
-                    </div>
-                    <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}')">Toevoegen</button>
-                </div>`;
+            users.push({ id: doc.id, ...d });
         });
 
-        if (count === 0) {
+        // Sorteer op JoinedAt (Nieuwste eerst), als dat er niet is, onderaan.
+        users.sort((a, b) => {
+            const tA = a.joinedAt ? a.joinedAt.toMillis() : 0;
+            const tB = b.joinedAt ? b.joinedAt.toMillis() : 0;
+            return tB - tA;
+        });
+
+        if (users.length === 0) {
             list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen nieuwe mensen gevonden.</div>";
+            return;
         }
+
+        users.forEach(u => {
+            list.innerHTML += `
+                <div class="item">
+                    <img src="${u.pic || `https://ui-avatars.com/api/?name=${u.name}`}">
+                    <div class="item-info">
+                        <h4>${u.name}</h4>
+                        <p style="font-size:10px; color:gray;">
+                            ${u.status === 'online' ? '🟢 Online' : '⚪ Offline'} • 
+                            ${u.joinedAt ? 'Lid' : 'Speler'}
+                        </p>
+                    </div>
+                    <button class="btn btn-sm" onclick="sendFriendRequest('${u.id}', '${u.name}')">Toevoegen</button>
+                </div>`;
+        });
     }).catch(err => {
         console.error("Ontdek fout:", err);
-        if(err.code === 'failed-precondition') {
-            list.innerHTML = "<div style='padding:20px;text-align:center;color:orange'>Index bouwen... check console als dit blijft.</div>";
-        }
+        list.innerHTML = "<div style='padding:20px;text-align:center;color:orange'>Fout bij laden.</div>";
     });
 }
 
@@ -912,11 +918,10 @@ function renderMessagesFromCache() {
         let contextAttr = "";
         
         if(m.type !== 'system') {
-            // Encode tekst om HTML/JS errors te voorkomen in de onclick
             const safeText = m.text ? encodeURIComponent(m.text) : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            
-            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
+            // AANGEPAST: Duidelijkere "Opties" knop (horizontale puntjes ipv verticaal) en titel
+            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">•••</div>`;
             contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
 
