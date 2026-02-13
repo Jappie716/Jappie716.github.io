@@ -924,7 +924,7 @@ function renderMessagesFromCache() {
             const safeText = m.text ? m.text.replace(/'/g, "\\'") : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
             // 3 Puntjes knop roept nu het context menu aan op de plek van de knop
-            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
+            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">Opties</div>`;
             // Rechtermuisknop op bericht
             contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
