@@ -153,7 +153,7 @@
             white-space: pre-wrap;
             display: flex; 
             flex-direction: column;
-            user-select: text; /* Zorg dat tekst selecteerbaar is */
+            user-select: text;
         }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
@@ -465,6 +465,13 @@ function initApp() {
         const data = d.data();
         document.getElementById('myName').innerText = data.name;
         document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
+        
+        // Zorg dat de gebruiker een joinedAt datum heeft (voor sortering Ontdek)
+        if (!data.joinedAt) {
+            db.collection("users").doc(user.uid).update({ 
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+        }
     });
     
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
@@ -676,28 +683,23 @@ function renderSidebar() {
 }
 
 async function renderDiscover(list, term) {
-    // 1. Haal eerst je eigen vrienden op, zodat we die kunnen verbergen
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     const myFriends = friendsSnap.docs.map(d => d.id);
     
-    list.innerHTML = ""; // Maak lijst leeg
+    list.innerHTML = ""; 
 
     let query;
 
     if (term && term.length > 0) {
-        // ZOEK MODUS: Zoek specifiek in de database naar namen die beginnen met de zoekterm
-        // Let op: Dit is hoofdlettergevoelig in standaard Firebase (dus 'Peter' zoeken werkt, 'peter' soms niet als de naam met P begint)
-        // We proberen hier slim te zoeken door de eerste letter hoofdletter te maken voor de query
+        // Zoek modus
         const searchName = term.charAt(0).toUpperCase() + term.slice(1);
-        
         query = db.collection("users")
                   .where('name', '>=', searchName)
                   .where('name', '<=', searchName + '\uf8ff')
                   .limit(50);
     } else {
-        // STANDAARD MODUS: Haal gewoon heel veel gebruikers op (100 ipv 20)
-        // We sorteren nog niet op datum omdat oude gebruikers geen datum hebben en dan zouden verdwijnen.
-        query = db.collection("users").limit(100);
+        // Standaard: Nieuwste eerst (vereist joinedAt veld)
+        query = db.collection("users").orderBy("joinedAt", "desc").limit(50);
     }
 
     query.get().then(snap => {
@@ -709,11 +711,6 @@ async function renderDiscover(list, term) {
         let count = 0;
         snap.forEach(doc => {
             const d = doc.data();
-            
-            // FILTERS:
-            // 1. Jezelf niet tonen
-            // 2. Vrienden niet tonen
-            // 3. Als we niet in zoekmodus zitten, filteren we hier alsnog op de kleine letters zoekterm voor de zekerheid
             if(doc.id === user.uid || myFriends.includes(doc.id)) return;
             if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
 
@@ -723,7 +720,10 @@ async function renderDiscover(list, term) {
                     <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
                     <div class="item-info">
                         <h4>${d.name}</h4>
-                        <p style="font-size:10px; color:gray;">${d.status === 'online' ? '🟢 Online' : '⚪ Offline'}</p>
+                        <p style="font-size:10px; color:gray;">
+                            ${d.status === 'online' ? '🟢 Online' : '⚪ Offline'} • 
+                            ${d.joinedAt ? 'Lid' : 'Speler'}
+                        </p>
                     </div>
                     <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}')">Toevoegen</button>
                 </div>`;
@@ -731,6 +731,11 @@ async function renderDiscover(list, term) {
 
         if (count === 0) {
             list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen nieuwe mensen gevonden.</div>";
+        }
+    }).catch(err => {
+        console.error("Ontdek fout:", err);
+        if(err.code === 'failed-precondition') {
+            list.innerHTML = "<div style='padding:20px;text-align:center;color:orange'>Index bouwen... check console als dit blijft.</div>";
         }
     });
 }
@@ -907,11 +912,11 @@ function renderMessagesFromCache() {
         let contextAttr = "";
         
         if(m.type !== 'system') {
-            const safeText = m.text ? m.text.replace(/'/g, "\\'") : "";
+            // Encode tekst om HTML/JS errors te voorkomen in de onclick
+            const safeText = m.text ? encodeURIComponent(m.text) : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            // 3 Puntjes knop roept nu het context menu aan op de plek van de knop
+            
             optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
-            // Rechtermuisknop op bericht
             contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
 
@@ -926,25 +931,27 @@ function renderMessagesFromCache() {
 }
 
 // CONTEXT MENU LOGIC
-function handleContextMenu(e, mid, uid, uName, text) {
+function handleContextMenu(e, mid, uid, uName, encodedText) {
     e.preventDefault();
     e.stopPropagation();
     
+    const text = encodedText ? decodeURIComponent(encodedText) : "";
+
     const menu = document.getElementById('contextMenu');
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
 
     // 1. Antwoorden (Iedereen)
     content.innerHTML += `
-        <div class="ctx-item" onclick="startReply('${mid}', '${uName}', '${text}'); hideContextMenu()">
+        <div class="ctx-item" onclick="startReply('${mid}', '${uName}', decodeURIComponent('${encodedText || ""}')); hideContextMenu()">
             <span>↩</span> Antwoorden
         </div>`;
 
     // 2. Opties voor eigen berichten
     if (uid === user.uid) {
-        if(text) { // Alleen tekstberichten bewerken
+        if(text) { 
             content.innerHTML += `
-            <div class="ctx-item" onclick="startEdit('${mid}', '${text}'); hideContextMenu()">
+            <div class="ctx-item" onclick="startEdit('${mid}', decodeURIComponent('${encodedText}')); hideContextMenu()">
                 <span>✎</span> Bewerken
             </div>`;
         }
@@ -959,7 +966,6 @@ function handleContextMenu(e, mid, uid, uName, text) {
     let x = e.clientX;
     let y = e.clientY;
 
-    // Zorg dat menu niet van scherm valt
     if (x + 160 > window.innerWidth) x -= 160;
     if (y + menu.offsetHeight > window.innerHeight) y -= menu.offsetHeight;
 
@@ -1257,7 +1263,6 @@ async function createGroup() {
     await db.collection("groups").add({ name, owner: user.uid, members, pic: currentBase64 || "" });
     closeModal('groupModal');
 }
-// Update de setup functie zodat nieuwe gebruikers een datum krijgen (handig voor later)
 async function completeSetup() {
     const name = document.getElementById('setupName').value;
     if(!name) return;
@@ -1267,7 +1272,7 @@ async function completeSetup() {
         name, 
         pic: currentBase64 || "", 
         email: user.email,
-        joinedAt: firebase.firestore.FieldValue.serverTimestamp(), // Tijdstempel toegevoegd
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
         status: 'online'
     });
     location.reload();
