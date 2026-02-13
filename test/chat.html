@@ -14,7 +14,7 @@
             --bg: #020617; --sidebar-bg: #010409; --card-bg: #0f172a;
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
             --sent: #172554; --received: #1e293b; --danger: #ef4444; --system: #334155;
-            --online: #22c55e; --offline: #64748b;
+            --online: #22c55e; --offline: #64748b; --reply-bg: #0f172a;
         }
 
         * { box-sizing: border-box; }
@@ -27,6 +27,28 @@
         a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
         a:hover { border-bottom: 1px solid var(--accent); }
 
+        /* SKELETON LOADING STYLES */
+        .skeleton {
+            background: #1e293b;
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        .sk-item { display: flex; padding: 15px; align-items: center; border-bottom: 1px solid #1e293b; }
+        .sk-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 12px; flex-shrink: 0; }
+        .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .sk-line { height: 10px; width: 100%; }
+        .sk-line.short { width: 60%; }
+
+        .sk-msg { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+        .sk-msg-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .sk-msg-row.right { flex-direction: row-reverse; }
+        .sk-msg-bubble { width: 40%; height: 40px; border-radius: 12px; }
+
+        /* TOAST & LAYOUT */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 999999; pointer-events: none; }
         .toast { 
             background: var(--card-bg); color: white; padding: 15px 20px; 
@@ -72,7 +94,6 @@
             z-index: 5;
         }
         .status-dot.online { background-color: var(--online); box-shadow: 0 0 5px var(--online); }
-
         .unread-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
         .unread-badge.show { display: block; }
 
@@ -98,45 +119,67 @@
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
         .msg.system { align-self: center; background: #1e293b88; padding: 5px 12px; border-radius: 20px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px solid #334155; margin: 5px 0; max-width: 90%; }
         
+        /* QUOTED MESSAGE STYLE */
+        .quoted-msg {
+            border-left: 3px solid var(--accent);
+            background: rgba(0,0,0,0.2);
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex; flex-direction: column;
+        }
+        .quoted-user { font-weight: bold; color: var(--accent); margin-bottom: 2px; }
+        .quoted-text { color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         .msg img { max-width: 350px; max-height: 350px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; object-fit: cover; }
         .msg .sender { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 2px; display: block; }
         
-        .msg-footer {
-            display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px;
-        }
+        .msg-footer { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; }
         .msg-time { font-size: 9px; color: #64748b; }
+        .msg-edited { font-size: 9px; color: #94a3b8; margin-right: 5px; font-style: italic; }
 
-        .date-divider {
-            display: flex; align-items: center; justify-content: center; margin: 15px 0;
-            font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;
-        }
+        .date-divider { display: flex; align-items: center; justify-content: center; margin: 15px 0; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .date-divider span { background: #1e293b; padding: 4px 12px; border-radius: 12px; border: 1px solid #334155; }
 
-        .delete-btn { 
+        /* OPTIONS BUTTON (HOVER) */
+        .opts-btn { 
             position: absolute; top: -8px; right: -8px; 
-            background: var(--card-bg); border: 1px solid var(--danger); 
-            color: var(--danger); border-radius: 50%; width: 22px; height: 22px; 
+            background: var(--card-bg); border: 1px solid var(--primary); 
+            color: var(--primary); border-radius: 50%; width: 22px; height: 22px; 
             display: none; align-items: center; justify-content: center; 
             font-size: 12px; cursor: pointer; z-index: 10;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-        .msg.sent:hover .delete-btn { display: flex; }
+        .msg:hover .opts-btn { display: flex; }
 
+        /* INPUT AREA */
         .chat-input { padding: 15px; background: var(--card-bg); display: flex; flex-direction:column; gap:0; border-top: 1px solid #1e293b; }
+        
+        /* REPLY PREVIEW BAR */
+        #replyPreview {
+            display: none;
+            background: #1e293b;
+            padding: 8px 15px;
+            border-left: 4px solid var(--accent);
+            border-radius: 6px 6px 0 0;
+            margin-bottom: 5px;
+            font-size: 12px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
         .typing-indicator { font-size: 11px; color: var(--accent); height: 16px; margin-bottom: 4px; padding-left: 10px; opacity: 0; transition: 0.3s; }
         .typing-indicator.active { opacity: 1; }
 
         .input-row { display: flex; gap: 10px; align-items: flex-end; width: 100%; }
-        
         .chat-input textarea { 
             flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #1e293b; 
             background: var(--bg); color: white; outline: none; 
             resize: none; font-family: inherit; 
-            height: 44px; 
-            min-height: 44px; 
-            max-height: 150px;
-            overflow-y: auto;
-            line-height: 1.4;
+            height: 44px; min-height: 44px; max-height: 150px;
+            overflow-y: auto; line-height: 1.4;
         }
         
         .btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 13px; }
@@ -163,7 +206,6 @@
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
-        
         .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
     </style>
 </head>
@@ -233,6 +275,14 @@
         <div id="loadingOld">Berichten laden...</div>
 
         <div class="chat-input" id="inputArea" style="display:none">
+            <div id="replyPreview">
+                <div>
+                    <span id="replyLabel" style="color:var(--accent); font-weight:bold; font-size:11px; display:block;">Antwoorden op...</span>
+                    <span id="replyText" style="color:#ccc; font-style:italic;">Tekst...</span>
+                </div>
+                <button class="btn btn-sm btn-danger" onclick="cancelReplyOrEdit()" style="padding:2px 8px; height:auto;">✕</button>
+            </div>
+
             <div id="typingIndicator" class="typing-indicator">Iemand is aan het typen...</div>
             <div class="input-row">
                 <button class="btn btn-icon" onclick="document.getElementById('imgInp').click()" style="display: flex; align-items: center; justify-content: center;">
@@ -244,37 +294,18 @@
                           oninput="handleTyping()"
                           onkeydown="handleKeyDown(event)"></textarea>
                 
-                <button class="btn" onclick="sendMessage()">➤</button>
+                <button id="sendBtn" class="btn" onclick="sendMessage()">➤</button>
             </div>
         </div>
     </div>
 </div>
 
-<div id="messageOptionsModal" class="modal">
+<div id="msgOptionsModal" class="modal">
     <div class="modal-box" style="text-align:center;">
-        <div id="msgOptionButtons">
-            <h3>Bericht Opties</h3>
-            <p style="color:gray; font-size:13px; margin-bottom:20px;">Wat wil je doen?</p>
-            
-            <button class="btn" onclick="startEditMessage()" style="width:100%; margin-bottom:10px;">✎ Bericht Bewerken</button>
-            <button class="btn btn-danger" onclick="confirmDeleteMessage()" style="width:100%; margin-bottom:10px;">🗑 Verwijderen</button>
-            <button class="btn" style="background:#334155; width:100%;" onclick="closeModal('messageOptionsModal')">Annuleren</button>
-        </div>
-
-        <div id="msgEditInputView" style="display:none;">
-            <h3>Bericht Bewerken</h3>
-            <textarea id="editMsgText" style="width:100%; height:80px; padding:10px; border-radius:8px; border:1px solid #1e293b; background:#020617; color:white; resize:none; margin-bottom:10px;"></textarea>
-            <div id="editError" class="error-text">Bericht bevat niet toegestane woorden.</div>
-            
-            <div style="display:flex; gap:10px;">
-                <button class="btn" onclick="saveEditMessage()" style="width:100%;">Opslaan</button>
-                <button class="btn" style="background:#334155; width:100%;" onclick="resetMessageModal()">Terug</button>
-            </div>
-        </div>
-        
-        <p id="deleteError" style="color:var(--danger); font-size:11px; margin-top:10px; display:none;"></p>
+        <h3>Opties</h3>
+        <div id="msgOptionBtns" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <button class="btn" style="background:#334155; width:100%; margin-top:15px;" onclick="closeModal('msgOptionsModal')">Annuleren</button>
     </div>
-</div>
 </div>
 
 <div id="confirmModal" class="modal" style="z-index: 3000;">
@@ -322,6 +353,7 @@
 <div id="settingsModal" class="modal"><div class="modal-box" id="settingsContent"></div></div>
 
 <script>
+// CONFIG
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -334,18 +366,10 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-const badWords = [
-    "kanker", "hoer", "slet", "tyfus", "tering", "kut", "neuk", "lul", 
-    "pik", "verdomme", "godver", "nigger", "neger", "hitler", "nazi", 
-    "kkr", "mongool", "autist", "bitch", "fuck", "asshole", "klootzak"
-];
+const badWords = ["kanker", "hoer", "slet", "tyfus", "tering", "kut", "neuk", "lul", "pik", "verdomme", "godver", "nigger", "neger", "hitler", "nazi", "kkr", "mongool", "autist", "bitch", "fuck", "asshole", "klootzak"];
+function checkProfanity(text) { if(!text) return false; return badWords.some(word => text.toLowerCase().includes(word)); }
 
-function checkProfanity(text) {
-    if (!text) return false;
-    const lower = text.toLowerCase();
-    return badWords.some(word => lower.includes(word));
-}
-
+// STATE
 let user = null;
 let activeChatId = null;
 let chatType = null;
@@ -357,12 +381,17 @@ let typingUnsub = null;
 let originalTitle = document.title;
 let titleInterval = null;
 let ignoreInitialGroups = true;
-let messageToDeleteId = null;
 let typingTimeout = null;
 let msgLimit = 50; 
-
-// AANGEPAST: Set om bij te houden wie we al live tracken
 let observedUsers = new Set(); 
+let hasLoadedChats = false;
+
+// Reply & Edit State
+let replyContext = null; // { id, user, text }
+let editMessageId = null; // ID van bericht dat bewerkt wordt
+
+// INIT
+showSidebarSkeletons(); // Toon skeletons direct bij laden
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
@@ -373,26 +402,16 @@ function startPresenceSystem() {
     updatePresence('online');
     setInterval(() => { updatePresence('online'); }, 60000);
     window.addEventListener('beforeunload', () => {
-        db.collection("users").doc(user.uid).update({ 
-            status: 'offline', lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        db.collection("users").doc(user.uid).update({ status: 'offline', lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
         if(activeChatId) updateTyping(false);
     });
 }
-
-function updatePresence(status) {
-    if(user) {
-        db.collection("users").doc(user.uid).update({
-            status: status, lastSeen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-    }
-}
+function updatePresence(status) { if(user) db.collection("users").doc(user.uid).update({ status: status, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); }
 
 async function checkSetup() {
     const doc = await db.collection("users").doc(user.uid).get();
-    if (!doc.exists || !doc.data().name) {
-        document.getElementById('setupOverlay').style.display = 'flex';
-    } else {
+    if (!doc.exists || !doc.data().name) { document.getElementById('setupOverlay').style.display = 'flex'; }
+    else {
         document.getElementById('setupOverlay').style.display = 'none';
         if (Notification.permission === "default") Notification.requestPermission();
         initApp();
@@ -409,43 +428,58 @@ function initApp() {
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
         if(!snap.empty) {
-            snap.docChanges().forEach(change => {
-                if(change.type === 'added') notify("Vriendschapsverzoek", "Je hebt een nieuw verzoek!", "", "requests");
-            });
+            snap.docChanges().forEach(change => { if(change.type === 'added') notify("Vriendschapsverzoek", "Je hebt een nieuw verzoek!", "", "requests"); });
         }
     });
     subscribeToChats();
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
 
-// AANGEPAST: Functie om gebruikersnamen live te updaten
+// SKELETON FUNCTIONS
+function showSidebarSkeletons() {
+    const list = document.getElementById('sidebarList');
+    list.innerHTML = "";
+    for(let i=0; i<15; i++) {
+        list.innerHTML += `
+        <div class="sk-item">
+            <div class="skeleton sk-avatar"></div>
+            <div class="sk-lines">
+                <div class="skeleton sk-line" style="width: 40%"></div>
+                <div class="skeleton sk-line short"></div>
+            </div>
+        </div>`;
+    }
+}
+
+function showChatSkeletons() {
+    const box = document.getElementById('chatMessages');
+    box.innerHTML = "";
+    for(let i=0; i<8; i++) {
+        const align = i % 2 === 0 ? 'left' : 'right';
+        box.innerHTML += `
+        <div class="sk-msg">
+            <div class="sk-msg-row ${align}">
+                <div class="skeleton sk-msg-bubble"></div>
+            </div>
+        </div>`;
+    }
+}
+
+// LOGIC
 function listenToUserUpdates(uid) {
     if (observedUsers.has(uid)) return;
     observedUsers.add(uid);
-
     db.collection("users").doc(uid).onSnapshot(doc => {
         if (doc.exists) {
             const data = doc.data();
             const newName = data.name;
-
-            // 1. Update naam in berichten
-            const elements = document.querySelectorAll(`.user-name-${uid}`);
-            elements.forEach(el => {
-                el.innerText = newName;
-            });
-
-            // 2. Update Sidebar en Header als het een vriend is
+            document.querySelectorAll(`.user-name-${uid}`).forEach(el => el.innerText = newName);
             if(chatDataMap.has(uid)) {
                 const c = chatDataMap.get(uid);
                 if (c.name !== newName) {
-                    c.name = newName;
-                    c.pic = data.pic || c.pic;
-                    chatDataMap.set(uid, c);
-                    renderSidebar();
-                    
-                    if(activeChatId === uid) {
-                        document.getElementById('activeChatName').innerText = newName;
-                    }
+                    c.name = newName; c.pic = data.pic || c.pic;
+                    chatDataMap.set(uid, c); renderSidebar();
+                    if(activeChatId === uid) document.getElementById('activeChatName').innerText = newName;
                 }
             }
         }
@@ -478,7 +512,6 @@ async function subscribeToChats() {
         const chatId = [user.uid, doc.id].sort().join("_");
         setupListener(doc.id, doc.data().name, doc.data().pic, 'private', db.collection("private_chats").doc(chatId).collection("messages"));
         
-        // AANGEPAST: Live update voor vrienden in de sidebar
         db.collection("users").doc(doc.id).onSnapshot(s => {
             const data = s.data();
             const now = Date.now();
@@ -487,33 +520,31 @@ async function subscribeToChats() {
             
             if(chatDataMap.has(doc.id)) {
                 const c = chatDataMap.get(doc.id);
-                
-                // Update naam direct
-                c.name = data.name; 
-                c.online = isOnline;
-                c.pic = data.pic || c.pic;
-                
-                chatDataMap.set(doc.id, c);
-                renderSidebar();
+                c.name = data.name; c.online = isOnline; c.pic = data.pic || c.pic;
+                chatDataMap.set(doc.id, c); renderSidebar();
                 
                 if(activeChatId === doc.id) {
                     document.getElementById('activeStatus').style.display = 'block';
                     document.getElementById('activeStatus').innerText = isOnline ? 'Online' : 'Offline';
                     document.getElementById('activeStatus').style.color = isOnline ? 'var(--online)' : 'gray';
-                    
-                    // Update header ook direct
                     document.getElementById('activeChatName').innerText = c.name;
                     document.getElementById('activeChatImg').src = c.pic;
                 }
             }
         });
     });
+
+    // Timeout om te checken of er chats zijn. Zo niet, stop skeletons
+    setTimeout(() => {
+        if(chatDataMap.size === 0) {
+            document.getElementById('sidebarList').innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen chats gevonden.</div>";
+        }
+    }, 2500);
 }
 
 function setupListener(id, name, pic, type, ref) {
     if(activeListeners.has(id)) return;
     activeListeners.add(id);
-
     if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, online: false });
 
     if(type === 'group') {
@@ -533,13 +564,11 @@ function setupListener(id, name, pic, type, ref) {
     }
 
     ref.orderBy("timestamp", "desc").limit(1).onSnapshot(snap => {
-        if(snap.empty) return;
+        if(snap.empty) { renderSidebar(); return; }
         const m = snap.docs[0].data();
         const time = m.timestamp ? m.timestamp.toMillis() : Date.now();
         const cData = chatDataMap.get(id);
-        
         cData.timestamp = time;
-        
         if (m.uid !== user.uid) {
             if (activeChatId !== id) {
                 cData.unread = true;
@@ -549,11 +578,9 @@ function setupListener(id, name, pic, type, ref) {
                     playNotificationSound();
                 }
             }
-        } else if (activeChatId === id) {
-            cData.unread = false;
-        }
-
+        } else if (activeChatId === id) { cData.unread = false; }
         chatDataMap.set(id, cData);
+        hasLoadedChats = true;
         renderSidebar();
     });
 }
@@ -568,14 +595,12 @@ function flashTitle(msg) {
     setTimeout(() => { clearInterval(titleInterval); document.title = originalTitle; }, 5000);
     window.onclick = () => { clearInterval(titleInterval); document.title = originalTitle; };
 }
-
-function playNotificationSound() {
-    const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => {}); 
-}
+function playNotificationSound() { const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3'); audio.volume = 0.5; audio.play().catch(e => {}); }
 
 function renderSidebar() {
+    // Als we nog geen data hebben en ook niet "leeg" zijn bevestigd, laat skeletons staan
+    if(!hasLoadedChats && chatDataMap.size === 0) return;
+
     const list = document.getElementById('sidebarList');
     const tab = document.querySelector('.tab.active').innerText.split(' ')[0];
     const term = document.getElementById('searchBar').value.toLowerCase();
@@ -587,9 +612,10 @@ function renderSidebar() {
             return b.timestamp - a.timestamp;
         });
 
+        if(chats.length === 0) { list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen chats.</div>"; return; }
+
         chats.forEach(c => {
             if(term && !c.name.toLowerCase().includes(term)) return;
-            
             const item = document.createElement('div');
             item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
             item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
@@ -605,11 +631,8 @@ function renderSidebar() {
                 <div class="unread-badge ${c.unread?'show':''}">${c.unread?'!':''}</div>`;
             list.appendChild(item);
         });
-    } else if (tab === 'Ontdek') {
-        renderDiscover(list, term);
-    } else if (tab === 'Verzoeken') {
-        renderRequests(list);
-    }
+    } else if (tab === 'Ontdek') { renderDiscover(list, term); } 
+    else if (tab === 'Verzoeken') { renderRequests(list); }
 }
 
 async function renderDiscover(list, term) {
@@ -619,7 +642,6 @@ async function renderDiscover(list, term) {
             if(doc.id === user.uid || myFriends.includes(doc.id)) return;
             const d = doc.data();
             if(term && !d.name.toLowerCase().includes(term)) return;
-
             list.innerHTML += `
                 <div class="item">
                     <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
@@ -649,28 +671,25 @@ function renderRequests(list) {
 }
 
 function linkify(text) {
+    if(!text) return "";
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlRegex, function(url) {
-        return '<a href="' + url + '" target="_blank">' + url + '</a>';
-    });
+    return text.replace(urlRegex, function(url) { return '<a href="' + url + '" target="_blank">' + url + '</a>'; });
 }
-
 function getFormattedDate(date) {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
+    const today = new Date(); const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
     if (date.toDateString() === today.toDateString()) return "VANDAAG";
     if (date.toDateString() === yesterday.toDateString()) return "GISTEREN";
-    const options = { day: 'numeric', month: 'long' };
-    return date.toLocaleDateString('nl-NL', options);
+    return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
 }
 
-// --- OPEN CHAT LOGICA ---
+// CHAT OPENING
 async function openChat(id, name, pic, type) {
     activeChatId = id; chatType = type;
     msgLimit = 50; 
     
+    // Reset inputs
+    cancelReplyOrEdit();
+
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
     if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
 
@@ -680,10 +699,6 @@ async function openChat(id, name, pic, type) {
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('settingsBtn').style.display = type === 'global' ? 'none' : 'block';
     
-    const txtArea = document.getElementById('messageInput');
-    txtArea.value = "";
-    txtArea.style.height = "44px";
-
     document.getElementById('chatMessages').onscroll = checkScroll;
     
     const statusEl = document.getElementById('activeStatus');
@@ -692,50 +707,35 @@ async function openChat(id, name, pic, type) {
         statusEl.style.display = 'block';
         statusEl.innerText = isOnline ? 'Online' : 'Offline';
         statusEl.style.color = isOnline ? 'var(--online)' : 'gray';
-    } else {
-        statusEl.style.display = 'none';
-    }
+    } else { statusEl.style.display = 'none'; }
 
     renderSidebar();
-    
     if(msgUnsub) msgUnsub();
     if(typingUnsub) typingUnsub();
 
+    showChatSkeletons(); // Laat skeletons zien in chat area
     setupChatListeners();
 }
 
 function setupChatListeners() {
     let ref, docRef;
-    if(chatType === 'global') {
-        ref = db.collection("chats");
-        docRef = db.collection("metadata").doc("global");
-    } else if(chatType === 'group') {
-        docRef = db.collection("groups").doc(activeChatId);
-        ref = docRef.collection("messages");
-    } else {
+    if(chatType === 'global') { ref = db.collection("chats"); docRef = db.collection("metadata").doc("global"); } 
+    else if(chatType === 'group') { docRef = db.collection("groups").doc(activeChatId); ref = docRef.collection("messages"); } 
+    else {
         const chatId = [user.uid, activeChatId].sort().join("_");
-        docRef = db.collection("private_chats").doc(chatId);
-        ref = docRef.collection("messages");
+        docRef = db.collection("private_chats").doc(chatId); ref = docRef.collection("messages");
     }
 
     typingUnsub = docRef.onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
             const typingMap = data.typingStatus || {};
-            
-            const typerNames = Object.keys(typingMap)
-                .filter(uid => uid !== user.uid)
-                .map(uid => typingMap[uid]);
-
+            const typerNames = Object.keys(typingMap).filter(uid => uid !== user.uid).map(uid => typingMap[uid]);
             const ind = document.getElementById('typingIndicator');
-            
             if(typerNames.length > 0) {
-                const text = typerNames.join(", ") + (typerNames.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
-                ind.innerText = text;
+                ind.innerText = typerNames.join(", ") + (typerNames.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
                 ind.classList.add('active');
-            } else {
-                ind.classList.remove('active');
-            }
+            } else { ind.classList.remove('active'); }
         }
     });
 
@@ -747,19 +747,15 @@ function setupChatListeners() {
 
 function checkScroll() {
     const box = document.getElementById('chatMessages');
-    if (box.scrollTop === 0 && window.currentSnap && window.currentSnap.size >= msgLimit) {
-        loadMoreMessages();
-    }
+    if (box.scrollTop === 0 && window.currentSnap && window.currentSnap.size >= msgLimit) { loadMoreMessages(); }
 }
 
 function loadMoreMessages() {
     const oldLimit = msgLimit;
     msgLimit += 50; 
     document.getElementById('loadingOld').style.display = 'block';
-    
     const box = document.getElementById('chatMessages');
     const oldHeight = box.scrollHeight;
-    
     if(msgUnsub) msgUnsub();
 
     let ref;
@@ -770,9 +766,7 @@ function loadMoreMessages() {
     msgUnsub = ref.orderBy("timestamp", "asc").limitToLast(msgLimit).onSnapshot(snap => {
         window.currentSnap = snap;
         renderMessagesFromCache();
-        
         document.getElementById('loadingOld').style.display = 'none';
-        
         if (oldLimit !== msgLimit) {
             const newHeight = box.scrollHeight;
             box.scrollTop = newHeight - oldHeight;
@@ -780,7 +774,6 @@ function loadMoreMessages() {
     });
 }
 
-// AANGEPAST: Render messages met live naam-update ondersteuning
 function renderMessagesFromCache() {
     if(!window.currentSnap) return;
     const box = document.getElementById('chatMessages');
@@ -795,15 +788,11 @@ function renderMessagesFromCache() {
         let className = m.uid === user.uid ? 'sent' : 'received';
         let timeStr = "";
 
-        // Start listening voor deze user
-        if(m.uid && m.uid !== 'system') {
-            listenToUserUpdates(m.uid);
-        }
+        if(m.uid && m.uid !== 'system') listenToUserUpdates(m.uid);
 
         if(m.timestamp) {
             const date = m.timestamp.toDate();
             timeStr = date.getHours().toString().padStart(2,'0') + ":" + date.getMinutes().toString().padStart(2,'0');
-            
             const dateHeader = getFormattedDate(date);
             if(dateHeader !== lastDateStr) {
                 box.innerHTML += `<div class="date-divider"><span>${dateHeader}</span></div>`;
@@ -811,39 +800,124 @@ function renderMessagesFromCache() {
             }
         }
 
-        // Naam span met ID class zodat we hem kunnen updaten
         const nameSpan = `<span class="sender user-name-${m.uid}">${m.user}</span>`;
+        let quotedBlock = "";
+
+        // REPLY RENDERING
+        if (m.replyTo) {
+            quotedBlock = `
+            <div class="quoted-msg" onclick="scrollToMessage('${m.replyTo.id}')">
+                <span class="quoted-user">${m.replyTo.user}</span>
+                <span class="quoted-text">${m.replyTo.text}</span>
+            </div>`;
+        }
 
         if (m.type === 'system') {
             className = 'system';
             content = m.text;
         } else if (m.image) {
-            content = `${nameSpan}<img src="${m.image}" onclick="openImage('${m.image}')">`;
+            content = `${nameSpan}${quotedBlock}<img src="${m.image}" onclick="openImage('${m.image}')">`;
         } else {
-            content = `${nameSpan}${linkify(m.text)}${editedLabel}`;
+            content = `${nameSpan}${quotedBlock}${linkify(m.text)}`;
         }
         
-        let deleteBtn = "";
-        if (m.uid === user.uid && m.type !== 'system') {
-            // AANGEPAST: Ander icoontje en nieuwe functie aanroep
-// We voegen ook (bewerkt) toe als het bericht is aangepast
-const editedLabel = m.isEdited ? " <span style='font-size:9px; color:gray; font-style:italic;'>(bewerkt)</span>" : "";
-
-if (m.uid === user.uid && m.type !== 'system') {
-    deleteBtn = `<div class="delete-btn" title="Opties" onclick="openMessageOptions('${doc.id}')">⋮</div>`;
-}
-        }
-
-        let footerHtml = "";
+        let optsBtn = "";
         if(m.type !== 'system') {
-            footerHtml = `<div class="msg-footer"><span class="msg-time">${timeStr}</span></div>`;
+            // Pas de argumenten aan zodat we alles hebben voor reply/edit
+            // We escapen single quotes voor de veiligheid in de onclick
+            const safeText = m.text ? m.text.replace(/'/g, "\\'") : "";
+            const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
+            optsBtn = `<div class="opts-btn" title="Opties" onclick="openMessageOptions('${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
         }
 
-        box.innerHTML += `<div class="msg ${className}">${deleteBtn}${content}${footerHtml}</div>`;
+        let editedSpan = m.edited ? `<span class="msg-edited">(bewerkt)</span>` : "";
+        let footerHtml = "";
+        if(m.type !== 'system') footerHtml = `<div class="msg-footer">${editedSpan}<span class="msg-time">${timeStr}</span></div>`;
+
+        box.innerHTML += `<div class="msg ${className}" id="msg-${doc.id}">${optsBtn}${content}${footerHtml}</div>`;
     });
 
-    if (msgLimit === 50 || isAtBottom) {
-        box.scrollTop = box.scrollHeight;
+    if (msgLimit === 50 || isAtBottom) box.scrollTop = box.scrollHeight;
+}
+
+// REPLY & EDIT FUNCTIONS
+function openMessageOptions(mid, uid, uName, text) {
+    const modal = document.getElementById('msgOptionsModal');
+    const container = document.getElementById('msgOptionBtns');
+    modal.style.display = 'flex';
+    container.innerHTML = "";
+
+    // 1. Antwoorden (Altijd mogelijk)
+    const replyBtn = document.createElement('button');
+    replyBtn.className = "btn";
+    replyBtn.style.marginBottom = "5px";
+    replyBtn.innerHTML = "↩ Antwoorden";
+    replyBtn.onclick = () => { startReply(mid, uName, text); closeModal('msgOptionsModal'); };
+    container.appendChild(replyBtn);
+
+    // 2. Bewerken & Verwijderen (Alleen eigen bericht)
+    if(uid === user.uid) {
+        if(text) { // Alleen tekstberichten bewerken
+            const editBtn = document.createElement('button');
+            editBtn.className = "btn";
+            editBtn.style.background = "var(--sidebar-bg)";
+            editBtn.style.marginBottom = "5px";
+            editBtn.innerHTML = "✎ Bewerken";
+            editBtn.onclick = () => { startEdit(mid, text); closeModal('msgOptionsModal'); };
+            container.appendChild(editBtn);
+        }
+
+        const delBtn = document.createElement('button');
+        delBtn.className = "btn btn-danger";
+        delBtn.innerHTML = "🗑 Verwijderen";
+        delBtn.onclick = () => { 
+            closeModal('msgOptionsModal');
+            confirmAction("Verwijderen", "Wil je dit bericht verwijderen?", () => deleteMessage(mid)); 
+        };
+        container.appendChild(delBtn);
+    }
+}
+
+function startReply(mid, name, text) {
+    cancelReplyOrEdit(); // Reset vorige state
+    replyContext = { id: mid, user: name, text: text || "[Afbeelding]" };
+    
+    document.getElementById('replyPreview').style.display = 'flex';
+    document.getElementById('replyLabel').innerText = `Antwoorden op ${name}`;
+    document.getElementById('replyText').innerText = text || "[Afbeelding]";
+    document.getElementById('messageInput').focus();
+}
+
+function startEdit(mid, text) {
+    cancelReplyOrEdit();
+    editMessageId = mid;
+    
+    document.getElementById('replyPreview').style.display = 'flex';
+    document.getElementById('replyLabel').innerText = "Bericht bewerken";
+    document.getElementById('replyText').innerText = text;
+    
+    const inp = document.getElementById('messageInput');
+    inp.value = text;
+    inp.focus();
+    document.getElementById('sendBtn').innerText = "✓";
+}
+
+function cancelReplyOrEdit() {
+    replyContext = null;
+    editMessageId = null;
+    document.getElementById('replyPreview').style.display = 'none';
+    document.getElementById('messageInput').value = "";
+    document.getElementById('sendBtn').innerText = "➤";
+}
+
+function scrollToMessage(id) {
+    const el = document.getElementById(`msg-${id}`);
+    if(el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.background = "#2563eb66";
+        setTimeout(() => el.style.background = "", 1000);
+    } else {
+        notify("Info", "Bericht is te oud om naartoe te scrollen.");
     }
 }
 
@@ -856,14 +930,10 @@ function handleKeyDown(e) {
 
 function handleTyping() {
     const tx = document.getElementById('messageInput');
-    tx.style.height = 'auto'; 
-    tx.style.height = (tx.scrollHeight) + 'px';
-    
+    tx.style.height = 'auto'; tx.style.height = (tx.scrollHeight) + 'px';
     if(typingTimeout) clearTimeout(typingTimeout);
     updateTyping(true);
-    typingTimeout = setTimeout(() => {
-        updateTyping(false);
-    }, 2000);
+    typingTimeout = setTimeout(() => { updateTyping(false); }, 2000);
 }
 
 async function updateTyping(isTyping) {
@@ -872,12 +942,9 @@ async function updateTyping(isTyping) {
     if(chatType === 'global') ref = db.collection("metadata").doc("global");
     else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
-
     const myName = document.getElementById('myName').innerText;
-    
     const field = {};
     field[user.uid] = isTyping ? myName : firebase.firestore.FieldValue.delete();
-
     await ref.set({ typingStatus: field }, { merge: true });
 }
 
@@ -901,7 +968,6 @@ async function resizeAndCompressImage(file) {
         }
     });
 }
-
 async function handleImageSend(input) {
     if(input.files[0]) {
         const compressed = await resizeAndCompressImage(input.files[0]);
@@ -914,13 +980,33 @@ async function sendMessage() {
     const txt = inp.value.trim();
     if(!txt) return;
     
-    inp.value = "";
-    inp.style.height = "44px"; 
+    // Check of we aan het bewerken zijn
+    if(editMessageId) {
+        await updateMessageText(editMessageId, txt);
+        cancelReplyOrEdit();
+        return;
+    }
 
+    inp.value = ""; inp.style.height = "44px"; 
     updateTyping(false);
     if(typingTimeout) clearTimeout(typingTimeout);
 
-    pushMsg({ text: txt });
+    const data = { text: txt };
+    if(replyContext) {
+        data.replyTo = replyContext; // Voeg reply data toe
+        cancelReplyOrEdit();
+    }
+
+    pushMsg(data);
+}
+
+async function updateMessageText(mid, newText) {
+    let ref;
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+    
+    await ref.doc(mid).update({ text: newText, edited: true });
 }
 
 async function pushMsg(data) {
@@ -931,88 +1017,12 @@ async function pushMsg(data) {
     else await db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages").add(payload);
 }
 
-// --- NIEUWE LOGICA VOOR BEWERKEN & VERWIJDEREN ---
-
-let selectedMessageId = null;
-let selectedMessageText = "";
-
-function openMessageOptions(mid) {
-    selectedMessageId = mid;
-    
-    // Haal de tekst op uit de lokale cache (currentSnap)
-    const doc = window.currentSnap.docs.find(d => d.id === mid);
-    if(doc) {
-        const data = doc.data();
-        // Als het een plaatje is, mag je alleen verwijderen (geen tekst om te bewerken)
-        if(data.image) {
-             confirmDeleteMessage(); // Direct naar verwijder bevestiging
-             return;
-        }
-        selectedMessageText = data.text;
-    }
-
-    resetMessageModal();
-    document.getElementById('messageOptionsModal').style.display = 'flex';
-}
-
-function resetMessageModal() {
-    document.getElementById('msgOptionButtons').style.display = 'block';
-    document.getElementById('msgEditInputView').style.display = 'none';
-    document.getElementById('deleteError').style.display = 'none';
-}
-
-function startEditMessage() {
-    document.getElementById('msgOptionButtons').style.display = 'none';
-    document.getElementById('msgEditInputView').style.display = 'block';
-    document.getElementById('editMsgText').value = selectedMessageText;
-    document.getElementById('editError').style.display = 'none';
-}
-
-async function saveEditMessage() {
-    const newText = document.getElementById('editMsgText').value.trim();
-    if(!newText) return;
-
-    if (checkProfanity(newText)) {
-        document.getElementById('editError').style.display = 'block';
-        return;
-    }
-
+async function deleteMessage(mid) {
     let ref;
     if(chatType === 'global') ref = db.collection("chats");
     else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
-
-    try {
-        // Update het bericht en voeg (bewerkt) toe als flag indien gewenst, 
-        // of gewoon de tekst updaten.
-        await ref.doc(selectedMessageId).update({ 
-            text: newText,
-            isEdited: true // Optioneel: zodat je in CSS eventueel '(bewerkt)' kan tonen
-        });
-        closeModal('messageOptionsModal');
-    } catch(e) {
-        alert("Fout bij opslaan: " + e.message);
-    }
-}
-
-async function confirmDeleteMessage() {
-    // Als we nog in het hoofdmenu zitten van de modal, toon dan direct de bevestiging
-    // Of voer de delete uit. In dit geval voeren we hem uit omdat de gebruiker al op "Verwijderen" klikte.
-    
-    if(!selectedMessageId) return;
-    
-    let ref;
-    if(chatType === 'global') ref = db.collection("chats");
-    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
-    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
-    
-    try {
-        await ref.doc(selectedMessageId).delete();
-        closeModal('messageOptionsModal');
-    } catch(e) {
-        document.getElementById('deleteError').style.display = 'block';
-        document.getElementById('deleteError').innerText = "Fout: " + e.message;
-    }
+    await ref.doc(mid).delete();
 }
 
 async function sendSystemMessage(text) {
@@ -1020,6 +1030,7 @@ async function sendSystemMessage(text) {
     if(chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(payload);
 }
 
+// SETTINGS & MODALS
 async function openChatSettings() {
     const modal = document.getElementById('settingsModal');
     const content = document.getElementById('settingsContent');
@@ -1039,7 +1050,6 @@ async function openChatSettings() {
         const isOwner = gData.owner === user.uid;
         
         let html = `<h3>${gData.name}</h3>`;
-        
         if(isOwner) {
             html += `
             <div style="margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
@@ -1057,7 +1067,6 @@ async function openChatSettings() {
                 </div>
             </div>`;
         }
-
         html += `<div style="max-height:200px; overflow-y:auto; margin:10px 0;">`;
         for(let mid of gData.members) {
             let mName = "Lid";
@@ -1066,7 +1075,6 @@ async function openChatSettings() {
                 const uDoc = await db.collection("users").doc(mid).get();
                 if(uDoc.exists) mName = uDoc.data().name;
             }
-            
             html += `<div class="member-row">
                 <span>${mName} ${gData.owner === mid ? '👑' : ''}</span>
                 <div style="display:flex; gap:5px;">
@@ -1078,38 +1086,28 @@ async function openChatSettings() {
             </div>`;
         }
         html += `</div>`;
-
         if(isOwner) {
-            // AANGEPAST: Geen parameters meer nodig, functie regelt zelf data
             html += `<button class="btn full-btn" onclick="openAddMemberModal()">+ Lid Toevoegen</button>`;
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Groep Verwijderen', 'Zeker weten?', deleteGroup)">Groep Verwijderen</button>`;
         } else {
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Verlaten', 'Groep verlaten?', leaveGroup)">Groep Verlaten</button>`;
         }
-        
         html += `<button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>`;
         content.innerHTML = html;
     }
 }
 
-// AANGEPAST: Haalt verse groepsleden op zodat ex-leden weer in de lijst staan
 async function openAddMemberModal() {
     const list = document.getElementById('addMemberList');
     document.getElementById('addMemberModal').style.display = 'flex';
     list.innerHTML = "Laden...";
-
-    // 1. Verse data ophalen
     const gDoc = await db.collection("groups").doc(activeChatId).get();
     const currentMembers = gDoc.exists ? gDoc.data().members : [];
-
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     let content = "";
-    
     friendsSnap.forEach(doc => {
-        // Filter: Alleen tonen als vriend NIET in de ledenlijst zit
         if(!currentMembers.includes(doc.id)) {
-            content += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #334155;">
+            content += `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #334155;">
                     <span>${doc.data().name}</span>
                     <button class="btn btn-sm" onclick="addMemberToGroup('${doc.id}', '${doc.data().name}')">Toevoegen</button>
                 </div>`;
@@ -1117,154 +1115,78 @@ async function openAddMemberModal() {
     });
     list.innerHTML = content || "<div style='text-align:center; color:gray'>Iedereen zit er al in!</div>";
 }
-
 async function addMemberToGroup(newId, newName) {
     await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayUnion(newId) });
     await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} toegevoegd.`);
-    closeModal('addMemberModal');
-    openChatSettings();
+    closeModal('addMemberModal'); openChatSettings();
 }
-
 function confirmAction(title, text, actionFn) {
     document.getElementById('confirmTitle').innerText = title;
     document.getElementById('confirmText').innerText = text;
     document.getElementById('confirmModal').style.display = 'flex';
     document.getElementById('confirmYesBtn').onclick = () => { actionFn(); closeModal('confirmModal'); };
 }
-
 async function updateGroupInfo() {
     const newName = document.getElementById('groupEditName').value;
     const imgPreview = document.getElementById('groupEditPreview').src;
     await db.collection("groups").doc(activeChatId).update({ name: newName, pic: imgPreview });
-    notify("Aangepast", "Groepsinformatie bijgewerkt");
-    openChatSettings();
+    notify("Aangepast", "Groepsinformatie bijgewerkt"); openChatSettings();
 }
-
-async function deleteGroup() {
-    await db.collection("groups").doc(activeChatId).delete();
-    activeChatId = null;
-    document.getElementById('chatMessages').innerHTML = "";
-    document.getElementById('inputArea').style.display = 'none';
-    closeModal('settingsModal');
-    renderSidebar();
-}
-async function removeFriend() {
-    await db.collection("users").doc(user.uid).collection("friends").doc(activeChatId).delete();
-    await db.collection("users").doc(activeChatId).collection("friends").doc(user.uid).delete();
-    location.reload();
-}
-async function leaveGroup() {
-    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`);
-    await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) });
-    location.reload();
-}
-async function kickMember(mid, mName) {
-    await sendSystemMessage(`${mName} is verwijderd door de beheerder.`);
-    await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(mid) });
-    openChatSettings(); 
-}
-async function transferOwner(newId, newName) {
-    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`);
-    await db.collection("groups").doc(activeChatId).update({ owner: newId });
-    openChatSettings();
-}
+async function deleteGroup() { await db.collection("groups").doc(activeChatId).delete(); activeChatId = null; document.getElementById('chatMessages').innerHTML = ""; document.getElementById('inputArea').style.display = 'none'; closeModal('settingsModal'); renderSidebar(); }
+async function removeFriend() { await db.collection("users").doc(user.uid).collection("friends").doc(activeChatId).delete(); await db.collection("users").doc(activeChatId).collection("friends").doc(user.uid).delete(); location.reload(); }
+async function leaveGroup() { await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`); await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) }); location.reload(); }
+async function kickMember(mid, mName) { await sendSystemMessage(`${mName} is verwijderd door de beheerder.`); await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(mid) }); openChatSettings(); }
+async function transferOwner(newId, newName) { await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`); await db.collection("groups").doc(activeChatId).update({ owner: newId }); openChatSettings(); }
 
 function notify(title, body, icon, chatId, type) {
     if(activeChatId !== chatId) {
         const box = document.getElementById('toast-container');
-        const t = document.createElement('div');
-        t.className = 'toast';
+        const t = document.createElement('div'); t.className = 'toast';
         t.innerHTML = `<img src="${icon || 'https://ui-avatars.com/api/?name=Msg'}" style="width:30px;height:30px;border-radius:50%"><div><b>${title}</b><br><small>${body}</small></div>`;
         t.onclick = () => { if(chatId) openChat(chatId, title, icon, type); t.remove(); };
-        box.appendChild(t);
-        setTimeout(()=>t.remove(), 4000);
+        box.appendChild(t); setTimeout(()=>t.remove(), 4000);
     }
-
     if(Notification.permission === "granted" && document.hidden) {
         const n = new Notification(title, { body: body, icon: icon || "https://i.imgur.com/CeRZ8na.png" });
         n.onclick = function() { window.focus(); this.close(); if(chatId) openChat(chatId, title, icon, type); };
     }
 }
-
-function previewImage(inp, id) {
-    if(inp.files[0]) {
-        resizeAndCompressImage(inp.files[0]).then(base64 => {
-            document.getElementById(id).src = base64;
-            currentBase64 = base64;
-        });
-    }
-}
-
+function previewImage(inp, id) { if(inp.files[0]) { resizeAndCompressImage(inp.files[0]).then(base64 => { document.getElementById(id).src = base64; currentBase64 = base64; }); } }
 async function createGroup() {
     const name = document.getElementById('groupName').value.trim();
     if(!name) return alert("Kies een naam!");
     const members = [user.uid, ...Array.from(document.querySelectorAll('.invite-chk:checked')).map(c=>c.value)];
-    const groupRef = await db.collection("groups").add({ name, owner: user.uid, members, pic: currentBase64 || "" });
+    await db.collection("groups").add({ name, owner: user.uid, members, pic: currentBase64 || "" });
     closeModal('groupModal');
 }
-
 async function completeSetup() {
     const name = document.getElementById('setupName').value;
     if(!name) return;
-
-    if (checkProfanity(name)) {
-        document.getElementById('setupError').style.display = 'block';
-        return;
-    }
-
+    if (checkProfanity(name)) { document.getElementById('setupError').style.display = 'block'; return; }
     await db.collection("users").doc(user.uid).set({ name, pic: currentBase64 || "", email: user.email });
     location.reload();
 }
 async function saveProfile() {
     const name = document.getElementById('editName').value;
-
-    if (checkProfanity(name)) {
-        document.getElementById('profileError').style.display = 'block';
-        return;
-    }
-
-    const update = { name };
-    if(currentBase64) update.pic = currentBase64;
+    if (checkProfanity(name)) { document.getElementById('profileError').style.display = 'block'; return; }
+    const update = { name }; if(currentBase64) update.pic = currentBase64;
     await db.collection("users").doc(user.uid).update(update);
     closeModal('profileModal');
 }
-function switchTab(t, el) {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    el.classList.add('active'); renderSidebar();
-}
+function switchTab(t, el) { document.querySelectorAll('.tab').forEach(x => x.classList.remove('active')); el.classList.add('active'); renderSidebar(); }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-function openImage(src) {
-    document.getElementById('imgViewer').src = src;
-    document.getElementById('imgDownload').href = src;
-    document.getElementById('imageModal').style.display = 'flex';
-}
-
-function openProfile() { 
-    currentBase64 = null;
-    document.getElementById('editName').value = document.getElementById('myName').innerText;
-    document.getElementById('editPreview').src = document.getElementById('myAvatar').src;
-    document.getElementById('profileError').style.display = 'none';
-    document.getElementById('profileModal').style.display = 'flex'; 
-}
+function openImage(src) { document.getElementById('imgViewer').src = src; document.getElementById('imgDownload').href = src; document.getElementById('imageModal').style.display = 'flex'; }
+function openProfile() { currentBase64 = null; document.getElementById('editName').value = document.getElementById('myName').innerText; document.getElementById('editPreview').src = document.getElementById('myAvatar').src; document.getElementById('profileError').style.display = 'none'; document.getElementById('profileModal').style.display = 'flex'; }
 function openGroupModal() {
-    currentBase64 = null;
-    document.getElementById('groupCreatePreview').src = "https://ui-avatars.com/api/?name=Group";
+    currentBase64 = null; document.getElementById('groupCreatePreview').src = "https://ui-avatars.com/api/?name=Group";
     document.getElementById('groupModal').style.display = 'flex';
-    const list = document.getElementById('inviteList');
-    list.innerHTML = "Laden...";
+    const list = document.getElementById('inviteList'); list.innerHTML = "Laden...";
     db.collection("users").doc(user.uid).collection("friends").get().then(snap => {
         list.innerHTML = snap.empty ? "Geen vrienden." : "";
-        snap.forEach(doc => {
-            list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px;"><span>${doc.data().name}</span><input type="checkbox" class="invite-chk" value="${doc.id}"></div>`;
-        });
+        snap.forEach(doc => { list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px;"><span>${doc.data().name}</span><input type="checkbox" class="invite-chk" value="${doc.id}"></div>`; });
     });
 }
-async function sendFriendRequest(id, name) {
-    const me = (await db.collection("users").doc(user.uid).get()).data();
-    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-    notify("Verzonden", `Verzoek naar ${name}`);
-}
+async function sendFriendRequest(id, name) { const me = (await db.collection("users").doc(user.uid).get()).data(); await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" }); notify("Verzonden", `Verzoek naar ${name}`); }
 async function acceptFriend(id, name, pic) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
@@ -1272,10 +1194,7 @@ async function acceptFriend(id, name, pic) {
     await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
     location.reload();
 }
-async function declineRequest(id) {
-    if(!confirm("Verzoek afwijzen?")) return;
-    await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
-}
+async function declineRequest(id) { if(!confirm("Verzoek afwijzen?")) return; await db.collection("users").doc(user.uid).collection("requests").doc(id).delete(); }
 </script>
 </body>
 </html>
