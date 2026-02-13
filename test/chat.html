@@ -27,7 +27,46 @@
         a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
         a:hover { border-bottom: 1px solid var(--accent); }
 
-        /* SKELETON LOADING STYLES */
+        /* CONTEXT MENU (Rechtermuisknop menu) */
+        .context-menu {
+            position: fixed;
+            display: none;
+            flex-direction: column;
+            background: var(--card-bg);
+            border: 1px solid #334155;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            border-radius: 6px;
+            padding: 5px 0;
+            z-index: 10000;
+            min-width: 160px;
+            animation: fadeIn 0.1s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        .ctx-item {
+            padding: 10px 15px;
+            font-size: 13px;
+            color: #e2e8f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.1s;
+        }
+        .ctx-item:hover { background: #1e293b; color: white; }
+        .ctx-item.danger { color: var(--danger); }
+        .ctx-item.danger:hover { background: #331010; }
+        .ctx-header {
+            padding: 8px 15px;
+            font-size: 11px;
+            color: var(--text-dim);
+            border-bottom: 1px solid #1e293b;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: default;
+        }
+
+        /* SKELETON LOADING */
         .skeleton {
             background: #1e293b;
             background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
@@ -48,7 +87,7 @@
         .sk-msg-row.right { flex-direction: row-reverse; }
         .sk-msg-bubble { width: 40%; height: 40px; border-radius: 12px; }
 
-        /* TOAST & LAYOUT */
+        /* LAYOUT */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 999999; pointer-events: none; }
         .toast { 
             background: var(--card-bg); color: white; padding: 15px 20px; 
@@ -114,12 +153,12 @@
             white-space: pre-wrap;
             display: flex; 
             flex-direction: column;
+            user-select: text; /* Zorg dat tekst selecteerbaar is */
         }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
         .msg.system { align-self: center; background: #1e293b88; padding: 5px 12px; border-radius: 20px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px solid #334155; margin: 5px 0; max-width: 90%; }
         
-        /* QUOTED MESSAGE STYLE */
         .quoted-msg {
             border-left: 3px solid var(--accent);
             background: rgba(0,0,0,0.2);
@@ -143,7 +182,7 @@
         .date-divider { display: flex; align-items: center; justify-content: center; margin: 15px 0; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .date-divider span { background: #1e293b; padding: 4px 12px; border-radius: 12px; border: 1px solid #334155; }
 
-        /* OPTIONS BUTTON (HOVER) */
+        /* OPTIONS BUTTON (3 puntjes) */
         .opts-btn { 
             position: absolute; top: -8px; right: -8px; 
             background: var(--card-bg); border: 1px solid var(--primary); 
@@ -157,7 +196,6 @@
         /* INPUT AREA */
         .chat-input { padding: 15px; background: var(--card-bg); display: flex; flex-direction:column; gap:0; border-top: 1px solid #1e293b; }
         
-        /* REPLY PREVIEW BAR */
         #replyPreview {
             display: none;
             background: #1e293b;
@@ -212,6 +250,11 @@
 <body>
 
 <div id="toast-container"></div>
+
+<div id="contextMenu" class="context-menu">
+    <div class="ctx-header">Opties</div>
+    <div id="ctxContent"></div>
+</div>
 
 <div id="imageModal" class="modal" style="z-index: 5000;" onclick="if(event.target===this) document.getElementById('imageModal').style.display='none'">
     <div style="position:relative; max-width:90%; max-height:90vh; text-align:center;">
@@ -300,14 +343,6 @@
     </div>
 </div>
 
-<div id="msgOptionsModal" class="modal">
-    <div class="modal-box" style="text-align:center;">
-        <h3>Opties</h3>
-        <div id="msgOptionBtns" style="display:flex; flex-direction:column; gap:8px;"></div>
-        <button class="btn" style="background:#334155; width:100%; margin-top:15px;" onclick="closeModal('msgOptionsModal')">Annuleren</button>
-    </div>
-</div>
-
 <div id="confirmModal" class="modal" style="z-index: 3000;">
     <div class="modal-box" style="text-align:center;">
         <h3 id="confirmTitle">Bevestigen</h3>
@@ -387,11 +422,18 @@ let observedUsers = new Set();
 let hasLoadedChats = false;
 
 // Reply & Edit State
-let replyContext = null; // { id, user, text }
-let editMessageId = null; // ID van bericht dat bewerkt wordt
+let replyContext = null; 
+let editMessageId = null; 
 
 // INIT
-showSidebarSkeletons(); // Toon skeletons direct bij laden
+showSidebarSkeletons(); 
+// Sluit context menu als je ergens anders klikt
+document.addEventListener('click', (e) => {
+    if(!e.target.closest('.context-menu')) hideContextMenu();
+});
+document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') hideContextMenu();
+});
 
 auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
@@ -534,7 +576,6 @@ async function subscribeToChats() {
         });
     });
 
-    // Timeout om te checken of er chats zijn. Zo niet, stop skeletons
     setTimeout(() => {
         if(chatDataMap.size === 0) {
             document.getElementById('sidebarList').innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen chats gevonden.</div>";
@@ -598,7 +639,6 @@ function flashTitle(msg) {
 function playNotificationSound() { const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3'); audio.volume = 0.5; audio.play().catch(e => {}); }
 
 function renderSidebar() {
-    // Als we nog geen data hebben en ook niet "leeg" zijn bevestigd, laat skeletons staan
     if(!hasLoadedChats && chatDataMap.size === 0) return;
 
     const list = document.getElementById('sidebarList');
@@ -713,7 +753,7 @@ async function openChat(id, name, pic, type) {
     if(msgUnsub) msgUnsub();
     if(typingUnsub) typingUnsub();
 
-    showChatSkeletons(); // Laat skeletons zien in chat area
+    showChatSkeletons(); 
     setupChatListeners();
 }
 
@@ -803,7 +843,6 @@ function renderMessagesFromCache() {
         const nameSpan = `<span class="sender user-name-${m.uid}">${m.user}</span>`;
         let quotedBlock = "";
 
-        // REPLY RENDERING
         if (m.replyTo) {
             quotedBlock = `
             <div class="quoted-msg" onclick="scrollToMessage('${m.replyTo.id}')">
@@ -822,64 +861,80 @@ function renderMessagesFromCache() {
         }
         
         let optsBtn = "";
+        let contextAttr = "";
+        
         if(m.type !== 'system') {
-            // Pas de argumenten aan zodat we alles hebben voor reply/edit
-            // We escapen single quotes voor de veiligheid in de onclick
             const safeText = m.text ? m.text.replace(/'/g, "\\'") : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            optsBtn = `<div class="opts-btn" title="Opties" onclick="openMessageOptions('${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
+            // 3 Puntjes knop roept nu het context menu aan op de plek van de knop
+            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
+            // Rechtermuisknop op bericht
+            contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
 
         let editedSpan = m.edited ? `<span class="msg-edited">(bewerkt)</span>` : "";
         let footerHtml = "";
         if(m.type !== 'system') footerHtml = `<div class="msg-footer">${editedSpan}<span class="msg-time">${timeStr}</span></div>`;
 
-        box.innerHTML += `<div class="msg ${className}" id="msg-${doc.id}">${optsBtn}${content}${footerHtml}</div>`;
+        box.innerHTML += `<div class="msg ${className}" id="msg-${doc.id}" ${contextAttr}>${optsBtn}${content}${footerHtml}</div>`;
     });
 
     if (msgLimit === 50 || isAtBottom) box.scrollTop = box.scrollHeight;
 }
 
-// REPLY & EDIT FUNCTIONS
-function openMessageOptions(mid, uid, uName, text) {
-    const modal = document.getElementById('msgOptionsModal');
-    const container = document.getElementById('msgOptionBtns');
-    modal.style.display = 'flex';
-    container.innerHTML = "";
+// CONTEXT MENU LOGIC
+function handleContextMenu(e, mid, uid, uName, text) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const menu = document.getElementById('contextMenu');
+    const content = document.getElementById('ctxContent');
+    content.innerHTML = "";
 
-    // 1. Antwoorden (Altijd mogelijk)
-    const replyBtn = document.createElement('button');
-    replyBtn.className = "btn";
-    replyBtn.style.marginBottom = "5px";
-    replyBtn.innerHTML = "↩ Antwoorden";
-    replyBtn.onclick = () => { startReply(mid, uName, text); closeModal('msgOptionsModal'); };
-    container.appendChild(replyBtn);
+    // 1. Antwoorden (Iedereen)
+    content.innerHTML += `
+        <div class="ctx-item" onclick="startReply('${mid}', '${uName}', '${text}'); hideContextMenu()">
+            <span>↩</span> Antwoorden
+        </div>`;
 
-    // 2. Bewerken & Verwijderen (Alleen eigen bericht)
-    if(uid === user.uid) {
+    // 2. Opties voor eigen berichten
+    if (uid === user.uid) {
         if(text) { // Alleen tekstberichten bewerken
-            const editBtn = document.createElement('button');
-            editBtn.className = "btn";
-            editBtn.style.background = "var(--sidebar-bg)";
-            editBtn.style.marginBottom = "5px";
-            editBtn.innerHTML = "✎ Bewerken";
-            editBtn.onclick = () => { startEdit(mid, text); closeModal('msgOptionsModal'); };
-            container.appendChild(editBtn);
+            content.innerHTML += `
+            <div class="ctx-item" onclick="startEdit('${mid}', '${text}'); hideContextMenu()">
+                <span>✎</span> Bewerken
+            </div>`;
         }
-
-        const delBtn = document.createElement('button');
-        delBtn.className = "btn btn-danger";
-        delBtn.innerHTML = "🗑 Verwijderen";
-        delBtn.onclick = () => { 
-            closeModal('msgOptionsModal');
-            confirmAction("Verwijderen", "Wil je dit bericht verwijderen?", () => deleteMessage(mid)); 
-        };
-        container.appendChild(delBtn);
+        content.innerHTML += `
+        <div class="ctx-item danger" onclick="confirmDelete('${mid}'); hideContextMenu()">
+            <span>🗑</span> Verwijderen
+        </div>`;
     }
+
+    // Positie bepalen
+    menu.style.display = 'flex';
+    let x = e.clientX;
+    let y = e.clientY;
+
+    // Zorg dat menu niet van scherm valt
+    if (x + 160 > window.innerWidth) x -= 160;
+    if (y + menu.offsetHeight > window.innerHeight) y -= menu.offsetHeight;
+
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
 }
 
+function hideContextMenu() {
+    document.getElementById('contextMenu').style.display = 'none';
+}
+
+function confirmDelete(mid) {
+    confirmAction("Verwijderen", "Wil je dit bericht definitief verwijderen?", () => deleteMessage(mid));
+}
+
+// REPLY & EDIT FUNCTIONS
 function startReply(mid, name, text) {
-    cancelReplyOrEdit(); // Reset vorige state
+    cancelReplyOrEdit();
     replyContext = { id: mid, user: name, text: text || "[Afbeelding]" };
     
     document.getElementById('replyPreview').style.display = 'flex';
