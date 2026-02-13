@@ -692,14 +692,14 @@ async function renderDiscover(list, term) {
         }
 
         users.forEach(u => {
-            // AANGEPAST: Geen status tekst meer
+            const picUrl = u.pic || "";
             list.innerHTML += `
                 <div class="item">
-                    <img src="${u.pic || `https://ui-avatars.com/api/?name=${u.name}`}">
+                    <img src="${picUrl || `https://ui-avatars.com/api/?name=${u.name}`}">
                     <div class="item-info">
                         <h4>${u.name}</h4>
                     </div>
-                    <button class="btn btn-sm" onclick="sendFriendRequest('${u.id}', '${u.name}')">Toevoegen</button>
+                    <button class="btn btn-sm" onclick="sendFriendRequest('${u.id}', '${u.name}', '${picUrl}')">Toevoegen</button>
                 </div>`;
         });
     }).catch(err => {
@@ -737,14 +737,13 @@ function renderRequests(list) {
         }
 
         // --- VERZONDEN ---
-        // AANGEPAST: Oranje klokje icoon toegevoegd
         if(!outSnap.empty) {
             list.innerHTML += `<div class="req-section-header" style="color:var(--pending)">Verzonden 🕒</div>`;
             outSnap.forEach(doc => {
                 const d = doc.data();
                 list.innerHTML += `
                     <div class="item">
-                        <img src="https://ui-avatars.com/api/?name=${d.name}&background=f59e0b&color=fff">
+                        <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
                         <div class="item-info"><h4>${d.name}</h4><p style="color:var(--pending); font-size:10px;">In afwachting...</p></div>
                         <button class="btn btn-sm btn-danger" onclick="cancelSentRequest('${doc.id}')">Annuleren</button>
                     </div>`;
@@ -938,7 +937,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
     
-    // AANGEPAST: Kopieer knop toegevoegd voor iedereen
     if (text) {
         content.innerHTML += `
         <div class="ctx-item" onclick="copyText(decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -1311,33 +1309,84 @@ function openGroupModal() {
         snap.forEach(doc => { list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px;"><span>${doc.data().name}</span><input type="checkbox" class="invite-chk" value="${doc.id}"></div>`; });
     });
 }
-async function sendFriendRequest(id, name) { 
-    const me = (await db.collection("users").doc(user.uid).get()).data(); 
-    // Stuur verzoek naar ander
-    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" }); 
-    // AANGEPAST: Sla op in eigen verzonden lijst
-    await db.collection("users").doc(user.uid).collection("sentRequests").doc(id).set({ timestamp: firebase.firestore.FieldValue.serverTimestamp(), name: name });
-    notify("Verzonden", `Verzoek naar ${name}`); 
+
+// ----------------------------------------------------
+// AANGEPASTE VRIENDEN LOGICA (Verzoeken + Verzonden)
+// ----------------------------------------------------
+
+async function sendFriendRequest(targetId, targetName, targetPic) { 
+    try {
+        const meDoc = await db.collection("users").doc(user.uid).get();
+        const me = meDoc.data();
+        
+        // 1. Stuur verzoek naar de ander (INBOX van de ander)
+        await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({ 
+            name: me.name, 
+            pic: me.pic || "",
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }); 
+
+        // 2. Sla op in mijn eigen verzonden items (OUTBOX van mij)
+        await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).set({ 
+            name: targetName,
+            pic: targetPic || "",
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+        });
+
+        notify("Verzonden", `Verzoek naar ${targetName}`); 
+        renderSidebar(); 
+    } catch(e) {
+        console.error(e);
+        alert("Kon verzoek niet versturen: " + e.message);
+    }
 }
-// NIEUW: Annuleer verzoek
-async function cancelSentRequest(id) {
+
+async function cancelSentRequest(targetId) {
     if(!confirm("Verzoek intrekken?")) return;
-    await db.collection("users").doc(id).collection("requests").doc(user.uid).delete();
-    await db.collection("users").doc(user.uid).collection("sentRequests").doc(id).delete();
+    
+    // 1. Verwijder uit de INBOX van de ontvanger
+    await db.collection("users").doc(targetId).collection("requests").doc(user.uid).delete();
+    
+    // 2. Verwijder uit mijn OUTBOX (verzonden items)
+    await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).delete();
+    
     notify("Geannuleerd", "Vriendschapsverzoek ingetrokken");
 }
 
-async function acceptFriend(id, name, pic) {
-    const me = (await db.collection("users").doc(user.uid).get()).data();
-    await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
-    await db.collection("users").doc(id).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-    // Verwijder uit requests
-    await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
-    // Verwijder ook uit sentRequests van de ander (voor netheid)
-    await db.collection("users").doc(id).collection("sentRequests").doc(user.uid).delete();
-    location.reload();
+async function acceptFriend(senderId, senderName, senderPic) {
+    try {
+        const meDoc = await db.collection("users").doc(user.uid).get();
+        const me = meDoc.data();
+
+        // 1. Vrienden maken
+        await db.collection("users").doc(user.uid).collection("friends").doc(senderId).set({ name: senderName, pic: senderPic || "" });
+        await db.collection("users").doc(senderId).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
+
+        // 2. Verwijder uit mijn INBOX
+        await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
+
+        // 3. Verwijder uit de ander zijn OUTBOX
+        await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
+
+        notify("Vrienden!", `Je bent nu vrienden met ${senderName}`);
+        location.reload(); 
+    } catch(e) {
+        console.error(e);
+        alert("Er ging iets mis bij accepteren.");
+    }
 }
-async function declineRequest(id) { if(!confirm("Verzoek afwijzen?")) return; await db.collection("users").doc(user.uid).collection("requests").doc(id).delete(); }
+
+async function declineRequest(senderId) { 
+    if(!confirm("Verzoek afwijzen?")) return; 
+    
+    // 1. Verwijder uit mijn INBOX
+    await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
+    
+    // 2. Verwijder uit de ander zijn OUTBOX
+    await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
+    
+    renderSidebar();
+}
 </script>
 </body>
 </html>
