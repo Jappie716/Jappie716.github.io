@@ -448,15 +448,7 @@ function startPresenceSystem() {
         if(activeChatId) updateTyping(false);
     });
 }
-function updatePresence(status) { 
-    if(user) {
-        // Update lastSeen zodat ook oude gebruikers die online komen bovenaan de lijst komen te staan in Ontdek
-        db.collection("users").doc(user.uid).set({ 
-            status: status, 
-            lastSeen: firebase.firestore.FieldValue.serverTimestamp() 
-        }, { merge: true });
-    }
-}
+function updatePresence(status) { if(user) db.collection("users").doc(user.uid).update({ status: status, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); }
 
 async function checkSetup() {
     const doc = await db.collection("users").doc(user.uid).get();
@@ -473,6 +465,13 @@ function initApp() {
         const data = d.data();
         document.getElementById('myName').innerText = data.name;
         document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
+        
+        // Zorg dat de gebruiker een joinedAt datum heeft (voor sortering Ontdek)
+        if (!data.joinedAt) {
+            db.collection("users").doc(user.uid).update({ 
+                joinedAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+        }
     });
     
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
@@ -687,65 +686,57 @@ async function renderDiscover(list, term) {
     const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
     const myFriends = friendsSnap.docs.map(d => d.id);
     
-    list.innerHTML = "<div style='padding:10px; text-align:center; color:gray'>Laden...</div>";
+    list.innerHTML = ""; 
 
     let query;
+
     if (term && term.length > 0) {
-        // Zoekmodus
+        // Zoek modus
         const searchName = term.charAt(0).toUpperCase() + term.slice(1);
         query = db.collection("users")
                   .where('name', '>=', searchName)
                   .where('name', '<=', searchName + '\uf8ff')
                   .limit(50);
     } else {
-        // Ontdek modus: Haal 300 gebruikers op zodat we zeker weten dat de nieuwe erbij zitten
-        query = db.collection("users").limit(300); 
+        // Standaard: Nieuwste eerst (vereist joinedAt veld)
+        query = db.collection("users").orderBy("joinedAt", "desc").limit(50);
     }
 
     query.get().then(snap => {
-        list.innerHTML = ""; 
-
         if (snap.empty) {
             list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Niemand gevonden.</div>";
             return;
         }
 
-        let users = [];
+        let count = 0;
         snap.forEach(doc => {
-            // Filter jezelf en je huidige vrienden eruit
-            if(doc.id === user.uid || myFriends.includes(doc.id)) return;
-            
             const d = doc.data();
-            if(term && !d.name.toLowerCase().includes(term.toLowerCase())) return;
+            if(doc.id === user.uid || myFriends.includes(doc.id)) return;
+            if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
 
-            users.push({ id: doc.id, ...d });
-        });
-
-        // SORTEREN: Nieuwste (of laatst geziene) gebruikers bovenaan
-        users.sort((a, b) => {
-            // Pak de datum van aanmaken, of anders de datum van laatst online
-            const timeA = a.joinedAt ? a.joinedAt.toMillis() : (a.lastSeen ? a.lastSeen.toMillis() : 0);
-            const timeB = b.joinedAt ? b.joinedAt.toMillis() : (b.lastSeen ? b.lastSeen.toMillis() : 0);
-            return timeB - timeA; // Nieuwste datum eerst
-        });
-
-        if (users.length === 0) {
-            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen suggesties.</div>";
-            return;
-        }
-
-        users.forEach(d => {
-            // Gewoon de normale weergave zonder 'NIEUW' label
+            count++;
             list.innerHTML += `
                 <div class="item">
                     <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
                     <div class="item-info">
                         <h4>${d.name}</h4>
-                        <p style="font-size:10px; color:gray;">${d.status === 'online' ? '🟢 Online' : '⚪ Offline'}</p>
+                        <p style="font-size:10px; color:gray;">
+                            ${d.status === 'online' ? '🟢 Online' : '⚪ Offline'} • 
+                            ${d.joinedAt ? 'Lid' : 'Speler'}
+                        </p>
                     </div>
-                    <button class="btn btn-sm" onclick="sendFriendRequest('${d.id}', '${d.name}')">Toevoegen</button>
+                    <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}')">Toevoegen</button>
                 </div>`;
         });
+
+        if (count === 0) {
+            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen nieuwe mensen gevonden.</div>";
+        }
+    }).catch(err => {
+        console.error("Ontdek fout:", err);
+        if(err.code === 'failed-precondition') {
+            list.innerHTML = "<div style='padding:20px;text-align:center;color:orange'>Index bouwen... check console als dit blijft.</div>";
+        }
     });
 }
 
@@ -921,11 +912,11 @@ function renderMessagesFromCache() {
         let contextAttr = "";
         
         if(m.type !== 'system') {
-            const safeText = m.text ? m.text.replace(/'/g, "\\'") : "";
+            // Encode tekst om HTML/JS errors te voorkomen in de onclick
+            const safeText = m.text ? encodeURIComponent(m.text) : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            // 3 Puntjes knop roept nu het context menu aan op de plek van de knop
-            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">Opties</div>`;
-            // Rechtermuisknop op bericht
+            
+            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">⋮</div>`;
             contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
 
@@ -940,25 +931,27 @@ function renderMessagesFromCache() {
 }
 
 // CONTEXT MENU LOGIC
-function handleContextMenu(e, mid, uid, uName, text) {
+function handleContextMenu(e, mid, uid, uName, encodedText) {
     e.preventDefault();
     e.stopPropagation();
     
+    const text = encodedText ? decodeURIComponent(encodedText) : "";
+
     const menu = document.getElementById('contextMenu');
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
 
     // 1. Antwoorden (Iedereen)
     content.innerHTML += `
-        <div class="ctx-item" onclick="startReply('${mid}', '${uName}', '${text}'); hideContextMenu()">
+        <div class="ctx-item" onclick="startReply('${mid}', '${uName}', decodeURIComponent('${encodedText || ""}')); hideContextMenu()">
             <span>↩</span> Antwoorden
         </div>`;
 
     // 2. Opties voor eigen berichten
     if (uid === user.uid) {
-        if(text) { // Alleen tekstberichten bewerken
+        if(text) { 
             content.innerHTML += `
-            <div class="ctx-item" onclick="startEdit('${mid}', '${text}'); hideContextMenu()">
+            <div class="ctx-item" onclick="startEdit('${mid}', decodeURIComponent('${encodedText}')); hideContextMenu()">
                 <span>✎</span> Bewerken
             </div>`;
         }
@@ -973,7 +966,6 @@ function handleContextMenu(e, mid, uid, uName, text) {
     let x = e.clientX;
     let y = e.clientY;
 
-    // Zorg dat menu niet van scherm valt
     if (x + 160 > window.innerWidth) x -= 160;
     if (y + menu.offsetHeight > window.innerHeight) y -= menu.offsetHeight;
 
@@ -1276,14 +1268,12 @@ async function completeSetup() {
     if(!name) return;
     if (checkProfanity(name)) { document.getElementById('setupError').style.display = 'block'; return; }
     
-    // Voeg joinedAt toe zodat nieuwe gebruikers bovenaan komen
     await db.collection("users").doc(user.uid).set({ 
         name, 
         pic: currentBase64 || "", 
         email: user.email,
         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        status: 'online',
-        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+        status: 'online'
     });
     location.reload();
 }
