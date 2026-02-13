@@ -1195,8 +1195,8 @@ async function openChatSettings() {
                 <span>${mName} ${gData.owner === mid ? '👑' : ''}</span>
                 <div style="display:flex; gap:5px;">
                    ${isOwner && mid !== user.uid ? `
-                        <button class="btn btn-sm btn-icon" style="width:30px; height:30px; padding:0; background:#334155" title="Maak Beheerder" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">👑</button>
-                        <button class="btn btn-sm btn-danger" style="width:30px; height:30px; padding:0;" title="Verwijder Lid" onclick="confirmAction('Lid Verwijderen', '${mName} verwijderen uit de groep?', () => kickMember('${mid}', '${mName}'))">✖</button>
+                        <button class="btn btn-sm btn-icon" style="width:30px; height:30px; padding:0; background:#334155" title="Maak Beheerder" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">Maak eigenaar</button>
+                        <button class="btn btn-sm btn-danger" style="width:30px; height:30px; padding:0;" title="Verwijder Lid" onclick="confirmAction('Lid Verwijderen', '${mName} verwijderen uit de groep?', () => kickMember('${mid}', '${mName}'))">Verwijder</button>
                    ` : ''}
                 </div>
             </div>`;
