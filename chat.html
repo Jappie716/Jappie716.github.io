@@ -676,19 +676,62 @@ function renderSidebar() {
 }
 
 async function renderDiscover(list, term) {
-    const myFriends = (await db.collection("users").doc(user.uid).collection("friends").get()).docs.map(d => d.id);
-    db.collection("users").limit(20).get().then(snap => {
+    // 1. Haal eerst je eigen vrienden op, zodat we die kunnen verbergen
+    const friendsSnap = await db.collection("users").doc(user.uid).collection("friends").get();
+    const myFriends = friendsSnap.docs.map(d => d.id);
+    
+    list.innerHTML = ""; // Maak lijst leeg
+
+    let query;
+
+    if (term && term.length > 0) {
+        // ZOEK MODUS: Zoek specifiek in de database naar namen die beginnen met de zoekterm
+        // Let op: Dit is hoofdlettergevoelig in standaard Firebase (dus 'Peter' zoeken werkt, 'peter' soms niet als de naam met P begint)
+        // We proberen hier slim te zoeken door de eerste letter hoofdletter te maken voor de query
+        const searchName = term.charAt(0).toUpperCase() + term.slice(1);
+        
+        query = db.collection("users")
+                  .where('name', '>=', searchName)
+                  .where('name', '<=', searchName + '\uf8ff')
+                  .limit(50);
+    } else {
+        // STANDAARD MODUS: Haal gewoon heel veel gebruikers op (100 ipv 20)
+        // We sorteren nog niet op datum omdat oude gebruikers geen datum hebben en dan zouden verdwijnen.
+        query = db.collection("users").limit(100);
+    }
+
+    query.get().then(snap => {
+        if (snap.empty) {
+            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Niemand gevonden.</div>";
+            return;
+        }
+
+        let count = 0;
         snap.forEach(doc => {
-            if(doc.id === user.uid || myFriends.includes(doc.id)) return;
             const d = doc.data();
-            if(term && !d.name.toLowerCase().includes(term)) return;
+            
+            // FILTERS:
+            // 1. Jezelf niet tonen
+            // 2. Vrienden niet tonen
+            // 3. Als we niet in zoekmodus zitten, filteren we hier alsnog op de kleine letters zoekterm voor de zekerheid
+            if(doc.id === user.uid || myFriends.includes(doc.id)) return;
+            if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
+
+            count++;
             list.innerHTML += `
                 <div class="item">
                     <img src="${d.pic || `https://ui-avatars.com/api/?name=${d.name}`}">
-                    <div class="item-info"><h4>${d.name}</h4></div>
-                    <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}')">Add</button>
+                    <div class="item-info">
+                        <h4>${d.name}</h4>
+                        <p style="font-size:10px; color:gray;">${d.status === 'online' ? '🟢 Online' : '⚪ Offline'}</p>
+                    </div>
+                    <button class="btn btn-sm" onclick="sendFriendRequest('${doc.id}', '${d.name}')">Toevoegen</button>
                 </div>`;
         });
+
+        if (count === 0) {
+            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen nieuwe mensen gevonden.</div>";
+        }
     });
 }
 
@@ -1214,11 +1257,19 @@ async function createGroup() {
     await db.collection("groups").add({ name, owner: user.uid, members, pic: currentBase64 || "" });
     closeModal('groupModal');
 }
+// Update de setup functie zodat nieuwe gebruikers een datum krijgen (handig voor later)
 async function completeSetup() {
     const name = document.getElementById('setupName').value;
     if(!name) return;
     if (checkProfanity(name)) { document.getElementById('setupError').style.display = 'block'; return; }
-    await db.collection("users").doc(user.uid).set({ name, pic: currentBase64 || "", email: user.email });
+    
+    await db.collection("users").doc(user.uid).set({ 
+        name, 
+        pic: currentBase64 || "", 
+        email: user.email,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(), // Tijdstempel toegevoegd
+        status: 'online'
+    });
     location.reload();
 }
 async function saveProfile() {
