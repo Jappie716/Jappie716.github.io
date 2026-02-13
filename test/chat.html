@@ -15,6 +15,7 @@
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
             --sent: #172554; --received: #1e293b; --danger: #ef4444; --system: #334155;
             --online: #22c55e; --offline: #64748b; --reply-bg: #0f172a;
+            --pending: #f59e0b; /* Oranje voor pending */
         }
 
         * { box-sizing: border-box; }
@@ -27,52 +28,34 @@
         a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
         a:hover { border-bottom: 1px solid var(--accent); }
 
-        /* CONTEXT MENU (Rechtermuisknop menu) */
+        /* CONTEXT MENU */
         .context-menu {
-            position: fixed;
-            display: none;
-            flex-direction: column;
-            background: var(--card-bg);
-            border: 1px solid #334155;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-            border-radius: 6px;
-            padding: 5px 0;
-            z-index: 10000;
-            min-width: 160px;
+            position: fixed; display: none; flex-direction: column;
+            background: var(--card-bg); border: 1px solid #334155;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6); border-radius: 6px;
+            padding: 5px 0; z-index: 10000; min-width: 160px;
             animation: fadeIn 0.1s ease;
         }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         .ctx-item {
-            padding: 10px 15px;
-            font-size: 13px;
-            color: #e2e8f0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: background 0.1s;
+            padding: 10px 15px; font-size: 13px; color: #e2e8f0; cursor: pointer;
+            display: flex; align-items: center; gap: 10px; transition: background 0.1s;
         }
         .ctx-item:hover { background: #1e293b; color: white; }
         .ctx-item.danger { color: var(--danger); }
         .ctx-item.danger:hover { background: #331010; }
         .ctx-header {
-            padding: 8px 15px;
-            font-size: 11px;
-            color: var(--text-dim);
-            border-bottom: 1px solid #1e293b;
-            text-transform: uppercase;
-            font-weight: bold;
-            cursor: default;
+            padding: 8px 15px; font-size: 11px; color: var(--text-dim);
+            border-bottom: 1px solid #1e293b; text-transform: uppercase;
+            font-weight: bold; cursor: default;
         }
 
         /* SKELETON LOADING */
         .skeleton {
             background: #1e293b;
             background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 6px;
+            background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px;
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         
@@ -135,6 +118,11 @@
         .status-dot.online { background-color: var(--online); box-shadow: 0 0 5px var(--online); }
         .unread-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
         .unread-badge.show { display: block; }
+        
+        .req-section-header {
+            padding: 8px 15px; font-size: 11px; text-transform: uppercase; font-weight: bold; 
+            color: var(--text-dim); background: #0f172a; border-bottom: 1px solid #1e293b; border-top: 1px solid #1e293b;
+        }
 
         /* MAIN CHAT */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
@@ -142,32 +130,18 @@
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
         
         .msg { 
-            max-width: 75%; 
-            padding: 10px 14px; 
-            border-radius: 12px; 
-            font-size: 14px; 
-            position: relative; 
-            word-wrap: break-word;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            white-space: pre-wrap;
-            display: flex; 
-            flex-direction: column;
-            user-select: text;
+            max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; 
+            position: relative; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;
+            white-space: pre-wrap; display: flex; flex-direction: column; user-select: text;
         }
         .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
         .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
         .msg.system { align-self: center; background: #1e293b88; padding: 5px 12px; border-radius: 20px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px solid #334155; margin: 5px 0; max-width: 90%; }
         
         .quoted-msg {
-            border-left: 3px solid var(--accent);
-            background: rgba(0,0,0,0.2);
-            padding: 5px 8px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-            font-size: 11px;
-            cursor: pointer;
-            display: flex; flex-direction: column;
+            border-left: 3px solid var(--accent); background: rgba(0,0,0,0.2);
+            padding: 5px 8px; border-radius: 4px; margin-bottom: 5px; font-size: 11px;
+            cursor: pointer; display: flex; flex-direction: column;
         }
         .quoted-user { font-weight: bold; color: var(--accent); margin-bottom: 2px; }
         .quoted-text { color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -182,17 +156,13 @@
         .date-divider { display: flex; align-items: center; justify-content: center; margin: 15px 0; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .date-divider span { background: #1e293b; padding: 4px 12px; border-radius: 12px; border: 1px solid #334155; }
 
-        /* OPTIONS BUTTON (3 puntjes) */
         .opts-btn { 
             position: absolute; top: -8px; right: -8px; 
             background: var(--card-bg); border: 1px solid var(--primary); 
             color: var(--primary); border-radius: 50%; width: 22px; height: 22px; 
             display: none; align-items: center; justify-content: center; 
             font-size: 10px; cursor: pointer; z-index: 10;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            font-weight: bold;
-            line-height: 0;
-            padding-bottom: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-weight: bold; line-height: 0; padding-bottom: 2px;
         }
         .msg:hover .opts-btn { display: flex; }
 
@@ -200,15 +170,9 @@
         .chat-input { padding: 15px; background: var(--card-bg); display: flex; flex-direction:column; gap:0; border-top: 1px solid #1e293b; }
         
         #replyPreview {
-            display: none;
-            background: #1e293b;
-            padding: 8px 15px;
-            border-left: 4px solid var(--accent);
-            border-radius: 6px 6px 0 0;
-            margin-bottom: 5px;
-            font-size: 12px;
-            justify-content: space-between;
-            align-items: center;
+            display: none; background: #1e293b; padding: 8px 15px; border-left: 4px solid var(--accent);
+            border-radius: 6px 6px 0 0; margin-bottom: 5px; font-size: 12px;
+            justify-content: space-between; align-items: center;
         }
 
         .typing-indicator { font-size: 11px; color: var(--accent); height: 16px; margin-bottom: 4px; padding-left: 10px; opacity: 0; transition: 0.3s; }
@@ -230,6 +194,7 @@
         .btn-icon { padding: 10px; width: 44px; height: 44px; background: #334155; }
         .btn-outline { background: transparent; border: 1px solid #334155; color: #94a3b8; }
         .btn-outline:hover { border-color: var(--primary); color: white; }
+        .btn-warning { background: var(--pending); color: #020617; }
         
         .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; }
         .settings-icon:hover { transform: rotate(45deg); }
@@ -423,6 +388,7 @@ let typingTimeout = null;
 let msgLimit = 50; 
 let observedUsers = new Set(); 
 let hasLoadedChats = false;
+let sentRequestIds = new Set(); // Opslag voor verzonden verzoeken IDs
 
 // Reply & Edit State
 let replyContext = null; 
@@ -430,7 +396,6 @@ let editMessageId = null;
 
 // INIT
 showSidebarSkeletons(); 
-// Sluit context menu als je ergens anders klikt
 document.addEventListener('click', (e) => {
     if(!e.target.closest('.context-menu')) hideContextMenu();
 });
@@ -468,21 +433,26 @@ function initApp() {
         const data = d.data();
         document.getElementById('myName').innerText = data.name;
         document.getElementById('myAvatar').src = data.pic || `https://ui-avatars.com/api/?name=${data.name}`;
-        
-        // Zorg dat de gebruiker een joinedAt datum heeft (voor sortering Ontdek)
-        if (!data.joinedAt) {
-            db.collection("users").doc(user.uid).update({ 
-                joinedAt: firebase.firestore.FieldValue.serverTimestamp() 
-            });
-        }
+        if (!data.joinedAt) { db.collection("users").doc(user.uid).update({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
     });
     
+    // Listener voor inkomende verzoeken
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
         if(!snap.empty) {
             snap.docChanges().forEach(change => { if(change.type === 'added') notify("Vriendschapsverzoek", "Je hebt een nieuw verzoek!", "", "requests"); });
         }
     });
+
+    // NIEUW: Listener voor uitgaande (verzonden) verzoeken
+    db.collection("users").doc(user.uid).collection("sentRequests").onSnapshot(snap => {
+        sentRequestIds.clear();
+        snap.forEach(doc => sentRequestIds.add(doc.id));
+        // Als we in de Ontdek of Verzoeken tab zitten, herlaad de sidebar
+        const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
+        if (activeTab === 'Ontdek' || activeTab === 'Verzoeken') renderSidebar();
+    });
+
     subscribeToChats();
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
@@ -691,9 +661,6 @@ async function renderDiscover(list, term) {
     
     list.innerHTML = ""; 
 
-    // We halen een grotere lijst op (limit 200) zonder specifieke orderBy anders dan standaard
-    // om te voorkomen dat nieuwe gebruikers zonder 'joinedAt' onzichtbaar zijn.
-    // Client-side filtering is betrouwbaarder voor "iedereen behalve vrienden".
     let query = db.collection("users").limit(200);
 
     query.get().then(snap => {
@@ -705,16 +672,14 @@ async function renderDiscover(list, term) {
         let users = [];
         snap.forEach(doc => {
             const d = doc.data();
-            // Filter jezelf en vrienden eruit
-            if(doc.id === user.uid || myFriends.includes(doc.id)) return;
+            // Filter: Zelf, Vrienden, en reeds Verstuurd
+            if(doc.id === user.uid || myFriends.includes(doc.id) || sentRequestIds.has(doc.id)) return;
             
-            // Filter op zoekterm
             if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
 
             users.push({ id: doc.id, ...d });
         });
 
-        // Sorteer op JoinedAt (Nieuwste eerst), als dat er niet is, onderaan.
         users.sort((a, b) => {
             const tA = a.joinedAt ? a.joinedAt.toMillis() : 0;
             const tB = b.joinedAt ? b.joinedAt.toMillis() : 0;
@@ -727,15 +692,12 @@ async function renderDiscover(list, term) {
         }
 
         users.forEach(u => {
+            // AANGEPAST: Geen status tekst meer
             list.innerHTML += `
                 <div class="item">
                     <img src="${u.pic || `https://ui-avatars.com/api/?name=${u.name}`}">
                     <div class="item-info">
                         <h4>${u.name}</h4>
-                        <p style="font-size:10px; color:gray;">
-                            ${u.status === 'online' ? '🟢 Online' : '⚪ Offline'} • 
-                            ${u.joinedAt ? 'Lid' : 'Speler'}
-                        </p>
                     </div>
                     <button class="btn btn-sm" onclick="sendFriendRequest('${u.id}', '${u.name}')">Toevoegen</button>
                 </div>`;
@@ -747,20 +709,51 @@ async function renderDiscover(list, term) {
 }
 
 function renderRequests(list) {
-    db.collection("users").doc(user.uid).collection("requests").get().then(snap => {
-        if(snap.empty) list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
-        snap.forEach(doc => {
-            const d = doc.data();
-            list.innerHTML += `
-                <div class="item">
-                    <img src="${d.pic}">
-                    <div class="item-info"><h4>${d.name}</h4></div>
-                    <div style="display:flex; gap:5px;">
-                        <button class="btn btn-sm" onclick="acceptFriend('${doc.id}', '${d.name}', '${d.pic}')">Accepteer</button>
-                        <button class="btn btn-sm btn-danger" onclick="declineRequest('${doc.id}')">Afwijzen</button>
-                    </div>
-                </div>`;
-        });
+    // We renderen nu zowel INKOMENDE (ontvangen) als UITGAANDE (verzonden) verzoeken
+    
+    // 1. Inkomende verzoeken ophalen
+    const incomingPromise = db.collection("users").doc(user.uid).collection("requests").get();
+    // 2. Uitgaande verzoeken ophalen
+    const outgoingPromise = db.collection("users").doc(user.uid).collection("sentRequests").get();
+
+    Promise.all([incomingPromise, outgoingPromise]).then(([inSnap, outSnap]) => {
+        list.innerHTML = "";
+        
+        // --- INKOMEND ---
+        if(!inSnap.empty) {
+            list.innerHTML += `<div class="req-section-header">Ontvangen</div>`;
+            inSnap.forEach(doc => {
+                const d = doc.data();
+                list.innerHTML += `
+                    <div class="item">
+                        <img src="${d.pic || 'https://ui-avatars.com/api/?name=Req'}">
+                        <div class="item-info"><h4>${d.name}</h4></div>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn btn-sm" onclick="acceptFriend('${doc.id}', '${d.name}', '${d.pic}')">Accepteer</button>
+                            <button class="btn btn-sm btn-danger" onclick="declineRequest('${doc.id}')">Afwijzen</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // --- VERZONDEN ---
+        // AANGEPAST: Oranje klokje icoon toegevoegd
+        if(!outSnap.empty) {
+            list.innerHTML += `<div class="req-section-header" style="color:var(--pending)">Verzonden 🕒</div>`;
+            outSnap.forEach(doc => {
+                const d = doc.data();
+                list.innerHTML += `
+                    <div class="item">
+                        <img src="https://ui-avatars.com/api/?name=${d.name}&background=f59e0b&color=fff">
+                        <div class="item-info"><h4>${d.name}</h4><p style="color:var(--pending); font-size:10px;">In afwachting...</p></div>
+                        <button class="btn btn-sm btn-danger" onclick="cancelSentRequest('${doc.id}')">Annuleren</button>
+                    </div>`;
+            });
+        }
+
+        if(inSnap.empty && outSnap.empty) {
+            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
+        }
     });
 }
 
@@ -920,7 +913,6 @@ function renderMessagesFromCache() {
         if(m.type !== 'system') {
             const safeText = m.text ? encodeURIComponent(m.text) : "";
             const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            // AANGEPAST: Duidelijkere "Opties" knop (horizontale puntjes ipv verticaal) en titel
             optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">•••</div>`;
             contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
         }
@@ -945,6 +937,14 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
     const menu = document.getElementById('contextMenu');
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
+    
+    // AANGEPAST: Kopieer knop toegevoegd voor iedereen
+    if (text) {
+        content.innerHTML += `
+        <div class="ctx-item" onclick="copyText(decodeURIComponent('${encodedText}')); hideContextMenu()">
+            <span>📋</span> Kopiëren
+        </div>`;
+    }
 
     // 1. Antwoorden (Iedereen)
     content.innerHTML += `
@@ -980,6 +980,15 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
 
 function hideContextMenu() {
     document.getElementById('contextMenu').style.display = 'none';
+}
+
+// NIEUW: Kopieer Functie
+function copyText(txt) {
+    navigator.clipboard.writeText(txt).then(() => {
+        notify("Gekopieerd", "Bericht gekopieerd naar klembord.");
+    }).catch(err => {
+        console.error('Copy failed', err);
+    });
 }
 
 function confirmDelete(mid) {
@@ -1302,12 +1311,30 @@ function openGroupModal() {
         snap.forEach(doc => { list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:5px;"><span>${doc.data().name}</span><input type="checkbox" class="invite-chk" value="${doc.id}"></div>`; });
     });
 }
-async function sendFriendRequest(id, name) { const me = (await db.collection("users").doc(user.uid).get()).data(); await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" }); notify("Verzonden", `Verzoek naar ${name}`); }
+async function sendFriendRequest(id, name) { 
+    const me = (await db.collection("users").doc(user.uid).get()).data(); 
+    // Stuur verzoek naar ander
+    await db.collection("users").doc(id).collection("requests").doc(user.uid).set({ name: me.name, pic: me.pic || "" }); 
+    // AANGEPAST: Sla op in eigen verzonden lijst
+    await db.collection("users").doc(user.uid).collection("sentRequests").doc(id).set({ timestamp: firebase.firestore.FieldValue.serverTimestamp(), name: name });
+    notify("Verzonden", `Verzoek naar ${name}`); 
+}
+// NIEUW: Annuleer verzoek
+async function cancelSentRequest(id) {
+    if(!confirm("Verzoek intrekken?")) return;
+    await db.collection("users").doc(id).collection("requests").doc(user.uid).delete();
+    await db.collection("users").doc(user.uid).collection("sentRequests").doc(id).delete();
+    notify("Geannuleerd", "Vriendschapsverzoek ingetrokken");
+}
+
 async function acceptFriend(id, name, pic) {
     const me = (await db.collection("users").doc(user.uid).get()).data();
     await db.collection("users").doc(user.uid).collection("friends").doc(id).set({ name, pic });
     await db.collection("users").doc(id).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
+    // Verwijder uit requests
     await db.collection("users").doc(user.uid).collection("requests").doc(id).delete();
+    // Verwijder ook uit sentRequests van de ander (voor netheid)
+    await db.collection("users").doc(id).collection("sentRequests").doc(user.uid).delete();
     location.reload();
 }
 async function declineRequest(id) { if(!confirm("Verzoek afwijzen?")) return; await db.collection("users").doc(user.uid).collection("requests").doc(id).delete(); }
