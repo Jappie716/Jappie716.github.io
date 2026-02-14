@@ -15,7 +15,7 @@
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
             --sent: #172554; --received: #1e293b; --danger: #ef4444; --system: #334155;
             --online: #22c55e; --offline: #64748b; --reply-bg: #0f172a;
-            --pending: #f59e0b; /* Oranje voor pending */
+            --pending: #f59e0b;
         }
 
         * { box-sizing: border-box; }
@@ -234,6 +234,18 @@
     </div>
 </div>
 
+<div id="reportModal" class="modal" style="z-index: 6000;">
+    <div class="modal-box" style="width:100%; max-width:600px; padding:0; background: #0f172a; overflow:hidden;">
+        <div style="padding:10px; display:flex; justify-content:space-between; align-items:center; background:#1e293b;">
+            <span style="font-weight:bold; margin-left:10px;">Bericht Rapporteren</span>
+            <button class="btn btn-sm btn-danger" onclick="closeModal('reportModal')">Sluiten</button>
+        </div>
+        <div style="width:100%; height:600px; overflow-y:auto;">
+            <iframe data-tally-src="https://tally.so/embed/7R2rP2?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" loading="lazy" width="100%" height="607" frameborder="0" marginheight="0" marginwidth="0" title="Bericht rapporteren"></iframe>
+        </div>
+    </div>
+</div>
+
 <div id="setupOverlay" style="position:fixed; inset:0; background:var(--bg); z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center;">
     <div class="modal-box" style="text-align:center;">
         <h2>Welkom!</h2>
@@ -369,6 +381,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
+// ADMIN CONFIG
+const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
+
 const badWords = ["kanker", "hoer", "slet", "tyfus", "tering", "kut", "neuk", "lul", "pik", "verdomme", "godver", "nigger", "neger", "hitler", "nazi", "kkr", "mongool", "autist", "bitch", "fuck", "asshole", "klootzak"];
 function checkProfanity(text) { if(!text) return false; return badWords.some(word => text.toLowerCase().includes(word)); }
 
@@ -407,6 +422,10 @@ auth.onAuthStateChanged(u => {
     if (u) { user = u; checkSetup(); startPresenceSystem(); }
     else { location.href = 'index.html'; }
 });
+
+function isAdmin() {
+    return user && ADMIN_EMAILS.includes(user.email);
+}
 
 function startPresenceSystem() {
     updatePresence('online');
@@ -937,6 +956,7 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
     
+    // Kopiëren
     if (text) {
         content.innerHTML += `
         <div class="ctx-item" onclick="copyText(decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -944,23 +964,44 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // 1. Antwoorden (Iedereen)
+    // Antwoorden (Iedereen)
     content.innerHTML += `
         <div class="ctx-item" onclick="startReply('${mid}', '${uName}', decodeURIComponent('${encodedText || ""}')); hideContextMenu()">
             <span>↩</span> Antwoorden
         </div>`;
 
-    // 2. Opties voor eigen berichten
-    if (uid === user.uid) {
-        if(text) { 
+    // --- NIEUWE LOGICA ---
+    
+    const isMe = uid === user.uid;
+    const admin = isAdmin();
+
+    // Als het bericht van IEMAND ANDERS is: Rapporteer optie
+    if (!isMe) {
+        content.innerHTML += `
+        <div class="ctx-item" onclick="openReportModal(); hideContextMenu()">
+            <span>🚩</span> Rapporteren
+        </div>`;
+    }
+
+    // DELETE LOGICA: Mag verwijderen als het bericht van mij is OF als ik admin ben
+    if (isMe || admin) {
+        // Edit alleen voor jezelf
+        if (isMe && text) { 
             content.innerHTML += `
             <div class="ctx-item" onclick="startEdit('${mid}', decodeURIComponent('${encodedText}')); hideContextMenu()">
                 <span>✎</span> Bewerken
             </div>`;
         }
+        
+        // Verwijder label bepalen
+        let deleteLabel = "Verwijderen";
+        if (!isMe && admin) {
+            deleteLabel = "Verwijderen (Admin)";
+        }
+
         content.innerHTML += `
         <div class="ctx-item danger" onclick="confirmDelete('${mid}'); hideContextMenu()">
-            <span>🗑</span> Verwijderen
+            <span>🗑</span> ${deleteLabel}
         </div>`;
     }
 
@@ -974,6 +1015,12 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
 
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
+}
+
+function openReportModal() {
+    document.getElementById('reportModal').style.display = 'flex';
+    // Herlaad Tally embeds als dat nodig is
+    if(typeof Tally !== 'undefined') Tally.loadEmbeds();
 }
 
 function hideContextMenu() {
@@ -1196,7 +1243,7 @@ async function openChatSettings() {
                 <div style="display:flex; gap:5px;">
                    ${isOwner && mid !== user.uid ? `
                         <button class="btn btn-sm btn-icon" style="width:30px; height:30px; padding:0; background:#334155" title="Maak Beheerder" onclick="confirmAction('Beheerder maken', 'Eigenaar wijzigen?', () => transferOwner('${mid}', '${mName}'))">👑</button>
-                        <button class="btn btn-sm btn-danger" style="width:30px; height:30px; padding:0;" title="Verwijder Lid" onclick="confirmAction('Lid Verwijderen', '${mName} verwijderen uit de groep?', () => kickMember('${mid}', '${mName}'))">✖</button>
+                        <button class="btn btn-sm btn-danger" style="width:30px; height:30px; padding:0;" title="Verwijder Lid" onclick="confirmAction('Lid Verwijderen', '${mName} verwijderen uit de groep?', () => kickMember('${mid}', '${mName}'))">🗑️</button>
                    ` : ''}
                 </div>
             </div>`;
@@ -1388,5 +1435,6 @@ async function declineRequest(senderId) {
     renderSidebar();
 }
 </script>
+<script>var d=document,w="https://tally.so/widgets/embed.js",v=function(){"undefined"!=typeof Tally?Tally.loadEmbeds():d.querySelectorAll("iframe[data-tally-src]:not([src])").forEach((function(e){e.src=e.dataset.tallySrc}))};if("undefined"!=typeof Tally)v();else if(d.querySelector('script[src="'+w+'"]')==null){var s=d.createElement("script");s.src=w,s.onload=v,s.onerror=v,d.body.appendChild(s);}</script>
 </body>
 </html>
