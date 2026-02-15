@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <title>Game Paradise - Chat</title>
     <link rel="icon" type="image/png" href="/icon/favicon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -20,10 +21,17 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { 
-            margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; 
-            background: var(--bg); color: white; height: 100vh; 
-            display: flex; overflow: hidden; 
+        
+        html, body {
+            margin: 0; padding: 0; width: 100%; 
+            /* Fix voor Safari hoogte problemen */
+            height: 100vh; 
+            height: 100dvh; 
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: var(--bg); color: white; 
+            display: flex;
+            overscroll-behavior: none; /* Voorkomt 'bouncen' op iOS */
         }
 
         a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
@@ -132,7 +140,7 @@
 
         /* MAIN CHAT */
         .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); width: 100%; }
-        .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; gap: 10px; }
+        .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; gap: 10px; flex-shrink: 0; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
         
         .msg { 
@@ -173,7 +181,7 @@
         .msg:hover .opts-btn { display: flex; }
 
         /* INPUT AREA */
-        .chat-input { padding: 15px; background: var(--card-bg); display: flex; flex-direction:column; gap:0; border-top: 1px solid #1e293b; }
+        .chat-input { padding: 15px; background: var(--card-bg); display: flex; flex-direction:column; gap:0; border-top: 1px solid #1e293b; flex-shrink: 0; }
         
         #replyPreview {
             display: none; background: #1e293b; padding: 8px 15px; border-left: 4px solid var(--accent);
@@ -334,7 +342,11 @@
         </div>
         
         <div class="chat-messages" id="chatMessages">
-            <div style="text-align:center; color:gray; margin-top:50px;">Selecteer een chat links...</div>
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center; opacity:0.8;">
+                <img src="https://jappie716.github.io/icon/favicon.png" style="width:100px; height:100px; margin-bottom:15px; border-radius:15px; box-shadow:0 0 20px rgba(37, 99, 235, 0.3);">
+                <h2 style="color:white; margin:0 0 10px 0;">Game Paradise chat</h2>
+                <p style="color:#94a3b8; margin:0; max-width:80%;">Welkom bij Game Paradise chat hier kan je gratis unblocked chatten!</p>
+            </div>
         </div>
         <div id="loadingOld">Berichten laden...</div>
 
