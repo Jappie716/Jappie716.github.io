@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <title>Game Paradise - Chat</title>
     <link rel="icon" type="image/png" href="/icon/favicon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -18,7 +19,7 @@
             --pending: #f59e0b;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; 
             background: var(--bg); color: white; height: 100vh; 
@@ -80,10 +81,15 @@
         }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-        .container { display: flex; width: 100%; height: 100%; }
+        .container { display: flex; width: 100%; height: 100%; position: relative; }
 
         /* SIDEBAR */
-        .sidebar { width: 320px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        .sidebar { 
+            width: 320px; background: var(--sidebar-bg); border-right: 1px solid #1e293b; 
+            display: flex; flex-direction: column; z-index: 50; transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+        
         .sidebar-header { padding: 15px; background: var(--card-bg); display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #1e293b; }
         .sidebar-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; cursor: pointer; border: 2px solid var(--primary); }
         
@@ -125,8 +131,8 @@
         }
 
         /* MAIN CHAT */
-        .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); }
-        .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; }
+        .main-chat { flex: 1; display: flex; flex-direction: column; background: radial-gradient(circle at center, #0f172a, #020617); width: 100%; }
+        .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; gap: 10px; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
         
         .msg { 
@@ -196,7 +202,7 @@
         .btn-outline:hover { border-color: var(--primary); color: white; }
         .btn-warning { background: var(--pending); color: #020617; }
         
-        .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; }
+        .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; margin-left: auto; }
         .settings-icon:hover { transform: rotate(45deg); }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
@@ -213,11 +219,45 @@
 
         #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
         .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
+
+        /* --- MOBILE RESPONSIVE CSS --- */
+        /* Menu Button (Hidden on Desktop) */
+        .menu-btn {
+            display: none; background: none; border: none; 
+            color: white; font-size: 24px; cursor: pointer; padding: 0;
+            line-height: 1; margin-right: 5px;
+        }
+
+        /* Overlay */
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+            z-index: 40; display: none; backdrop-filter: blur(2px);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                transform: translateX(-100%);
+                width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            }
+            .sidebar.active { transform: translateX(0); }
+            
+            .menu-btn { display: block; }
+            .sidebar-overlay.active { display: block; }
+            
+            .chat-header { padding: 10px 15px; }
+            .chat-messages { padding: 15px; }
+            .msg { max-width: 85%; }
+            
+            .modal-box { padding: 20px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
+
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <div id="contextMenu" class="context-menu">
     <div class="ctx-header">Opties</div>
@@ -259,7 +299,7 @@
 </div>
 
 <div class="container">
-    <div class="sidebar">
+    <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <img id="myAvatar" src="" onclick="openProfile()">
             <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
@@ -284,6 +324,7 @@
 
     <div class="main-chat">
         <div class="chat-header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:12px; display:none; object-fit:cover;">
             <div style="flex:1">
                 <h3 id="activeChatName" style="margin:0; font-size:16px;">Game Paradise</h3>
@@ -403,11 +444,25 @@ let typingTimeout = null;
 let msgLimit = 50; 
 let observedUsers = new Set(); 
 let hasLoadedChats = false;
-let sentRequestIds = new Set(); // Opslag voor verzonden verzoeken IDs
+let sentRequestIds = new Set(); 
 
 // Reply & Edit State
 let replyContext = null; 
 let editMessageId = null; 
+
+// --- MOBIELE MENU FUNCTIE ---
+function toggleSidebar(forceOpen = null) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (forceOpen === false) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+    } else {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+    }
+}
 
 // INIT
 showSidebarSkeletons(); 
@@ -789,6 +844,7 @@ function getFormattedDate(date) {
 
 // CHAT OPENING
 async function openChat(id, name, pic, type) {
+    toggleSidebar(false); // Sluit menu op mobiel
     activeChatId = id; chatType = type;
     msgLimit = 50; 
     
