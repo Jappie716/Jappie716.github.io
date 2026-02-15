@@ -1294,11 +1294,17 @@ async function openChatSettings() {
     modal.style.display = 'flex';
     content.innerHTML = "<h3>Instellingen</h3>Laden...";
 
+    // Nieuwe Media knop definities (donkerdere achtergrond voor witte tekst)
+    const mediaBtnPrivate = `<button class="btn" style="flex:1; background:#475569; color:white;" onclick="openMediaGallery()">Media</button>`;
+    const mediaBtnFull = `<button class="btn full-btn" style="background:#475569; color:white; margin-bottom:5px;" onclick="openMediaGallery()">Media</button>`;
+
     if (chatType === 'private') {
         content.innerHTML = `
             <h3>${document.getElementById('activeChatName').innerText}</h3>
-            <button class="btn full-btn" style="margin-bottom:5px; background:var(--accent); color:#020617" onclick="openMediaGallery()">🖼️ Bekijk Media</button>
-            <button class="btn btn-danger" onclick="confirmAction('Vriend verwijderen', 'Weet je zeker?', removeFriend)">Verwijder Vriend</button>
+            <div style="display:flex; gap:10px; margin-bottom: 5px;">
+                ${mediaBtnPrivate}
+                <button class="btn btn-danger" style="flex:1;" onclick="confirmAction('Vriend verwijderen', 'Weet je zeker?', removeFriend)">Verwijder Vriend</button>
+            </div>
             <button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>
         `;
     } else if (chatType === 'group') {
@@ -1309,9 +1315,6 @@ async function openChatSettings() {
         
         let html = `<h3>${gData.name}</h3>`;
         
-        // Media knop toegevoegd
-        html += `<button class="btn full-btn" style="margin-bottom:15px; background:var(--accent); color:#020617" onclick="openMediaGallery()">🖼️ Bekijk Media</button>`;
-
         if(isOwner) {
             html += `
             <div style="margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
@@ -1348,10 +1351,13 @@ async function openChatSettings() {
             </div>`;
         }
         html += `</div>`;
+        
         if(isOwner) {
+            html += mediaBtnFull; // Boven Lid Toevoegen
             html += `<button class="btn full-btn" onclick="openAddMemberModal()">+ Lid Toevoegen</button>`;
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Groep Verwijderen', 'Zeker weten?', deleteGroup)">Groep Verwijderen</button>`;
         } else {
+            html += mediaBtnFull; // Boven Groep Verlaten
             html += `<button class="btn btn-danger full-btn" onclick="confirmAction('Verlaten', 'Groep verlaten?', leaveGroup)">Groep Verlaten</button>`;
         }
         html += `<button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>`;
