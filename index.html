@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Game Paradise - Home</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" type="image/png" href="/icon/favicon.png">
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -20,7 +20,7 @@
             --text-dim: #94a3b8;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
             background: var(--bg); color: white;
@@ -31,7 +31,7 @@
         .sidebar {
             width: 260px; min-width: 260px; background: var(--sidebar-bg);
             padding: 20px; display: flex; flex-direction: column; border-right: 1px solid #1e293b;
-            height: 100vh;
+            height: 100vh; z-index: 50; transition: transform 0.3s ease;
         }
         
         .logo { font-size: 22px; font-weight: bold; color: var(--accent); margin-bottom: 25px; text-align: center; flex-shrink: 0; }
@@ -64,15 +64,29 @@
         }
 
         /* --- MAIN CONTENT --- */
-        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
+        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); position: relative; }
         .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        
+        .title-container { display: flex; align-items: center; gap: 15px; }
         .section-title { font-size: 24px; margin: 0; color: white; }
+        
+        /* Menu Button (Hidden on Desktop) */
+        .menu-btn {
+            display: none; background: none; border: none; 
+            color: white; font-size: 24px; cursor: pointer; padding: 0;
+        }
 
-        .auth-btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; }
+        /* Overlay for Mobile Sidebar */
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+            z-index: 40; display: none; backdrop-filter: blur(2px);
+        }
+
+        .auth-btn { background: var(--primary); border: none; padding: 10px 18px; border-radius: 10px; color: white; cursor: pointer; font-weight: bold; white-space: nowrap; }
         .admin-btn { background: #1e293b; margin-right: 10px; border: 1px solid #334155; color: white; }
 
         /* --- GAME GRID --- */
-        .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; }
         
         .game-card {
             background: var(--card-bg); border-radius: 15px; overflow: hidden;
@@ -101,9 +115,9 @@
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
         /* --- MODALS & TOASTS --- */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 10000; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 10000; padding: 20px; }
         .modal-box { 
-            background: #0f172a; padding: 30px; border-radius: 20px; width: 400px; 
+            background: #0f172a; padding: 30px; border-radius: 20px; width: 400px; max-width: 100%;
             text-align: center; border: 1px solid #1e293b; overflow-x: hidden;
         }
         .modal-box input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; background: #020617; color: white; }
@@ -113,16 +127,38 @@
         .toast { background: #1e293b; color: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-        /* UPDATE ITEM STYLE */
         .update-item { text-align: left; background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #334155; }
         .update-date { font-size: 11px; color: var(--accent); margin-bottom: 5px; display:block; }
+
+        /* --- MOBILE RESPONSIVE CSS --- */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                transform: translateX(-100%);
+                width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            }
+            .sidebar.active { transform: translateX(0); }
+            
+            .main { padding: 20px 15px; }
+            .menu-btn { display: block; }
+            .sidebar-overlay.active { display: block; }
+            
+            .game-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+            .section-title { font-size: 20px; }
+            
+            .topbar { gap: 10px; }
+            .auth-btn { padding: 8px 12px; font-size: 14px; }
+            .admin-btn { display: none !important; } /* Hide admin on mobile to save space */
+        }
     </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
 
-<div class="sidebar">
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<div id="sidebar" class="sidebar">
   <div class="logo">🎮 Game Paradise</div>
   
   <div class="search-box">
@@ -130,24 +166,23 @@
         id="searchInput" 
         type="search" 
         placeholder="Zoek games..." 
-        readonly 
-        onfocus="this.removeAttribute('readonly');"
+        oninput="renderGames()"
     >
   </div>
 
   <div class="sidebar-menu">
-      <div class="category-btn active" data-cat="all" onclick="setFilter('all', this)">Alle games</div>
-      <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this)">⭐ Favorieten</div>
+      <div class="category-btn active" data-cat="all" onclick="setFilter('all', this); toggleSidebar(false)">Alle games</div>
+      <div class="category-btn" data-cat="favorites" onclick="setFilter('favorites', this); toggleSidebar(false)">⭐ Favorieten</div>
       <div style="height: 1px; background: #1e293b; margin: 10px 0;"></div>
       <div id="categoryList"></div>
   </div>
 
   <div class="sidebar-footer">
-      <div class="category-btn" onclick="openUpdatesModal()" style="border: 1px solid #eab308; color: #facc15; justify-content: center;">
+      <div class="category-btn" onclick="openUpdatesModal(); toggleSidebar(false)" style="border: 1px solid #eab308; color: #facc15; justify-content: center;">
          Updates
       </div>
 
-      <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'" style="border: 1px solid #10b981; color: #34d399; justify-content: center;">
+      <div class="category-btn" onclick="document.getElementById('supportModal').style.display='flex'; toggleSidebar(false)" style="border: 1px solid #10b981; color: #34d399; justify-content: center;">
          Support
       </div>
 
@@ -160,7 +195,10 @@
 
 <div class="main">
     <div class="topbar">
-        <h2 id="sectionTitle" class="section-title">Alle Games</h2>
+        <div class="title-container">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <h2 id="sectionTitle" class="section-title">Alle Games</h2>
+        </div>
         <div>
             <button id="adminBtn" class="auth-btn admin-btn" style="display:none" onclick="location.href='admin.html'">Admin</button>
             <button id="authBtn" class="auth-btn">Inloggen</button>
@@ -252,6 +290,20 @@ let favorites = {};
 let allGames = {};
 let currentFilter = "all";
 let gamesLoading = true;
+
+// --- MOBIELE MENU FUNCTIE ---
+function toggleSidebar(forceOpen = null) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (forceOpen === false) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+    } else {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+    }
+}
 
 function notify(msg, type = 'success') {
     const container = document.getElementById('toast-container');
@@ -368,7 +420,10 @@ function loadCategories() {
             const btn = document.createElement("div");
             btn.className = "category-btn";
             btn.innerHTML = ` ${doc.data().name}`;
-            btn.onclick = () => setFilter(doc.id, btn);
+            btn.onclick = () => {
+                setFilter(doc.id, btn);
+                toggleSidebar(false); // Sluit menu op mobiel na klik
+            };
             list.appendChild(btn);
         });
     });
@@ -463,7 +518,9 @@ function renderGames() {
     });
 }
 
+// Event listener aanpassen zodat games ook updaten bij typen (deze bestond al, maar even expliciet houden)
 document.getElementById("searchInput").oninput = renderGames;
+
 loadGames();
 loadCategories();
 
