@@ -1,0 +1,7 @@
+{
+  "name": "Game Paradise Chat",
+  "description": "A feature-rich chat application with real-time messaging, group chats, friend requests, and status management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
