@@ -15,7 +15,7 @@
             --primary: #2563eb; --accent: #60a5fa; --text-dim: #94a3b8;
             --sent: #172554; --received: #1e293b; --danger: #ef4444; --system: #334155;
             --online: #22c55e; --offline: #64748b; --reply-bg: #0f172a;
-            --pending: #f59e0b;
+            --pending: #f59e0b; --busy: #ef4444;
         }
 
         * { box-sizing: border-box; }
@@ -108,6 +108,8 @@
         
         .status-wrapper { position: relative; margin-right: 12px; width: 40px; height: 40px; }
         .status-wrapper img { margin-right: 0; width: 100%; height: 100%; }
+        
+        /* STATUS DOTS */
         .status-dot {
             width: 12px; height: 12px; border-radius: 50%; 
             position: absolute; bottom: 0; right: 0;
@@ -116,6 +118,9 @@
             z-index: 5;
         }
         .status-dot.online { background-color: var(--online); box-shadow: 0 0 5px var(--online); }
+        .status-dot.busy { background-color: var(--busy); box-shadow: 0 0 2px var(--busy); }
+        .status-dot.away { background-color: var(--pending); box-shadow: 0 0 2px var(--pending); }
+
         .unread-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
         .unread-badge.show { display: block; }
         
@@ -206,6 +211,14 @@
         .member-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .full-btn { width: 100%; margin-top: 5px; }
 
+        /* STATUS SELECT */
+        #statusSelect {
+            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+            font-size: 11px; border-radius: 4px; padding: 2px 4px; 
+            margin-top: 4px; width: 100%; cursor: pointer; outline: none;
+        }
+        #statusSelect option { background: #0f172a; color: white; }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
@@ -262,7 +275,15 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <img id="myAvatar" src="" onclick="openProfile()">
-            <div style="flex:1; margin-left:10px;"><b id="myName">...</b></div>
+            <div style="flex:1; margin-left:10px; display:flex; flex-direction:column; justify-content:center;">
+                <b id="myName">...</b>
+                <select id="statusSelect" onchange="manualStatusChange(this.value)">
+                    <option value="online">🟢 Online</option>
+                    <option value="away">🟠 Afwezig</option>
+                    <option value="busy">🔴 Niet storen</option>
+                    <option value="offline">⚫ Onzichtbaar</option>
+                </select>
+            </div>
             <button class="btn btn-sm" onclick="openGroupModal()">+ Groep</button>
         </div>
         <div class="search-box">
@@ -403,11 +424,12 @@ let typingTimeout = null;
 let msgLimit = 50; 
 let observedUsers = new Set(); 
 let hasLoadedChats = false;
-let sentRequestIds = new Set(); // Opslag voor verzonden verzoeken IDs
+let sentRequestIds = new Set(); 
 
 // Reply & Edit State
 let replyContext = null; 
 let editMessageId = null; 
+let userManualStatus = 'online'; // Default
 
 // INIT
 showSidebarSkeletons(); 
@@ -427,21 +449,42 @@ function isAdmin() {
     return user && ADMIN_EMAILS.includes(user.email);
 }
 
+// ---- PRESENCE & STATUS SYSTEM ----
+function manualStatusChange(val) {
+    userManualStatus = val;
+    updatePresence(val);
+}
+
 function startPresenceSystem() {
-    updatePresence('online');
-    setInterval(() => { updatePresence('online'); }, 60000);
+    // Zet initieel op online, of wat in de select staat (default online)
+    updatePresence(userManualStatus);
+    
+    // Elke minuut de timestamp updaten, maar status behouden
+    setInterval(() => { 
+        updatePresence(userManualStatus); 
+    }, 60000);
+    
     window.addEventListener('beforeunload', () => {
         db.collection("users").doc(user.uid).update({ status: 'offline', lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
         if(activeChatId) updateTyping(false);
     });
 }
-function updatePresence(status) { if(user) db.collection("users").doc(user.uid).update({ status: status, lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); }
+function updatePresence(status) { 
+    if(user) {
+        db.collection("users").doc(user.uid).update({ 
+            status: status, 
+            lastSeen: firebase.firestore.FieldValue.serverTimestamp() 
+        }); 
+    }
+}
+// ----------------------------------
 
 async function checkSetup() {
     const doc = await db.collection("users").doc(user.uid).get();
     if (!doc.exists || !doc.data().name) { document.getElementById('setupOverlay').style.display = 'flex'; }
     else {
         document.getElementById('setupOverlay').style.display = 'none';
+        // Zet dropdown op de laatst bekende status als we die zouden opslaan, nu default online
         if (Notification.permission === "default") Notification.requestPermission();
         initApp();
     }
@@ -455,7 +498,6 @@ function initApp() {
         if (!data.joinedAt) { db.collection("users").doc(user.uid).update({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
     });
     
-    // Listener voor inkomende verzoeken
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
         if(!snap.empty) {
@@ -463,11 +505,9 @@ function initApp() {
         }
     });
 
-    // NIEUW: Listener voor uitgaande (verzonden) verzoeken
     db.collection("users").doc(user.uid).collection("sentRequests").onSnapshot(snap => {
         sentRequestIds.clear();
         snap.forEach(doc => sentRequestIds.add(doc.id));
-        // Als we in de Ontdek of Verzoeken tab zitten, herlaad de sidebar
         const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
         if (activeTab === 'Ontdek' || activeTab === 'Verzoeken') renderSidebar();
     });
@@ -557,17 +597,32 @@ async function subscribeToChats() {
             const data = s.data();
             const now = Date.now();
             const lastSeen = data.lastSeen ? data.lastSeen.toMillis() : 0;
-            const isOnline = (now - lastSeen) < 120000; 
-            
+            // Status bepalen
+            let status = 'offline';
+            // Als er recent activiteit was OF de gebruiker heeft handmatig een status (die niet offline is)
+            if ((now - lastSeen) < 180000 || (data.status && data.status !== 'offline')) {
+                 status = data.status || 'online';
+                 if(status === 'offline') status = 'offline'; // Forceer offline als expliciet gezet
+                 // Als time-out is geweest (3 min), dwing offline af tenzij expliciet iets anders
+                 if ((now - lastSeen) > 180000) status = 'offline'; 
+            }
+
             if(chatDataMap.has(doc.id)) {
                 const c = chatDataMap.get(doc.id);
-                c.name = data.name; c.online = isOnline; c.pic = data.pic || c.pic;
+                c.name = data.name; 
+                c.status = status; // Store string status instead of bool
+                c.pic = data.pic || c.pic;
                 chatDataMap.set(doc.id, c); renderSidebar();
                 
                 if(activeChatId === doc.id) {
-                    document.getElementById('activeStatus').style.display = 'block';
-                    document.getElementById('activeStatus').innerText = isOnline ? 'Online' : 'Offline';
-                    document.getElementById('activeStatus').style.color = isOnline ? 'var(--online)' : 'gray';
+                    const statusEl = document.getElementById('activeStatus');
+                    statusEl.style.display = 'block';
+                    
+                    if(status === 'online') { statusEl.innerText = 'Online'; statusEl.style.color = 'var(--online)'; }
+                    else if(status === 'busy') { statusEl.innerText = 'Niet storen'; statusEl.style.color = 'var(--busy)'; }
+                    else if(status === 'away') { statusEl.innerText = 'Afwezig'; statusEl.style.color = 'var(--pending)'; }
+                    else { statusEl.innerText = 'Offline'; statusEl.style.color = 'gray'; }
+
                     document.getElementById('activeChatName').innerText = c.name;
                     document.getElementById('activeChatImg').src = c.pic;
                 }
@@ -585,7 +640,7 @@ async function subscribeToChats() {
 function setupListener(id, name, pic, type, ref) {
     if(activeListeners.has(id)) return;
     activeListeners.add(id);
-    if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, online: false });
+    if(!chatDataMap.has(id)) chatDataMap.set(id, { id, name, pic, type, timestamp: 0, unread: false, status: 'offline' });
 
     if(type === 'group') {
         db.collection("groups").doc(id).onSnapshot(snap => {
@@ -659,9 +714,18 @@ function renderSidebar() {
             item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
             item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
             
+            // STATUS DOT LOGIC
+            let dotClass = '';
+            if(c.type === 'private') {
+                if(c.status === 'online') dotClass = 'online';
+                else if(c.status === 'busy') dotClass = 'busy';
+                else if(c.status === 'away') dotClass = 'away';
+                else dotClass = ''; // hidden/offline
+            }
+
             let avatarHtml = `<div class="status-wrapper">
                     <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
-                    ${c.type === 'private' ? `<div class="status-dot ${c.online?'online':''}"></div>` : ''}
+                    ${c.type === 'private' && dotClass ? `<div class="status-dot ${dotClass}"></div>` : ''}
                 </div>`;
 
             item.innerHTML = `
@@ -691,11 +755,8 @@ async function renderDiscover(list, term) {
         let users = [];
         snap.forEach(doc => {
             const d = doc.data();
-            // Filter: Zelf, Vrienden, en reeds Verstuurd
             if(doc.id === user.uid || myFriends.includes(doc.id) || sentRequestIds.has(doc.id)) return;
-            
             if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
-
             users.push({ id: doc.id, ...d });
         });
 
@@ -728,17 +789,12 @@ async function renderDiscover(list, term) {
 }
 
 function renderRequests(list) {
-    // We renderen nu zowel INKOMENDE (ontvangen) als UITGAANDE (verzonden) verzoeken
-    
-    // 1. Inkomende verzoeken ophalen
     const incomingPromise = db.collection("users").doc(user.uid).collection("requests").get();
-    // 2. Uitgaande verzoeken ophalen
     const outgoingPromise = db.collection("users").doc(user.uid).collection("sentRequests").get();
 
     Promise.all([incomingPromise, outgoingPromise]).then(([inSnap, outSnap]) => {
         list.innerHTML = "";
         
-        // --- INKOMEND ---
         if(!inSnap.empty) {
             list.innerHTML += `<div class="req-section-header">Ontvangen</div>`;
             inSnap.forEach(doc => {
@@ -755,7 +811,6 @@ function renderRequests(list) {
             });
         }
 
-        // --- VERZONDEN ---
         if(!outSnap.empty) {
             list.innerHTML += `<div class="req-section-header" style="color:var(--pending)">Verzonden 🕒</div>`;
             outSnap.forEach(doc => {
@@ -792,7 +847,6 @@ async function openChat(id, name, pic, type) {
     activeChatId = id; chatType = type;
     msgLimit = 50; 
     
-    // Reset inputs
     cancelReplyOrEdit();
 
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
@@ -808,10 +862,12 @@ async function openChat(id, name, pic, type) {
     
     const statusEl = document.getElementById('activeStatus');
     if(type === 'private' && chatDataMap.has(id)) {
-        const isOnline = chatDataMap.get(id).online;
+        const c = chatDataMap.get(id);
         statusEl.style.display = 'block';
-        statusEl.innerText = isOnline ? 'Online' : 'Offline';
-        statusEl.style.color = isOnline ? 'var(--online)' : 'gray';
+        if(c.status === 'online') { statusEl.innerText = 'Online'; statusEl.style.color = 'var(--online)'; }
+        else if(c.status === 'busy') { statusEl.innerText = 'Niet storen'; statusEl.style.color = 'var(--busy)'; }
+        else if(c.status === 'away') { statusEl.innerText = 'Afwezig'; statusEl.style.color = 'var(--pending)'; }
+        else { statusEl.innerText = 'Offline'; statusEl.style.color = 'gray'; }
     } else { statusEl.style.display = 'none'; }
 
     renderSidebar();
@@ -956,7 +1012,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
     
-    // Kopiëren
     if (text) {
         content.innerHTML += `
         <div class="ctx-item" onclick="copyText(decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -964,18 +1019,14 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // Antwoorden (Iedereen)
     content.innerHTML += `
         <div class="ctx-item" onclick="startReply('${mid}', '${uName}', decodeURIComponent('${encodedText || ""}')); hideContextMenu()">
             <span>↩</span> Antwoorden
         </div>`;
 
-    // --- NIEUWE LOGICA ---
-    
     const isMe = uid === user.uid;
     const admin = isAdmin();
 
-    // Als het bericht van IEMAND ANDERS is: Rapporteer optie
     if (!isMe) {
         content.innerHTML += `
         <div class="ctx-item" onclick="openReportModal(); hideContextMenu()">
@@ -983,9 +1034,7 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // DELETE LOGICA: Mag verwijderen als het bericht van mij is OF als ik admin ben
     if (isMe || admin) {
-        // Edit alleen voor jezelf
         if (isMe && text) { 
             content.innerHTML += `
             <div class="ctx-item" onclick="startEdit('${mid}', decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -993,7 +1042,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
             </div>`;
         }
         
-        // Verwijder label bepalen
         let deleteLabel = "Verwijderen";
         if (!isMe && admin) {
             deleteLabel = "Verwijderen (Admin)";
@@ -1005,7 +1053,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // Positie bepalen
     menu.style.display = 'flex';
     let x = e.clientX;
     let y = e.clientY;
@@ -1019,7 +1066,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
 
 function openReportModal() {
     document.getElementById('reportModal').style.display = 'flex';
-    // Herlaad Tally embeds als dat nodig is
     if(typeof Tally !== 'undefined') Tally.loadEmbeds();
 }
 
@@ -1027,7 +1073,6 @@ function hideContextMenu() {
     document.getElementById('contextMenu').style.display = 'none';
 }
 
-// NIEUW: Kopieer Functie
 function copyText(txt) {
     navigator.clipboard.writeText(txt).then(() => {
         notify("Gekopieerd", "Bericht gekopieerd naar klembord.");
@@ -1143,7 +1188,6 @@ async function sendMessage() {
     const txt = inp.value.trim();
     if(!txt) return;
     
-    // Check of we aan het bewerken zijn
     if(editMessageId) {
         await updateMessageText(editMessageId, txt);
         cancelReplyOrEdit();
@@ -1156,7 +1200,7 @@ async function sendMessage() {
 
     const data = { text: txt };
     if(replyContext) {
-        data.replyTo = replyContext; // Voeg reply data toe
+        data.replyTo = replyContext; 
         cancelReplyOrEdit();
     }
 
@@ -1357,46 +1401,25 @@ function openGroupModal() {
     });
 }
 
-// ----------------------------------------------------
-// AANGEPASTE VRIENDEN LOGICA (Verzoeken + Verzonden)
-// ----------------------------------------------------
-
+// FRIENDS & REQUESTS
 async function sendFriendRequest(targetId, targetName, targetPic) { 
     try {
         const meDoc = await db.collection("users").doc(user.uid).get();
         const me = meDoc.data();
-        
-        // 1. Stuur verzoek naar de ander (INBOX van de ander)
         await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({ 
-            name: me.name, 
-            pic: me.pic || "",
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            name: me.name, pic: me.pic || "", timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }); 
-
-        // 2. Sla op in mijn eigen verzonden items (OUTBOX van mij)
         await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).set({ 
-            name: targetName,
-            pic: targetPic || "",
-            timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+            name: targetName, pic: targetPic || "", timestamp: firebase.firestore.FieldValue.serverTimestamp() 
         });
-
-        notify("Verzonden", `Verzoek naar ${targetName}`); 
-        renderSidebar(); 
-    } catch(e) {
-        console.error(e);
-        alert("Kon verzoek niet versturen: " + e.message);
-    }
+        notify("Verzonden", `Verzoek naar ${targetName}`); renderSidebar(); 
+    } catch(e) { console.error(e); alert("Kon verzoek niet versturen: " + e.message); }
 }
 
 async function cancelSentRequest(targetId) {
     if(!confirm("Verzoek intrekken?")) return;
-    
-    // 1. Verwijder uit de INBOX van de ontvanger
     await db.collection("users").doc(targetId).collection("requests").doc(user.uid).delete();
-    
-    // 2. Verwijder uit mijn OUTBOX (verzonden items)
     await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).delete();
-    
     notify("Geannuleerd", "Vriendschapsverzoek ingetrokken");
 }
 
@@ -1404,34 +1427,18 @@ async function acceptFriend(senderId, senderName, senderPic) {
     try {
         const meDoc = await db.collection("users").doc(user.uid).get();
         const me = meDoc.data();
-
-        // 1. Vrienden maken
         await db.collection("users").doc(user.uid).collection("friends").doc(senderId).set({ name: senderName, pic: senderPic || "" });
         await db.collection("users").doc(senderId).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
-
-        // 2. Verwijder uit mijn INBOX
         await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
-
-        // 3. Verwijder uit de ander zijn OUTBOX
         await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
-
-        notify("Vrienden!", `Je bent nu vrienden met ${senderName}`);
-        location.reload(); 
-    } catch(e) {
-        console.error(e);
-        alert("Er ging iets mis bij accepteren.");
-    }
+        notify("Vrienden!", `Je bent nu vrienden met ${senderName}`); location.reload(); 
+    } catch(e) { console.error(e); alert("Er ging iets mis bij accepteren."); }
 }
 
 async function declineRequest(senderId) { 
     if(!confirm("Verzoek afwijzen?")) return; 
-    
-    // 1. Verwijder uit mijn INBOX
     await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
-    
-    // 2. Verwijder uit de ander zijn OUTBOX
     await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
-    
     renderSidebar();
 }
 </script>
