@@ -240,7 +240,7 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #476952; }
 
         #loadingOld { text-align: center; font-size: 11px; color: gray; padding: 5px; display: none; }
         .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
@@ -1295,8 +1295,8 @@ async function openChatSettings() {
     content.innerHTML = "<h3>Instellingen</h3>Laden...";
 
     // Nieuwe Media knop definities (donkerdere achtergrond voor witte tekst)
-    const mediaBtnPrivate = `<button class="btn" style="flex:1; background:#475569; color:white;" onclick="openMediaGallery()">Media</button>`;
-    const mediaBtnFull = `<button class="btn full-btn" style="background:#475569; color:white; margin-bottom:5px;" onclick="openMediaGallery()">Media</button>`;
+    const mediaBtnPrivate = `<button class="btn" style="flex:1; background:#476952; color:white;" onclick="openMediaGallery()">Media</button>`;
+    const mediaBtnFull = `<button class="btn full-btn" style="background:#476952; color:white; margin-bottom:5px;" onclick="openMediaGallery()">Media</button>`;
 
     if (chatType === 'private') {
         content.innerHTML = `
