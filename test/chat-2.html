@@ -24,18 +24,35 @@
         
         html, body {
             margin: 0; padding: 0; width: 100%; 
-            /* Fix voor Safari hoogte problemen */
-            height: 100vh; 
-            height: 100dvh; 
+            height: 100vh; height: 100dvh; /* Safari fix */
             overflow: hidden;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
             background: var(--bg); color: white; 
             display: flex;
-            overscroll-behavior: none; /* Voorkomt 'bouncen' op iOS */
+            overscroll-behavior: none;
         }
 
         a { color: var(--accent); text-decoration: none; border-bottom: 1px dotted var(--accent); }
         a:hover { border-bottom: 1px solid var(--accent); }
+
+        /* MEDIA GALLERY GRID */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        .media-item {
+            width: 100%;
+            aspect-ratio: 1; /* Vierkante tegels */
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #334155;
+            transition: transform 0.1s;
+            background: #1e293b;
+        }
+        .media-item:hover { transform: scale(1.05); border-color: var(--accent); }
 
         /* CONTEXT MENU */
         .context-menu {
@@ -229,14 +246,12 @@
         .error-text { color: var(--danger); font-size: 12px; display: none; margin-bottom: 5px; }
 
         /* --- MOBILE RESPONSIVE CSS --- */
-        /* Menu Button (Hidden on Desktop) */
         .menu-btn {
             display: none; background: none; border: none; 
             color: white; font-size: 24px; cursor: pointer; padding: 0;
             line-height: 1; margin-right: 5px;
         }
 
-        /* Overlay */
         .sidebar-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
             z-index: 40; display: none; backdrop-filter: blur(2px);
@@ -279,6 +294,14 @@
             <a id="imgDownload" href="#" download="afbeelding.jpg" class="btn">Downloaden</a>
             <button class="btn btn-danger" onclick="document.getElementById('imageModal').style.display='none'">Sluiten</button>
         </div>
+    </div>
+</div>
+
+<div id="mediaGalleryModal" class="modal" style="z-index: 4000;">
+    <div class="modal-box" style="width: 600px; max-width: 95%;">
+        <h3>Gedeelde Media</h3>
+        <div id="mediaGrid" class="media-grid" style="max-height: 60vh; overflow-y: auto;"></div>
+        <button class="btn full-btn" style="background:#334155" onclick="closeModal('mediaGalleryModal')">Sluiten</button>
     </div>
 </div>
 
@@ -430,9 +453,23 @@ const firebaseConfig = {
     messagingSenderId: "335620903527",
     appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
 };
+
+// INITIALIZE FIREBASE SAFELY
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+
+// SAFARI PERSISTENCE FIX
+try {
+    db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
+        if (err.code == 'failed-precondition') console.warn("Persistence failed: tabs");
+        else if (err.code == 'unimplemented') console.warn("Persistence failed: browser");
+    });
+} catch (e) { console.log("Persistence error ignored"); }
+
+window.onerror = function(msg, url, line) {
+    if(msg.includes("Firebase") || msg.includes("quota")) notify("Systeem Fout", msg, null, null, "error");
+};
 
 // ADMIN CONFIG
 const ADMIN_EMAILS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
@@ -522,7 +559,6 @@ function initApp() {
         if (!data.joinedAt) { db.collection("users").doc(user.uid).update({ joinedAt: firebase.firestore.FieldValue.serverTimestamp() }); }
     });
     
-    // Listener voor inkomende verzoeken
     db.collection("users").doc(user.uid).collection("requests").onSnapshot(snap => {
         document.getElementById('reqDot').style.display = snap.empty ? 'none' : 'block';
         if(!snap.empty) {
@@ -530,11 +566,9 @@ function initApp() {
         }
     });
 
-    // NIEUW: Listener voor uitgaande (verzonden) verzoeken
     db.collection("users").doc(user.uid).collection("sentRequests").onSnapshot(snap => {
         sentRequestIds.clear();
         snap.forEach(doc => sentRequestIds.add(doc.id));
-        // Als we in de Ontdek of Verzoeken tab zitten, herlaad de sidebar
         const activeTab = document.querySelector('.tab.active').innerText.split(' ')[0];
         if (activeTab === 'Ontdek' || activeTab === 'Verzoeken') renderSidebar();
     });
@@ -543,7 +577,6 @@ function initApp() {
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
 
-// SKELETON FUNCTIONS
 function showSidebarSkeletons() {
     const list = document.getElementById('sidebarList');
     list.innerHTML = "";
@@ -573,7 +606,6 @@ function showChatSkeletons() {
     }
 }
 
-// LOGIC
 function listenToUserUpdates(uid) {
     if (observedUsers.has(uid)) return;
     observedUsers.add(uid);
@@ -758,11 +790,8 @@ async function renderDiscover(list, term) {
         let users = [];
         snap.forEach(doc => {
             const d = doc.data();
-            // Filter: Zelf, Vrienden, en reeds Verstuurd
             if(doc.id === user.uid || myFriends.includes(doc.id) || sentRequestIds.has(doc.id)) return;
-            
             if(term && !d.name.toLowerCase().includes(term.toLowerCase()) && !term.includes(d.name)) return;
-
             users.push({ id: doc.id, ...d });
         });
 
@@ -782,9 +811,7 @@ async function renderDiscover(list, term) {
             list.innerHTML += `
                 <div class="item">
                     <img src="${picUrl || `https://ui-avatars.com/api/?name=${u.name}`}">
-                    <div class="item-info">
-                        <h4>${u.name}</h4>
-                    </div>
+                    <div class="item-info"><h4>${u.name}</h4></div>
                     <button class="btn btn-sm" onclick="sendFriendRequest('${u.id}', '${u.name}', '${picUrl}')">Toevoegen</button>
                 </div>`;
         });
@@ -795,17 +822,12 @@ async function renderDiscover(list, term) {
 }
 
 function renderRequests(list) {
-    // We renderen nu zowel INKOMENDE (ontvangen) als UITGAANDE (verzonden) verzoeken
-    
-    // 1. Inkomende verzoeken ophalen
     const incomingPromise = db.collection("users").doc(user.uid).collection("requests").get();
-    // 2. Uitgaande verzoeken ophalen
     const outgoingPromise = db.collection("users").doc(user.uid).collection("sentRequests").get();
 
     Promise.all([incomingPromise, outgoingPromise]).then(([inSnap, outSnap]) => {
         list.innerHTML = "";
         
-        // --- INKOMEND ---
         if(!inSnap.empty) {
             list.innerHTML += `<div class="req-section-header">Ontvangen</div>`;
             inSnap.forEach(doc => {
@@ -822,7 +844,6 @@ function renderRequests(list) {
             });
         }
 
-        // --- VERZONDEN ---
         if(!outSnap.empty) {
             list.innerHTML += `<div class="req-section-header" style="color:var(--pending)">Verzonden 🕒</div>`;
             outSnap.forEach(doc => {
@@ -836,9 +857,7 @@ function renderRequests(list) {
             });
         }
 
-        if(inSnap.empty && outSnap.empty) {
-            list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
-        }
+        if(inSnap.empty && outSnap.empty) list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen verzoeken</div>";
     });
 }
 
@@ -854,13 +873,11 @@ function getFormattedDate(date) {
     return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
 }
 
-// CHAT OPENING
 async function openChat(id, name, pic, type) {
-    toggleSidebar(false); // Sluit menu op mobiel
+    toggleSidebar(false);
     activeChatId = id; chatType = type;
     msgLimit = 50; 
     
-    // Reset inputs
     cancelReplyOrEdit();
 
     if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
@@ -1013,7 +1030,6 @@ function renderMessagesFromCache() {
     if (msgLimit === 50 || isAtBottom) box.scrollTop = box.scrollHeight;
 }
 
-// CONTEXT MENU LOGIC
 function handleContextMenu(e, mid, uid, uName, encodedText) {
     e.preventDefault();
     e.stopPropagation();
@@ -1024,7 +1040,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
     const content = document.getElementById('ctxContent');
     content.innerHTML = "";
     
-    // Kopiëren
     if (text) {
         content.innerHTML += `
         <div class="ctx-item" onclick="copyText(decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -1032,18 +1047,14 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // Antwoorden (Iedereen)
     content.innerHTML += `
         <div class="ctx-item" onclick="startReply('${mid}', '${uName}', decodeURIComponent('${encodedText || ""}')); hideContextMenu()">
             <span>↩</span> Antwoorden
         </div>`;
 
-    // --- NIEUWE LOGICA ---
-    
     const isMe = uid === user.uid;
     const admin = isAdmin();
 
-    // Als het bericht van IEMAND ANDERS is: Rapporteer optie
     if (!isMe) {
         content.innerHTML += `
         <div class="ctx-item" onclick="openReportModal(); hideContextMenu()">
@@ -1051,9 +1062,7 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // DELETE LOGICA: Mag verwijderen als het bericht van mij is OF als ik admin ben
     if (isMe || admin) {
-        // Edit alleen voor jezelf
         if (isMe && text) { 
             content.innerHTML += `
             <div class="ctx-item" onclick="startEdit('${mid}', decodeURIComponent('${encodedText}')); hideContextMenu()">
@@ -1061,11 +1070,8 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
             </div>`;
         }
         
-        // Verwijder label bepalen
         let deleteLabel = "Verwijderen";
-        if (!isMe && admin) {
-            deleteLabel = "Verwijderen (Admin)";
-        }
+        if (!isMe && admin) deleteLabel = "Verwijderen (Admin)";
 
         content.innerHTML += `
         <div class="ctx-item danger" onclick="confirmDelete('${mid}'); hideContextMenu()">
@@ -1073,7 +1079,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
         </div>`;
     }
 
-    // Positie bepalen
     menu.style.display = 'flex';
     let x = e.clientX;
     let y = e.clientY;
@@ -1087,7 +1092,6 @@ function handleContextMenu(e, mid, uid, uName, encodedText) {
 
 function openReportModal() {
     document.getElementById('reportModal').style.display = 'flex';
-    // Herlaad Tally embeds als dat nodig is
     if(typeof Tally !== 'undefined') Tally.loadEmbeds();
 }
 
@@ -1095,7 +1099,6 @@ function hideContextMenu() {
     document.getElementById('contextMenu').style.display = 'none';
 }
 
-// NIEUW: Kopieer Functie
 function copyText(txt) {
     navigator.clipboard.writeText(txt).then(() => {
         notify("Gekopieerd", "Bericht gekopieerd naar klembord.");
@@ -1108,11 +1111,9 @@ function confirmDelete(mid) {
     confirmAction("Verwijderen", "Wil je dit bericht definitief verwijderen?", () => deleteMessage(mid));
 }
 
-// REPLY & EDIT FUNCTIONS
 function startReply(mid, name, text) {
     cancelReplyOrEdit();
     replyContext = { id: mid, user: name, text: text || "[Afbeelding]" };
-    
     document.getElementById('replyPreview').style.display = 'flex';
     document.getElementById('replyLabel').innerText = `Antwoorden op ${name}`;
     document.getElementById('replyText').innerText = text || "[Afbeelding]";
@@ -1122,11 +1123,9 @@ function startReply(mid, name, text) {
 function startEdit(mid, text) {
     cancelReplyOrEdit();
     editMessageId = mid;
-    
     document.getElementById('replyPreview').style.display = 'flex';
     document.getElementById('replyLabel').innerText = "Bericht bewerken";
     document.getElementById('replyText').innerText = text;
-    
     const inp = document.getElementById('messageInput');
     inp.value = text;
     inp.focus();
@@ -1211,7 +1210,6 @@ async function sendMessage() {
     const txt = inp.value.trim();
     if(!txt) return;
     
-    // Check of we aan het bewerken zijn
     if(editMessageId) {
         await updateMessageText(editMessageId, txt);
         cancelReplyOrEdit();
@@ -1224,7 +1222,7 @@ async function sendMessage() {
 
     const data = { text: txt };
     if(replyContext) {
-        data.replyTo = replyContext; // Voeg reply data toe
+        data.replyTo = replyContext;
         cancelReplyOrEdit();
     }
 
@@ -1261,6 +1259,34 @@ async function sendSystemMessage(text) {
     if(chatType === 'group') await db.collection("groups").doc(activeChatId).collection("messages").add(payload);
 }
 
+// MEDIA GALLERY LOGIC
+async function openMediaGallery() {
+    closeModal('settingsModal');
+    const modal = document.getElementById('mediaGalleryModal');
+    const grid = document.getElementById('mediaGrid');
+    modal.style.display = 'flex';
+    grid.innerHTML = '<div style="text-align:center; padding:20px;">Laden...</div>';
+
+    let ref;
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
+
+    const snap = await ref.orderBy("timestamp", "desc").get();
+    grid.innerHTML = "";
+    let count = 0;
+
+    snap.forEach(doc => {
+        const d = doc.data();
+        if(d.image) {
+            count++;
+            grid.innerHTML += `<img src="${d.image}" class="media-item" onclick="openImage('${d.image}')">`;
+        }
+    });
+
+    if(count === 0) grid.innerHTML = '<div style="text-align:center; color:gray; padding:20px;">Geen media gevonden.</div>';
+}
+
 // SETTINGS & MODALS
 async function openChatSettings() {
     const modal = document.getElementById('settingsModal');
@@ -1271,6 +1297,7 @@ async function openChatSettings() {
     if (chatType === 'private') {
         content.innerHTML = `
             <h3>${document.getElementById('activeChatName').innerText}</h3>
+            <button class="btn full-btn" style="margin-bottom:5px; background:var(--accent); color:#020617" onclick="openMediaGallery()">🖼️ Bekijk Media</button>
             <button class="btn btn-danger" onclick="confirmAction('Vriend verwijderen', 'Weet je zeker?', removeFriend)">Verwijder Vriend</button>
             <button class="btn full-btn" style="background:#334155" onclick="closeModal('settingsModal')">Sluiten</button>
         `;
@@ -1281,6 +1308,10 @@ async function openChatSettings() {
         const isOwner = gData.owner === user.uid;
         
         let html = `<h3>${gData.name}</h3>`;
+        
+        // Media knop toegevoegd
+        html += `<button class="btn full-btn" style="margin-bottom:15px; background:var(--accent); color:#020617" onclick="openMediaGallery()">🖼️ Bekijk Media</button>`;
+
         if(isOwner) {
             html += `
             <div style="margin-bottom:15px; border-bottom:1px solid #1e293b; padding-bottom:10px;">
@@ -1434,14 +1465,12 @@ async function sendFriendRequest(targetId, targetName, targetPic) {
         const meDoc = await db.collection("users").doc(user.uid).get();
         const me = meDoc.data();
         
-        // 1. Stuur verzoek naar de ander (INBOX van de ander)
         await db.collection("users").doc(targetId).collection("requests").doc(user.uid).set({ 
             name: me.name, 
             pic: me.pic || "",
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }); 
 
-        // 2. Sla op in mijn eigen verzonden items (OUTBOX van mij)
         await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).set({ 
             name: targetName,
             pic: targetPic || "",
@@ -1459,10 +1488,7 @@ async function sendFriendRequest(targetId, targetName, targetPic) {
 async function cancelSentRequest(targetId) {
     if(!confirm("Verzoek intrekken?")) return;
     
-    // 1. Verwijder uit de INBOX van de ontvanger
     await db.collection("users").doc(targetId).collection("requests").doc(user.uid).delete();
-    
-    // 2. Verwijder uit mijn OUTBOX (verzonden items)
     await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).delete();
     
     notify("Geannuleerd", "Vriendschapsverzoek ingetrokken");
@@ -1473,14 +1499,10 @@ async function acceptFriend(senderId, senderName, senderPic) {
         const meDoc = await db.collection("users").doc(user.uid).get();
         const me = meDoc.data();
 
-        // 1. Vrienden maken
         await db.collection("users").doc(user.uid).collection("friends").doc(senderId).set({ name: senderName, pic: senderPic || "" });
         await db.collection("users").doc(senderId).collection("friends").doc(user.uid).set({ name: me.name, pic: me.pic || "" });
 
-        // 2. Verwijder uit mijn INBOX
         await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
-
-        // 3. Verwijder uit de ander zijn OUTBOX
         await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
 
         notify("Vrienden!", `Je bent nu vrienden met ${senderName}`);
@@ -1494,10 +1516,7 @@ async function acceptFriend(senderId, senderName, senderPic) {
 async function declineRequest(senderId) { 
     if(!confirm("Verzoek afwijzen?")) return; 
     
-    // 1. Verwijder uit mijn INBOX
     await db.collection("users").doc(user.uid).collection("requests").doc(senderId).delete();
-    
-    // 2. Verwijder uit de ander zijn OUTBOX
     await db.collection("users").doc(senderId).collection("sentRequests").doc(user.uid).delete();
     
     renderSidebar();
