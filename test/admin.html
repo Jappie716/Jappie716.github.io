@@ -215,56 +215,56 @@ const snap=await ref.get();
 snap.forEach(doc=>doc.ref.delete());
 }
 
-async function deleteFullUser(){
-const uid=document.getElementById("deleteUidInput").value.trim();
-if(!uid) return notify("Voer een UID in");
-if(!confirm("Weet je zeker dat je deze gebruiker volledig wilt verwijderen?")) return;
+async function deleteFullUser() {
+    const uid = document.getElementById("deleteUidInput").value.trim();
+    if(!uid) return notify("Voer een UID in");
+    if(!confirm("Weet je zeker dat je deze gebruiker volledig wilt verwijderen?")) return;
 
-try{
-notify("Verwijderen gestart...");
+    try {
+        notify("Verwijderen gestart...");
 
-const userRef=db.collection("users").doc(uid);
+        const userRef = db.collection("users").doc(uid);
 
-// subcollections
-await deleteCollection(userRef.collection("friends"));
-await deleteCollection(userRef.collection("requests"));
-await deleteCollection(userRef.collection("sentRequests"));
-await deleteCollection(userRef.collection("favorites"));
-await deleteCollection(userRef.collection("saveData"));
+        // --- Subcollections verwijderen ---
+        const subcollections = ["friends", "requests", "sentRequests", "favorites", "saveData"];
+        for (const col of subcollections) {
+            const snap = await userRef.collection(col).get();
+            snap.forEach(doc => doc.ref.delete());
+        }
 
-// hoofd user doc
-await userRef.delete();
+        // --- Hoofd document user ---
+        await userRef.delete();
 
-// chats
-const chats=await db.collection("chats").where("uid","==",uid).get();
-chats.forEach(doc=>doc.ref.delete());
+        // --- Chats ---
+        const chats = await db.collection("chats").where("uid", "==", uid).get();
+        chats.forEach(doc => doc.ref.delete());
 
-// group messages
-const groups=await db.collection("groups").get();
-for(const g of groups.docs){
-const msgs=await g.ref.collection("messages").where("uid","==",uid).get();
-msgs.forEach(doc=>doc.ref.delete());
-}
+        // --- Groups Messages ---
+        const groups = await db.collection("groups").get();
+        for (const g of groups.docs) {
+            const msgs = await g.ref.collection("messages").where("uid","==",uid).get();
+            msgs.forEach(doc => doc.ref.delete());
+        }
 
-// private messages
-const privateChats=await db.collection("private_chats").get();
-for(const pc of privateChats.docs){
-const msgs=await pc.ref.collection("messages").where("uid","==",uid).get();
-msgs.forEach(doc=>doc.ref.delete());
-}
+        // --- Private Chats Messages ---
+        const privateChats = await db.collection("private_chats").get();
+        for (const pc of privateChats.docs) {
+            const msgs = await pc.ref.collection("messages").where("uid","==",uid).get();
+            msgs.forEach(doc => doc.ref.delete());
+        }
 
-// metadata docs
-const metadata=await db.collection("metadata").where("uid","==",uid).get();
-metadata.forEach(doc=>doc.ref.delete());
+        // --- Metadata ---
+        const metadata = await db.collection("metadata").where("uid","==",uid).get();
+        metadata.forEach(doc => doc.ref.delete());
 
-notify("Firestore data volledig verwijderd.");
-alert("Firestore data verwijderd.\nVerwijder nu de gebruiker in Firebase Authentication.");
+        notify("Alle Firestore data volledig verwijderd.");
+        alert("Firestore data verwijderd.\nVerwijder nu de gebruiker in Firebase Authentication.");
 
-document.getElementById("deleteUidInput").value="";
+        document.getElementById("deleteUidInput").value="";
 
-}catch(e){
-alert("Fout: "+e.message);
-}
+    } catch(e) {
+        alert("Fout: " + e.message);
+    }
 }
 </script>
 
