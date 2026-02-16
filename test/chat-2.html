@@ -913,6 +913,13 @@ function markAsRead() {
     }
 }
 
+// HULP FUNCTIE OM ALTIJD DEZELFDE ID TE KRIJGEN VOOR TYPING DOCS
+function getTypingDocId() {
+    if (chatType === 'global') return "typing_global";
+    if (chatType === 'group') return "typing_group_" + activeChatId;
+    return "typing_private_" + [user.uid, activeChatId].sort().join("_");
+}
+
 async function openChat(id, name, pic, type) {
     toggleSidebar(false);
     activeChatId = id; chatType = type;
@@ -956,11 +963,8 @@ function setupChatListeners() {
     else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
     else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
 
-    // Bepaal de unieke ID voor TYPING in METADATA (zodat iedereen erbij kan)
-    let typingDocId = "";
-    if (chatType === 'global') typingDocId = "typing_global";
-    else if (chatType === 'group') typingDocId = "typing_group_" + activeChatId;
-    else typingDocId = "typing_private_" + [user.uid, activeChatId].sort().join("_");
+    // GEBRUIK DE HULP FUNCTIE VOOR CONSISTENTIE
+    const typingDocId = getTypingDocId();
 
     // Verbeterde Typing Listener op METADATA
     typingUnsub = db.collection("metadata").doc(typingDocId).onSnapshot(doc => {
@@ -1252,34 +1256,33 @@ function handleTyping() {
         updateTyping(true);
     }
     
-    // Reset de "stop met typen" timer
+    // Reset de "stop met typen" timer - IETS LANGER GEMAAKT
     if(typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => { updateTyping(false); }, 3000);
+    typingTimeout = setTimeout(() => { updateTyping(false); }, 4000);
 }
 
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
     
     // SCHRIJF NAAR METADATA (Iedereen heeft toegang)
-    let typingDocId = "";
-    if (chatType === 'global') typingDocId = "typing_global";
-    else if (chatType === 'group') typingDocId = "typing_group_" + activeChatId;
-    else typingDocId = "typing_private_" + [user.uid, activeChatId].sort().join("_");
-    
+    const typingDocId = getTypingDocId();
     const ref = db.collection("metadata").doc(typingDocId);
-    
     const myName = document.getElementById('myName').innerText;
-    const field = {};
     
+    const payload = {};
+
     if (isTyping) {
-        field[`typingStatus.${user.uid}`] = { name: myName, time: Date.now() };
+        // GEBRUIK SET MET MERGE: Dit maakt het document aan als het er niet is
+        payload[`typingStatus.${user.uid}`] = { name: myName, time: Date.now() };
+        await ref.set(payload, { merge: true });
     } else {
-        field[`typingStatus.${user.uid}`] = firebase.firestore.FieldValue.delete();
+        // STOPPEN MET TYPEN: Delete het veld
+        payload[`typingStatus.${user.uid}`] = firebase.firestore.FieldValue.delete();
+        // Update kan falen als doc niet bestaat, dat vangen we op
+        await ref.update(payload).catch(e => {
+            // Als het document niet bestaat, is er ook niemand aan het typen, dus prima.
+        });
     }
-    
-    await ref.update(field).catch(e => {
-        if(e.code === 'not-found') ref.set(field, {merge: true});
-    });
 }
 
 async function resizeAndCompressImage(file) {
