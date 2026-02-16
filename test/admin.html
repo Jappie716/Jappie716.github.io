@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Game Paradise - Admin</title>
     <link rel="icon" type="image/png" href="/icon/favicon.png">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -15,23 +15,45 @@
             --primary: #2563eb; --accent: #60a5fa; --danger: #ef4444; --success: #22c55e;
             --warning: #f59e0b;
         }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar */
-        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        /* Sidebar Styles (zoals in index.html) */
+        .sidebar { 
+            width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; 
+            display: flex; flex-direction: column; z-index: 50; transition: transform 0.3s ease;
+            height: 100vh;
+        }
+        
+        /* Overlay voor mobiel */
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
+            z-index: 40; display: none; backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.active { display: block; }
+
         .logo { color: var(--accent); font-size: 20px; font-weight: bold; margin-bottom: 30px; text-align: center; }
-        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; transition: 0.2s; }
+        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; transition: 0.2s; font-size: 16px; }
         .nav-btn:hover { background: #1e293b; color: white; }
         .nav-btn.active { background: var(--primary); color: white; }
 
         /* Main Area */
-        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
+        .main { flex: 1; padding: 20px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); position: relative; }
         .section { display: none; animation: fadeIn 0.3s ease; }
-        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 25px; }
+        
+        /* Top Bar voor mobiel menu */
+        .topbar { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .menu-btn { 
+            display: none; background: none; border: none; 
+            color: white; font-size: 24px; cursor: pointer; padding: 0; 
+        }
+
+        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 20px; overflow-wrap: break-word; }
         
         /* Form & Preview */
-        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; box-sizing: border-box; }
-        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; box-sizing: border-box; font-size: 16px; }
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; }
         .success { background: var(--success); color: white; }
         .danger { background: var(--danger); color: white; }
         .primary { background: var(--primary); color: white; }
@@ -39,15 +61,16 @@
         
         /* Checkbox Container */
         .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; padding: 10px; border: 1px solid #334155; border-radius: 10px; background: #0f172a; }
-        .cat-option { display: flex; align-items: center; gap: 5px; background: #1e293b; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+        .cat-option { display: flex; align-items: center; gap: 5px; background: #1e293b; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .cat-option input { width: auto; margin: 0; }
 
         .preview-container { text-align: center; margin-bottom: 15px; background: #020617; border-radius: 10px; padding: 10px; border: 1px dashed #334155; }
         #editPreview { max-width: 100%; max-height: 150px; border-radius: 8px; display: none; margin: 0 auto; }
         #previewPlaceholder { color: #475569; font-size: 14px; padding: 20px; }
 
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; }
+        /* Tables Responsive */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; } /* Min-width zorgt dat tabel niet plet */
         td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
         .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; }
 
@@ -55,15 +78,34 @@
         .toast { background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
         /* User List Specific */
-        .user-item { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 8px; }
-        .user-info small { color: #94a3b8; display: block; }
+        .user-item { display: flex; flex-direction: column; gap: 10px; background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        .user-header { display: flex; justify-content: space-between; align-items: start; }
+        .user-info strong { font-size: 16px; display: block; margin-bottom: 4px; color: white; }
+        .user-info small { color: #64748b; font-family: monospace; font-size: 12px; display: block; word-break: break-all; }
+        
+        /* --- MOBILE MEDIA QUERIES --- */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0;
+                transform: translateX(-100%);
+                width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+            }
+            .sidebar.active { transform: translateX(0); }
+            .menu-btn { display: block; }
+            .main { padding: 15px; }
+            
+            /* Responsive User Item voor mobiel */
+            .user-item { padding: 12px; }
+            .user-item button { width: 100%; margin-top: 5px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-<div class="sidebar">
+<div id="sidebar" class="sidebar">
     <div class="logo">🎮 Admin Panel</div>
     <button class="nav-btn active" id="btn-dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
     <button class="nav-btn" id="btn-users" onclick="showTab('users')">👥 Gebruikers</button>
@@ -80,10 +122,15 @@
 </div>
 
 <div class="main">
+    <div class="topbar">
+        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+        <h2 style="margin:0" id="pageTitle">Dashboard</h2>
+    </div>
+
     <div id="dashboardSection" class="section" style="display:block">
         <div class="card">
             <h2>Welkom Admin</h2>
-            <p>Gebruik het linker menu om de website te beheren.</p>
+            <p>Gebruik het menu om de website te beheren.</p>
             <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">Laden...</div>
         </div>
     </div>
@@ -92,15 +139,14 @@
         <div class="card">
             <h3>👥 Gebruiker Verwijderen</h3>
             <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                <p style="margin-top:0; color: #fca5a5;"><b>⚠️ Belangrijk:</b> Dit admin paneel verwijdert alle data uit de database (profiel, chats, savegames), maar <b>NIET</b> het login-account.</p>
-                <p>Klik na het verwijderen hieronder op deze knop om het account definitief te wissen:</p>
+                <p style="margin-top:0; color: #fca5a5; font-size:14px;"><b>⚠️ Let op:</b> Dit verwijdert alle data (profiel, chats, saves). Het inlog-account moet je apart verwijderen in de console.</p>
                 <a href="https://console.firebase.google.com/u/0/project/gameparadise-80490/authentication/users" 
-                   target="_blank" class="btn warning" style="text-decoration:none; display:inline-block;">
-                   🔗 Open Firebase Auth Console
+                   target="_blank" class="btn warning" style="text-decoration:none; display:inline-block; font-size:12px;">
+                   🔗 Open Auth Console
                 </a>
             </div>
 
-            <input type="text" id="userSearchInput" placeholder="🔍 Zoek op gebruikersnaam of e-mail..." onkeyup="filterUsers()">
+            <input type="text" id="userSearchInput" placeholder="🔍 Zoek op naam of e-mail..." onkeyup="filterUsers()">
             <div id="usersList">
                 <p style="color:#94a3b8">Laden van gebruikers...</p>
             </div>
@@ -135,10 +181,12 @@
     <div id="gamesSection" class="section">
         <div class="card">
             <input type="text" id="gameSearch" placeholder="🔍 Zoek game op titel..." onkeyup="filterGamesTable()">
-            <table>
-                <thead><tr><th>Afbeelding</th><th>Titel</th><th>Categorie(ën)</th><th>Acties</th></tr></thead>
-                <tbody id="gamesList"></tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Afbeelding</th><th>Titel</th><th>Categorie</th><th>Acties</th></tr></thead>
+                    <tbody id="gamesList"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -152,9 +200,9 @@
 
     <div id="updatesSection" class="section">
         <div class="card">
-            <h3>Nieuwe Update Plaatsen</h3>
+            <h3>Nieuwe Update</h3>
             <input id="updateTitle" placeholder="Titel van update">
-            <textarea id="updateContent" placeholder="Beschrijving van de update..." rows="3"></textarea>
+            <textarea id="updateContent" placeholder="Beschrijving..." rows="3"></textarea>
             <button class="btn success" onclick="postUpdate()">Publiceren</button>
         </div>
         <div class="card">
@@ -183,13 +231,12 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
-// Global user list cache
 let allUsers = [];
 
 auth.onAuthStateChanged(user => {
     if (user && ADMINS.includes(user.email.toLowerCase())) {
         init();
-        loadUsers(); // Users inladen bij start
+        loadUsers();
     } else {
         alert("Geen toegang! Log in met een admin account.");
         location.href = "index.html";
@@ -202,11 +249,32 @@ function notify(msg) {
     setTimeout(() => t.remove(), 3000);
 }
 
+// --- Mobiele Sidebar Logic ---
+function toggleSidebar(forceOpen = null) {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (forceOpen === false) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+    } else {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+    }
+}
+
 function showTab(id) {
     document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id + 'Section').style.display = 'block';
     document.getElementById('btn-' + id).classList.add('active');
+    
+    // Update titel en sluit menu op mobiel
+    const titleMap = {
+        'dashboard': 'Dashboard', 'users': 'Gebruikers', 'editor': 'Game Editor',
+        'games': 'Games Lijst', 'categories': 'Categorieën', 'updates': 'Updates', 'chat': 'Chat Beheer'
+    };
+    document.getElementById('pageTitle').innerText = titleMap[id];
+    toggleSidebar(false); 
 }
 
 function updatePreview(url) {
@@ -234,8 +302,8 @@ function init() {
                 <td class="game-title-cell"><b>${g.title}</b></td>
                 <td><small>${catDisplay}</small></td>
                 <td>
-                    <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
-                    <button class="btn danger" onclick="deleteItem('games','${doc.id}')">🗑️</button>
+                    <button class="btn" style="padding:5px 10px; margin-bottom:5px" onclick="editGame('${doc.id}')">✏️</button>
+                    <button class="btn danger" style="padding:5px 10px" onclick="deleteItem('games','${doc.id}')">🗑️</button>
                 </td>
             </tr>`;
         });
@@ -310,16 +378,27 @@ function renderUsers(users) {
     if(users.length === 0) { list.innerHTML = "<p>Geen gebruikers gevonden.</p>"; return; }
 
     users.forEach(u => {
-        const name = u.username || u.displayName || "Naamloos";
-        const email = u.email || "Geen email";
+        // LOGICA: Als er een naam is, gebruik die. Als die er niet is, gebruik email.
+        let displayMain = u.username || u.displayName;
+        if (!displayMain || displayMain.trim() === "") {
+            displayMain = u.email || "Onbekende gebruiker";
+        }
+
+        // KLEINE LETTERTJES: Altijd het UID
+        const displaySub = `UID: ${u.id}`;
+        
+        // Ter informatie tonen we het email in een tooltip of extra tekst als het niet de hoofdtitel is,
+        // maar de vraag was specifiek over naamloos.
         
         list.innerHTML += `
             <div class="user-item">
-                <div class="user-info">
-                    <strong>${name}</strong>
-                    <small>${email} (UID: ${u.id})</small>
+                <div class="user-header">
+                    <div class="user-info">
+                        <strong>${displayMain}</strong>
+                        <small>${displaySub}</small>
+                    </div>
                 </div>
-                <button class="btn danger" onclick="deleteFullUser('${u.id}', '${name}')">🗑️ Verwijderen</button>
+                <button class="btn danger" onclick="deleteFullUser('${u.id}', '${displayMain}')">🗑️ Verwijderen</button>
             </div>
         `;
     });
@@ -342,8 +421,6 @@ async function deleteFullUser(uid, name) {
     
     try {
         const userRef = db.collection("users").doc(uid);
-
-        // 1. Verwijder Subcollecties (Handmatig opvragen en deleten omdat web-sdk geen recursive delete heeft)
         const subCollections = ["favorites", "saveData", "friends", "requests", "sentRequests"];
         
         for (const sub of subCollections) {
@@ -353,18 +430,13 @@ async function deleteFullUser(uid, name) {
             await batch.commit();
         }
 
-        // 2. Verwijder Chat berichten van deze gebruiker
         const chatSnap = await db.collection("chats").where("uid", "==", uid).get();
         const chatBatch = db.batch();
         chatSnap.forEach(doc => chatBatch.delete(doc.ref));
         await chatBatch.commit();
 
-        // 3. Verwijder het User Document zelf
         await userRef.delete();
-
         notify(`✅ Data van ${name} verwijderd uit Database! Vergeet niet het account te wissen in de Console.`);
-        
-        // Ververs lijst
         loadUsers();
         
     } catch (error) {
