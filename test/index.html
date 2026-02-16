@@ -148,7 +148,9 @@
             
             .topbar { gap: 10px; }
             .auth-btn { padding: 8px 12px; font-size: 14px; }
-            .admin-btn { display: none !important; } /* Hide admin on mobile to save space */
+            
+            /* Admin knop zichtbaar houden op mobiel als de JS hem display block geeft */
+            /* We hebben de regel die de knop verbergt hier verwijderd */
         }
     </style>
 </head>
@@ -319,6 +321,7 @@ auth.onAuthStateChanged(user => {
     currentUser = user;
     if (user) {
         document.getElementById("authBtn").textContent = "Uitloggen";
+        // Check of het een admin is, zo ja: laat knop zien
         document.getElementById("adminBtn").style.display = ADMIN_EMAILS.includes(user.email.toLowerCase()) ? "inline-block" : "none";
         loadFavorites();
         initChatBadge(); 
