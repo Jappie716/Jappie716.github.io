@@ -44,7 +44,7 @@
         }
         .media-item {
             width: 100%;
-            aspect-ratio: 1; /* Vierkante tegels */
+            aspect-ratio: 1; 
             object-fit: cover;
             border-radius: 8px;
             cursor: pointer;
@@ -160,13 +160,33 @@
         .chat-header { padding: 10px 20px; background: var(--card-bg); display: flex; align-items: center; border-bottom: 1px solid #1e293b; height: 65px; gap: 10px; flex-shrink: 0; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
         
+        /* Message & Avatar Layout */
+        .msg-container {
+            display: flex;
+            align-items: flex-end; /* Onderaan uitlijnen */
+            max-width: 80%;
+            margin-bottom: 5px;
+        }
+        .msg-container.sent { align-self: flex-end; flex-direction: row-reverse; }
+        .msg-container.received { align-self: flex-start; }
+
+        .msg-avatar {
+            width: 30px; height: 30px; border-radius: 50%; 
+            object-fit: cover; margin-right: 8px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            pointer-events: none; /* Niet klikbaar */
+            user-select: none;
+        }
+
         .msg { 
-            max-width: 75%; padding: 10px 14px; border-radius: 12px; font-size: 14px; 
+            padding: 10px 14px; border-radius: 12px; font-size: 14px; 
             position: relative; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;
             white-space: pre-wrap; display: flex; flex-direction: column; user-select: text;
+            min-width: 80px;
         }
-        .msg.sent { align-self: flex-end; background: var(--sent); border-bottom-right-radius: 2px; }
-        .msg.received { align-self: flex-start; background: var(--received); border-bottom-left-radius: 2px; }
+        .msg.sent { background: var(--sent); border-bottom-right-radius: 2px; }
+        .msg.received { background: var(--received); border-bottom-left-radius: 2px; }
         .msg.system { align-self: center; background: #1e293b88; padding: 5px 12px; border-radius: 20px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px solid #334155; margin: 5px 0; max-width: 90%; }
         
         .quoted-msg {
@@ -177,7 +197,7 @@
         .quoted-user { font-weight: bold; color: var(--accent); margin-bottom: 2px; }
         .quoted-text { color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .msg img { max-width: 350px; max-height: 350px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; object-fit: cover; }
+        .msg img.msg-img-content { max-width: 350px; max-height: 350px; width: 100%; border-radius: 8px; margin-top: 5px; cursor: pointer; object-fit: cover; }
         .msg .sender { font-size: 10px; color: var(--accent); font-weight: bold; margin-bottom: 2px; display: block; }
         
         .msg-footer { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; }
@@ -227,7 +247,7 @@
         .btn-outline:hover { border-color: var(--primary); color: white; }
         .btn-warning { background: var(--pending); color: #020617; }
         
-        .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; margin-left: auto; }
+        .settings-icon { width: 30px; height: 30px; cursor: pointer; transition: transform 0.2s; margin-left: 5px; }
         .settings-icon:hover { transform: rotate(45deg); }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
@@ -270,7 +290,7 @@
             
             .chat-header { padding: 10px 15px; }
             .chat-messages { padding: 15px; }
-            .msg { max-width: 85%; }
+            .msg-container { max-width: 90%; }
             
             .modal-box { padding: 20px; }
         }
@@ -357,10 +377,11 @@
         <div class="chat-header">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <img id="activeChatImg" src="" style="width:40px; height:40px; border-radius:50%; margin-right:12px; display:none; object-fit:cover;">
-            <div style="flex:1">
-                <h3 id="activeChatName" style="margin:0; font-size:16px;">Game Paradise</h3>
+            <div style="flex:1; overflow:hidden;">
+                <h3 id="activeChatName" style="margin:0; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Game Paradise</h3>
                 <span id="activeStatus" style="font-size:11px; color:gray; display:none;">Online</span>
             </div>
+            
             <img id="settingsBtn" src="https://flaticons.net/icon.php?slug_category=mobile-application&slug_icon=settings-01&icon_size=256&icon_color=FFFFFF&icon_flip=&icon_rotate=100" class="settings-icon" style="display:none;" onclick="openChatSettings()">
         </div>
         
@@ -490,8 +511,10 @@ let originalTitle = document.title;
 let titleInterval = null;
 let ignoreInitialGroups = true;
 let typingTimeout = null;
+let lastTypingUpdate = 0;
 let msgLimit = 50; 
 let observedUsers = new Set(); 
+let userCache = new Map(); // Cache voor avatar URL's
 let hasLoadedChats = false;
 let sentRequestIds = new Set(); 
 
@@ -613,7 +636,13 @@ function listenToUserUpdates(uid) {
         if (doc.exists) {
             const data = doc.data();
             const newName = data.name;
+            const newPic = data.pic || `https://ui-avatars.com/api/?name=${newName}`;
+            
+            userCache.set(uid, newPic); // Update cache
+            
             document.querySelectorAll(`.user-name-${uid}`).forEach(el => el.innerText = newName);
+            document.querySelectorAll(`.user-avatar-${uid}`).forEach(el => el.src = newPic);
+            
             if(chatDataMap.has(uid)) {
                 const c = chatDataMap.get(uid);
                 if (c.name !== newName) {
@@ -709,7 +738,8 @@ function setupListener(id, name, pic, type, ref) {
         const cData = chatDataMap.get(id);
         cData.timestamp = time;
         if (m.uid !== user.uid) {
-            if (activeChatId !== id) {
+            // Als chat niet open is OF de chat wel open is maar het scherm niet actief: ongelezen
+            if (activeChatId !== id || document.hidden) {
                 cData.unread = true;
                 if(type !== 'global' && !ignoreInitialGroups) {
                     notify(name, m.type==='system'?m.text:(m.text || "Foto"), pic, id, type);
@@ -873,14 +903,33 @@ function getFormattedDate(date) {
     return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
 }
 
+// FUNCTION: Markeer als gelezen
+function markAsRead() {
+    if(activeChatId && chatDataMap.has(activeChatId)) {
+        const c = chatDataMap.get(activeChatId);
+        c.unread = false;
+        chatDataMap.set(activeChatId, c);
+        renderSidebar();
+    }
+}
+
+// HULP FUNCTIE OM ALTIJD DEZELFDE ID TE KRIJGEN VOOR TYPING DOCS
+function getTypingDocId() {
+    if (chatType === 'global') return "typing_global";
+    if (chatType === 'group') return "typing_group_" + activeChatId;
+    return "typing_private_" + [user.uid, activeChatId].sort().join("_");
+}
+
 async function openChat(id, name, pic, type) {
     toggleSidebar(false);
     activeChatId = id; chatType = type;
     msgLimit = 50; 
     
+    // Direct markeren als gelezen
+    markAsRead();
+    
     cancelReplyOrEdit();
 
-    if(chatDataMap.has(id)) chatDataMap.get(id).unread = false;
     if(titleInterval) { clearInterval(titleInterval); document.title = originalTitle; }
 
     document.getElementById('activeChatName').innerText = name;
@@ -908,24 +957,43 @@ async function openChat(id, name, pic, type) {
 }
 
 function setupChatListeners() {
-    let ref, docRef;
-    if(chatType === 'global') { ref = db.collection("chats"); docRef = db.collection("metadata").doc("global"); } 
-    else if(chatType === 'group') { docRef = db.collection("groups").doc(activeChatId); ref = docRef.collection("messages"); } 
-    else {
-        const chatId = [user.uid, activeChatId].sort().join("_");
-        docRef = db.collection("private_chats").doc(chatId); ref = docRef.collection("messages");
-    }
+    let ref;
+    // Bepaal de referentie voor BERICHTEN
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
 
-    typingUnsub = docRef.onSnapshot(doc => {
+    // GEBRUIK DE HULP FUNCTIE VOOR CONSISTENTIE
+    const typingDocId = getTypingDocId();
+
+    // Verbeterde Typing Listener op METADATA
+    typingUnsub = db.collection("metadata").doc(typingDocId).onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
             const typingMap = data.typingStatus || {};
-            const typerNames = Object.keys(typingMap).filter(uid => uid !== user.uid).map(uid => typingMap[uid]);
+            
+            const now = Date.now();
+            const activeTypers = [];
+            
+            Object.keys(typingMap).forEach(uid => {
+                if(uid !== user.uid) {
+                    const info = typingMap[uid];
+                    const name = (typeof info === 'object') ? info.name : info;
+                    const time = (typeof info === 'object') ? info.time : now; 
+                    
+                    if (now - time < 5000) { // Update < 5 sec geleden
+                        activeTypers.push(name);
+                    }
+                }
+            });
+
             const ind = document.getElementById('typingIndicator');
-            if(typerNames.length > 0) {
-                ind.innerText = typerNames.join(", ") + (typerNames.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
+            if(activeTypers.length > 0) {
+                ind.innerText = activeTypers.join(", ") + (activeTypers.length > 1 ? " zijn aan het typen..." : " is aan het typen...");
                 ind.classList.add('active');
-            } else { ind.classList.remove('active'); }
+            } else { 
+                ind.classList.remove('active'); 
+            }
         }
     });
 
@@ -975,7 +1043,8 @@ function renderMessagesFromCache() {
     window.currentSnap.forEach(doc => {
         const m = doc.data();
         let content = "";
-        let className = m.uid === user.uid ? 'sent' : 'received';
+        let isMe = m.uid === user.uid;
+        let className = isMe ? 'sent' : 'received';
         let timeStr = "";
 
         if(m.uid && m.uid !== 'system') listenToUserUpdates(m.uid);
@@ -1002,32 +1071,49 @@ function renderMessagesFromCache() {
         }
 
         if (m.type === 'system') {
-            className = 'system';
-            content = m.text;
-        } else if (m.image) {
-            content = `${nameSpan}${quotedBlock}<img src="${m.image}" onclick="openImage('${m.image}')">`;
+            box.innerHTML += `<div class="msg system">${m.text}</div>`;
+            return; // System messages have no avatar
+        }
+        
+        if (m.image) {
+            content = `${nameSpan}${quotedBlock}<img class="msg-img-content" src="${m.image}" onclick="openImage('${m.image}')">`;
         } else {
             content = `${nameSpan}${quotedBlock}${linkify(m.text)}`;
         }
         
-        let optsBtn = "";
-        let contextAttr = "";
-        
-        if(m.type !== 'system') {
-            const safeText = m.text ? encodeURIComponent(m.text) : "";
-            const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
-            optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">•••</div>`;
-            contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
-        }
+        // Context menu helpers
+        const safeText = m.text ? encodeURIComponent(m.text) : "";
+        const safeUser = m.user ? m.user.replace(/'/g, "\\'") : "User";
+        const optsBtn = `<div class="opts-btn" title="Opties" onclick="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')">•••</div>`;
+        const contextAttr = `oncontextmenu="handleContextMenu(event, '${doc.id}', '${m.uid}', '${safeUser}', '${safeText}')"`;
 
         let editedSpan = m.edited ? `<span class="msg-edited">(bewerkt)</span>` : "";
-        let footerHtml = "";
-        if(m.type !== 'system') footerHtml = `<div class="msg-footer">${editedSpan}<span class="msg-time">${timeStr}</span></div>`;
+        let footerHtml = `<div class="msg-footer">${editedSpan}<span class="msg-time">${timeStr}</span></div>`;
 
-        box.innerHTML += `<div class="msg ${className}" id="msg-${doc.id}" ${contextAttr}>${optsBtn}${content}${footerHtml}</div>`;
+        // AVATAR LOGIC (Only for received messages in group/global)
+        let avatarHtml = "";
+        if (!isMe && (chatType === 'group' || chatType === 'global')) {
+            // Haal avatar uit cache of gebruik fallback
+            let avatarSrc = userCache.get(m.uid) || `https://ui-avatars.com/api/?name=${m.user}`;
+            // Geen onClick meer hier
+            avatarHtml = `<img src="${avatarSrc}" class="msg-avatar user-avatar-${m.uid}">`;
+        }
+
+        box.innerHTML += `
+        <div class="msg-container ${className}">
+            ${avatarHtml}
+            <div class="msg ${className}" id="msg-${doc.id}" ${contextAttr}>
+                ${optsBtn}${content}${footerHtml}
+            </div>
+        </div>`;
     });
 
     if (msgLimit === 50 || isAtBottom) box.scrollTop = box.scrollHeight;
+}
+
+function viewUserProfile(uid) {
+    // Simpele functie om foto in groot te zien
+    if(userCache.has(uid)) openImage(userCache.get(uid));
 }
 
 function handleContextMenu(e, mid, uid, uName, encodedText) {
@@ -1158,24 +1244,45 @@ function handleKeyDown(e) {
     }
 }
 
+// VERBETERDE TYPING HANDLER (Throttling)
 function handleTyping() {
     const tx = document.getElementById('messageInput');
     tx.style.height = 'auto'; tx.style.height = (tx.scrollHeight) + 'px';
+    
+    const now = Date.now();
+    // Update firebase maximaal 1x per 2.5 seconden
+    if (now - lastTypingUpdate > 2500) {
+        lastTypingUpdate = now;
+        updateTyping(true);
+    }
+    
+    // Reset de "stop met typen" timer - IETS LANGER GEMAAKT
     if(typingTimeout) clearTimeout(typingTimeout);
-    updateTyping(true);
-    typingTimeout = setTimeout(() => { updateTyping(false); }, 2000);
+    typingTimeout = setTimeout(() => { updateTyping(false); }, 4000);
 }
 
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
-    let ref;
-    if(chatType === 'global') ref = db.collection("metadata").doc("global");
-    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
-    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
+    
+    // SCHRIJF NAAR METADATA (Iedereen heeft toegang)
+    const typingDocId = getTypingDocId();
+    const ref = db.collection("metadata").doc(typingDocId);
     const myName = document.getElementById('myName').innerText;
-    const field = {};
-    field[user.uid] = isTyping ? myName : firebase.firestore.FieldValue.delete();
-    await ref.set({ typingStatus: field }, { merge: true });
+    
+    const payload = {};
+
+    if (isTyping) {
+        // GEBRUIK SET MET MERGE: Dit maakt het document aan als het er niet is
+        payload[`typingStatus.${user.uid}`] = { name: myName, time: Date.now() };
+        await ref.set(payload, { merge: true });
+    } else {
+        // STOPPEN MET TYPEN: Delete het veld
+        payload[`typingStatus.${user.uid}`] = firebase.firestore.FieldValue.delete();
+        // Update kan falen als doc niet bestaat, dat vangen we op
+        await ref.update(payload).catch(e => {
+            // Als het document niet bestaat, is er ook niemand aan het typen, dus prima.
+        });
+    }
 }
 
 async function resizeAndCompressImage(file) {
