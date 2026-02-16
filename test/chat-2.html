@@ -175,6 +175,8 @@
             object-fit: cover; margin-right: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
             flex-shrink: 0;
+            pointer-events: none; /* Niet klikbaar */
+            user-select: none;
         }
 
         .msg { 
@@ -379,9 +381,7 @@
                 <h3 id="activeChatName" style="margin:0; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Game Paradise</h3>
                 <span id="activeStatus" style="font-size:11px; color:gray; display:none;">Online</span>
             </div>
-            <button id="markReadBtn" class="btn btn-sm" style="display:none; background:#0f172a; border:1px solid #334155; margin-right:5px;" onclick="markAsRead()">
-                ✓ Alles Gelezen
-            </button>
+            
             <img id="settingsBtn" src="https://flaticons.net/icon.php?slug_category=mobile-application&slug_icon=settings-01&icon_size=256&icon_color=FFFFFF&icon_flip=&icon_rotate=100" class="settings-icon" style="display:none;" onclick="openChatSettings()">
         </div>
         
@@ -930,7 +930,6 @@ async function openChat(id, name, pic, type) {
     document.getElementById('activeChatImg').style.display = "block";
     document.getElementById('inputArea').style.display = "flex";
     document.getElementById('settingsBtn').style.display = type === 'global' ? 'none' : 'block';
-    document.getElementById('markReadBtn').style.display = 'block'; // Toon de Gelezen knop
     
     document.getElementById('chatMessages').onscroll = checkScroll;
     
@@ -951,32 +950,34 @@ async function openChat(id, name, pic, type) {
 }
 
 function setupChatListeners() {
-    let ref, docRef;
-    if(chatType === 'global') { ref = db.collection("chats"); docRef = db.collection("metadata").doc("global"); } 
-    else if(chatType === 'group') { docRef = db.collection("groups").doc(activeChatId); ref = docRef.collection("messages"); } 
-    else {
-        const chatId = [user.uid, activeChatId].sort().join("_");
-        docRef = db.collection("private_chats").doc(chatId); ref = docRef.collection("messages");
-    }
+    let ref;
+    // Bepaal de referentie voor BERICHTEN
+    if(chatType === 'global') ref = db.collection("chats");
+    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId).collection("messages");
+    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_")).collection("messages");
 
-    // Verbeterde Typing Listener
-    typingUnsub = docRef.onSnapshot(doc => {
+    // Bepaal de unieke ID voor TYPING in METADATA (zodat iedereen erbij kan)
+    let typingDocId = "";
+    if (chatType === 'global') typingDocId = "typing_global";
+    else if (chatType === 'group') typingDocId = "typing_group_" + activeChatId;
+    else typingDocId = "typing_private_" + [user.uid, activeChatId].sort().join("_");
+
+    // Verbeterde Typing Listener op METADATA
+    typingUnsub = db.collection("metadata").doc(typingDocId).onSnapshot(doc => {
         if(doc.exists) {
             const data = doc.data();
             const typingMap = data.typingStatus || {};
             
-            // Filter: Haal mezelf eruit en check of timestamp recent is (laatste 5 sec)
             const now = Date.now();
             const activeTypers = [];
             
             Object.keys(typingMap).forEach(uid => {
                 if(uid !== user.uid) {
                     const info = typingMap[uid];
-                    // Ondersteuning voor oud formaat (alleen naam) en nieuw formaat (object)
                     const name = (typeof info === 'object') ? info.name : info;
-                    const time = (typeof info === 'object') ? info.time : now; // Fallback als geen tijd
+                    const time = (typeof info === 'object') ? info.time : now; 
                     
-                    if (now - time < 5000) { // Alleen tonen als update < 5 sec geleden
+                    if (now - time < 5000) { // Update < 5 sec geleden
                         activeTypers.push(name);
                     }
                 }
@@ -1090,7 +1091,8 @@ function renderMessagesFromCache() {
         if (!isMe && (chatType === 'group' || chatType === 'global')) {
             // Haal avatar uit cache of gebruik fallback
             let avatarSrc = userCache.get(m.uid) || `https://ui-avatars.com/api/?name=${m.user}`;
-            avatarHtml = `<img src="${avatarSrc}" class="msg-avatar user-avatar-${m.uid}" onclick="viewUserProfile('${m.uid}')">`;
+            // Geen onClick meer hier
+            avatarHtml = `<img src="${avatarSrc}" class="msg-avatar user-avatar-${m.uid}">`;
         }
 
         box.innerHTML += `
@@ -1244,7 +1246,7 @@ function handleTyping() {
     tx.style.height = 'auto'; tx.style.height = (tx.scrollHeight) + 'px';
     
     const now = Date.now();
-    // Update firebase maximaal 1x per 2.5 seconden om quota te sparen en knipperen te voorkomen
+    // Update firebase maximaal 1x per 2.5 seconden
     if (now - lastTypingUpdate > 2500) {
         lastTypingUpdate = now;
         updateTyping(true);
@@ -1257,24 +1259,25 @@ function handleTyping() {
 
 async function updateTyping(isTyping) {
     if(!activeChatId) return;
-    let ref;
-    if(chatType === 'global') ref = db.collection("metadata").doc("global");
-    else if(chatType === 'group') ref = db.collection("groups").doc(activeChatId);
-    else ref = db.collection("private_chats").doc([user.uid, activeChatId].sort().join("_"));
+    
+    // SCHRIJF NAAR METADATA (Iedereen heeft toegang)
+    let typingDocId = "";
+    if (chatType === 'global') typingDocId = "typing_global";
+    else if (chatType === 'group') typingDocId = "typing_group_" + activeChatId;
+    else typingDocId = "typing_private_" + [user.uid, activeChatId].sort().join("_");
+    
+    const ref = db.collection("metadata").doc(typingDocId);
     
     const myName = document.getElementById('myName').innerText;
     const field = {};
     
     if (isTyping) {
-        // Sla naam + tijdstip op
         field[`typingStatus.${user.uid}`] = { name: myName, time: Date.now() };
     } else {
         field[`typingStatus.${user.uid}`] = firebase.firestore.FieldValue.delete();
     }
     
-    // Gebruik update om alleen dit veld te wijzigen
     await ref.update(field).catch(e => {
-        // Als document niet bestaat (bv bij private chat start), gebruik set met merge
         if(e.code === 'not-found') ref.set(field, {merge: true});
     });
 }
