@@ -362,7 +362,7 @@ async function deleteFullUser(uid, name) {
         // 3. Verwijder het User Document zelf
         await userRef.delete();
 
-        notify(`✅ Data van ${name} verwijderd! Vergeet niet de Auth Console te checken.`);
+        notify(`✅ Data van ${name} verwijderd uit Database! Vergeet niet het account te wissen in de Console.`);
         
         // Ververs lijst
         loadUsers();
