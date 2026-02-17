@@ -3,149 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <title>Game Paradise - Admin</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" type="image/png" href="/icon/favicon.png">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
-            --bg: #020617; 
-            --card-bg: rgba(30, 41, 59, 0.4);
-            --primary: #2563eb; 
-            --accent: #60a5fa; 
-            --danger: #ef4444; 
-            --success: #22c55e;
+            --bg: #020617; --card-bg: rgba(30, 41, 59, 0.4);
+            --primary: #2563eb; --accent: #60a5fa; --danger: #ef4444; --success: #22c55e;
             --warning: #f59e0b;
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; height: 100vh; overflow: hidden; }
         
-        body { 
-            margin: 0; font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg); color: white; 
-            display: flex; height: 100vh; overflow: hidden; 
-        }
-        
-        /* --- SIDEBAR (Precies zoals index.html) --- */
-        .sidebar { 
-            width: 260px; background: #010409; padding: 20px; 
-            border-right: 1px solid #1e293b; 
-            display: flex; flex-direction: column; 
-            height: 100vh; z-index: 50;
-            transition: transform 0.3s ease;
-        }
-        
+        /* Sidebar */
+        .sidebar { width: 260px; background: #010409; padding: 20px; border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
         .logo { color: var(--accent); font-size: 20px; font-weight: bold; margin-bottom: 30px; text-align: center; }
-        
-        .nav-btn { 
-            width: 100%; padding: 12px; margin-bottom: 8px; 
-            background: transparent; color: #94a3b8; border: none; 
-            text-align: left; cursor: pointer; border-radius: 8px; 
-            transition: 0.2s; font-size: 16px; 
-        }
+        .nav-btn { width: 100%; padding: 12px; margin-bottom: 8px; background: transparent; color: #94a3b8; border: none; text-align: left; cursor: pointer; border-radius: 8px; transition: 0.2s; }
         .nav-btn:hover { background: #1e293b; color: white; }
         .nav-btn.active { background: var(--primary); color: white; }
 
-        /* Overlay voor mobiel menu */
-        .sidebar-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.6); 
-            z-index: 40; display: none; backdrop-filter: blur(2px);
-        }
-        .sidebar-overlay.active { display: block; }
-
-        /* --- MAIN CONTENT --- */
-        .main { 
-            flex: 1; padding: 20px; overflow-y: auto; 
-            background: radial-gradient(circle at top right, #0f172a, #020617); 
-            position: relative; 
-        }
-        
-        /* Topbar met hamburger (alleen zichtbaar op mobiel) */
-        .topbar { display: none; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; }
-
+        /* Main Area */
+        .main { flex: 1; padding: 30px; overflow-y: auto; background: radial-gradient(circle at top right, #0f172a, #020617); }
         .section { display: none; animation: fadeIn 0.3s ease; }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 20px; }
-
-        /* --- FORMS & INPUTS --- */
-        input, select, textarea { 
-            width: 100%; padding: 12px; margin-bottom: 15px; 
-            border-radius: 10px; border: 1px solid #334155; 
-            background: #0f172a; color: white; outline: none; font-size: 16px; 
-        }
-        .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .card { background: var(--card-bg); padding: 25px; border-radius: 15px; border: 1px solid #1e293b; margin-bottom: 25px; }
+        
+        /* Form & Preview */
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; box-sizing: border-box; }
+        .btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .success { background: var(--success); color: white; }
         .danger { background: var(--danger); color: white; }
         .primary { background: var(--primary); color: white; }
+        .warning { background: var(--warning); color: black; }
         
-        /* --- GEBRUIKERS LIJST (Aangepast voor compacte knoppen) --- */
-        .user-item { 
-            display: flex; 
-            justify-content: space-between; /* Tekst links, knop rechts */
-            align-items: center; 
-            background: #1e293b; 
-            padding: 12px 15px; 
-            border-radius: 8px; 
-            margin-bottom: 8px; 
-            border: 1px solid #334155; 
-        }
-        .user-info { 
-            overflow: hidden; 
-            margin-right: 10px; 
-        }
-        .user-info strong { 
-            font-size: 15px; display: block; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-        }
-        .user-info small { 
-            color: #64748b; font-family: monospace; font-size: 11px; 
-        }
-        /* De compacte verwijder knop */
-        .btn-icon-small {
-            width: 36px; height: 36px;
-            display: flex; align-items: center; justify-content: center;
-            padding: 0; font-size: 16px; flex-shrink: 0;
-        }
+        /* Checkbox Container */
+        .checkbox-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; padding: 10px; border: 1px solid #334155; border-radius: 10px; background: #0f172a; }
+        .cat-option { display: flex; align-items: center; gap: 5px; background: #1e293b; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+        .cat-option input { width: auto; margin: 0; }
 
-        /* --- TABELLEN --- */
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
-        td, th { padding: 10px; border-bottom: 1px solid #1e293b; text-align: left; }
-        .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; }
+        .preview-container { text-align: center; margin-bottom: 15px; background: #020617; border-radius: 10px; padding: 10px; border: 1px dashed #334155; }
+        #editPreview { max-width: 100%; max-height: 150px; border-radius: 8px; display: none; margin: 0 auto; }
+        #previewPlaceholder { color: #475569; font-size: 14px; padding: 20px; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 12px; border-bottom: 1px solid #1e293b; text-align: left; }
+        .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
         .toast { background: #1e293b; color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-
-        /* --- MOBILE RESPONSIVE --- */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed; top: 0; left: 0; bottom: 0;
-                transform: translateX(-100%); /* Verborgen links */
-                width: 280px; box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-            }
-            .sidebar.active { transform: translateX(0); /* Schuif in */ }
-            .topbar { display: flex; /* Toon hamburger balk */ }
-            .main { padding: 15px; }
-            
-            /* Nog iets compacter op mobiel */
-            .user-item { padding: 10px; }
-            .btn-icon-small { width: 32px; height: 32px; }
-        }
+        
+        /* User List Specific */
+        .user-item { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 8px; }
+        .user-info small { color: #94a3b8; display: block; }
     </style>
 </head>
 <body>
 
 <div id="toast-container"></div>
-<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-<div id="sidebar" class="sidebar">
+<div class="sidebar">
     <div class="logo">🎮 Admin Panel</div>
     <button class="nav-btn active" id="btn-dashboard" onclick="showTab('dashboard')">📊 Dashboard</button>
     <button class="nav-btn" id="btn-users" onclick="showTab('users')">👥 Gebruikers</button>
     <button class="nav-btn" id="btn-editor" onclick="showTab('editor')">✏️ Game Editor</button>
     <button class="nav-btn" id="btn-games" onclick="showTab('games')">🎮 Games Lijst</button>
+    <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
     <button class="nav-btn" id="btn-updates" onclick="showTab('updates')">🔔 Updates</button>
     <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
     
@@ -156,81 +80,91 @@
 </div>
 
 <div class="main">
-    <div class="topbar">
-        <button class="menu-btn" onclick="toggleSidebar()">☰</button>
-        <h2 style="margin:0; font-size: 18px;" id="pageTitle">Dashboard</h2>
-    </div>
-
     <div id="dashboardSection" class="section" style="display:block">
         <div class="card">
             <h2>Welkom Admin</h2>
-            <div id="stats" style="margin-top:10px; font-weight:bold; color:var(--accent);">Laden...</div>
+            <p>Gebruik het linker menu om de website te beheren.</p>
+            <div id="stats" style="margin-top:20px; font-weight:bold; color:var(--accent);">Laden...</div>
         </div>
     </div>
 
     <div id="usersSection" class="section">
         <div class="card">
-            <h3 style="margin-top:0">👥 Gebruikers</h3>
-            <p style="font-size:12px; color:#94a3b8; margin-bottom:15px">Let op: verwijderen wist alle voortgang en chats.</p>
-            
-            <input type="text" id="userSearchInput" placeholder="🔍 Zoek gebruiker..." onkeyup="filterUsers()" style="padding:10px;">
-            
-            <div id="usersList">
-                <p style="color:#94a3b8">Laden...</p>
-            </div>
-            
-            <div style="margin-top:20px; padding-top:10px; border-top:1px solid #334155;">
+            <h3>👥 Gebruiker Verwijderen</h3>
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin-top:0; color: #fca5a5;"><b>⚠️ Belangrijk:</b> Dit admin paneel verwijdert alle data uit de database (profiel, chats, savegames), maar <b>NIET</b> het login-account.</p>
+                <p>Klik na het verwijderen hieronder op deze knop om het account definitief te wissen:</p>
                 <a href="https://console.firebase.google.com/u/0/project/gameparadise-80490/authentication/users" 
-                   target="_blank" style="color:var(--danger); text-decoration:none; font-size:12px;">
-                   🔗 Naar Firebase Auth Console (voor definitief verwijderen login)
+                   target="_blank" class="btn warning" style="text-decoration:none; display:inline-block;">
+                   🔗 Open Firebase Auth Console
                 </a>
+            </div>
+
+            <input type="text" id="userSearchInput" placeholder="🔍 Zoek op gebruikersnaam of e-mail..." onkeyup="filterUsers()">
+            <div id="usersList">
+                <p style="color:#94a3b8">Laden van gebruikers...</p>
             </div>
         </div>
     </div>
 
     <div id="editorSection" class="section">
         <div class="card">
-            <h3 id="editorTitle">Nieuwe Game</h3>
-            <div style="text-align:center; margin-bottom:10px;">
-                <img id="editPreview" src="" alt="" style="max-height:100px; display:none; border-radius:8px; margin:0 auto;">
+            <h3 id="editorTitle">Nieuwe Game Toevoegen</h3>
+            <div class="preview-container">
+                <div id="previewPlaceholder">Afbeelding preview...</div>
+                <img id="editPreview" src="" alt="Preview">
             </div>
-            <input id="editId" placeholder="ID (bv: subway-surfers)">
-            <input id="editTitle" placeholder="Titel">
-            <input id="editImg" placeholder="Plaatje URL" oninput="updateImgPreview(this.value)">
-            <input id="editLink" value="games/" placeholder="Map link">
-            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;" id="catCheckboxes"></div>
-            <label style="display:block; margin-bottom:5px"><input type="checkbox" id="editHasSave" style="width:auto"> Slaat op (💾)</label>
-            <label style="display:block; margin-bottom:10px"><input type="checkbox" id="editHasInfo" style="width:auto"> Info knop (❓)</label>
-            <textarea id="editInfoText" placeholder="Info tekst" rows="2"></textarea>
-            <button class="btn success" onclick="saveGame()">Opslaan</button>
-            <button class="btn" onclick="resetEditor()">Reset</button>
+            <input id="editId" placeholder="Uniek ID (bijv: subway-surfers)">
+            <input id="editTitle" placeholder="Titel van de game">
+            <input id="editImg" placeholder="Afbeelding URL" oninput="updatePreview(this.value)">
+            <input id="editLink" value="games/" placeholder="Link naar game map">
+            <p style="margin-bottom:5px; font-size:14px; color:#94a3b8;">Categorieën (Selecteer meerdere):</p>
+            <div id="catCheckboxes" class="checkbox-container"></div>
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                <input type="checkbox" id="editHasSave" style="width:auto; margin:0"> <span>Slaat voortgang op (💾)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+                <input type="checkbox" id="editHasInfo" style="width:auto; margin:0"> <span>Heeft extra info (❓)</span>
+            </label>
+            <textarea id="editInfoText" placeholder="Informatie tekst..." rows="3"></textarea>
+            <button class="btn success" onclick="saveGame()">💾 Opslaan</button>
+            <button class="btn" style="width:100%; background:transparent; color:#94a3b8" onclick="resetEditor()">Schoonmaken</button>
         </div>
     </div>
 
     <div id="gamesSection" class="section">
         <div class="card">
-            <input type="text" id="gameSearch" placeholder="🔍 Zoek game..." onkeyup="filterGamesTable()">
-            <div class="table-container">
-                <table id="gamesTable">
-                    <thead><tr><th>Pic</th><th>Titel</th><th></th></tr></thead>
-                    <tbody id="gamesList"></tbody>
-                </table>
-            </div>
+            <input type="text" id="gameSearch" placeholder="🔍 Zoek game op titel..." onkeyup="filterGamesTable()">
+            <table>
+                <thead><tr><th>Afbeelding</th><th>Titel</th><th>Categorie(ën)</th><th>Acties</th></tr></thead>
+                <tbody id="gamesList"></tbody>
+            </table>
         </div>
+    </div>
+
+    <div id="categoriesSection" class="section">
+        <div class="card">
+            <input id="catId" placeholder="ID (bijv: actie)"><input id="catName" placeholder="Naam (bijv: Actie Games)">
+            <button class="btn success" onclick="addCategory()">Toevoegen</button>
+        </div>
+        <div id="categoriesList"></div>
     </div>
 
     <div id="updatesSection" class="section">
         <div class="card">
-            <h3>Update Plaatsen</h3>
-            <input id="updateTitle" placeholder="Titel">
-            <textarea id="updateContent" placeholder="Tekst..." rows="3"></textarea>
-            <button class="btn success" onclick="postUpdate()">Plaatsen</button>
+            <h3>Nieuwe Update Plaatsen</h3>
+            <input id="updateTitle" placeholder="Titel van update">
+            <textarea id="updateContent" placeholder="Beschrijving van de update..." rows="3"></textarea>
+            <button class="btn success" onclick="postUpdate()">Publiceren</button>
         </div>
-        <div class="card" id="updatesList"></div>
+        <div class="card">
+            <h3>Recente Updates</h3>
+            <div id="updatesList"></div>
+        </div>
     </div>
 
     <div id="chatSection" class="section">
-        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis HELE Chat</button></div>
+        <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Hele Chat</button></div>
         <div id="adminChatList"></div>
     </div>
 </div>
@@ -249,14 +183,15 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
+// Global user list cache
 let allUsers = [];
 
 auth.onAuthStateChanged(user => {
     if (user && ADMINS.includes(user.email.toLowerCase())) {
         init();
-        loadUsers();
+        loadUsers(); // Users inladen bij start
     } else {
-        alert("Geen admin toegang.");
+        alert("Geen toegang! Log in met een admin account.");
         location.href = "index.html";
     }
 });
@@ -267,94 +202,104 @@ function notify(msg) {
     setTimeout(() => t.remove(), 3000);
 }
 
-// --- Menu Logic (Hamburger) ---
-function toggleSidebar(forceOpen = null) {
-    const sb = document.getElementById('sidebar');
-    const ov = document.getElementById('sidebarOverlay');
-    if (forceOpen === false) {
-        sb.classList.remove('active');
-        ov.classList.remove('active');
-    } else {
-        sb.classList.toggle('active');
-        ov.classList.toggle('active');
-    }
-}
-
 function showTab(id) {
     document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id + 'Section').style.display = 'block';
     document.getElementById('btn-' + id).classList.add('active');
-    
-    // Update titel in mobiele balk
-    const names = {'dashboard':'Dashboard','users':'Gebruikers','editor':'Editor','games':'Games','updates':'Updates','chat':'Chat'};
-    document.getElementById('pageTitle').innerText = names[id] || 'Admin';
-    
-    toggleSidebar(false); // Sluit menu op mobiel na klik
 }
 
-function updateImgPreview(url) {
+function updatePreview(url) {
     const img = document.getElementById('editPreview');
-    if(url.length > 5){ img.src = url; img.style.display = 'block'; } 
-    else { img.style.display = 'none'; }
+    const placeholder = document.getElementById('previewPlaceholder');
+    if (url.length > 5) {
+        img.src = url; img.style.display = 'block'; placeholder.style.display = 'none';
+    } else {
+        img.style.display = 'none'; placeholder.style.display = 'block';
+    }
 }
 
 function init() {
-    // Games laden
+    // Games
     db.collection("games").onSnapshot(s => {
-        const list = document.getElementById('gamesList'); list.innerHTML = "";
-        document.getElementById('stats').innerText = `Games online: ${s.size}`;
+        const list = document.getElementById('gamesList');
+        list.innerHTML = "";
+        let count = 0;
         s.forEach(doc => {
+            count++;
             const g = doc.data();
+            const catDisplay = Array.isArray(g.categories) ? g.categories.join(", ") : g.category;
             list.innerHTML += `<tr class="game-row">
                 <td><img src="${g.image}" class="thumb"></td>
-                <td class="g-title"><b>${g.title}</b></td>
-                <td style="text-align:right">
-                    <button class="btn btn-icon-small primary" onclick="editGame('${doc.id}')" style="display:inline-block; margin-right:5px">✏️</button>
-                    <button class="btn btn-icon-small danger" onclick="deleteItem('games','${doc.id}')" style="display:inline-block">🗑️</button>
+                <td class="game-title-cell"><b>${g.title}</b></td>
+                <td><small>${catDisplay}</small></td>
+                <td>
+                    <button class="btn" onclick="editGame('${doc.id}')">✏️</button>
+                    <button class="btn danger" onclick="deleteItem('games','${doc.id}')">🗑️</button>
                 </td>
             </tr>`;
         });
+        document.getElementById('stats').innerText = `Totaal games: ${count}`;
     });
 
-    // Categorieën ophalen voor editor
+    // Categorieën
     db.collection("categories").onSnapshot(s => {
-        const box = document.getElementById('catCheckboxes'); box.innerHTML = "";
+        const list = document.getElementById('categoriesList');
+        const box = document.getElementById('catCheckboxes');
+        list.innerHTML = ""; box.innerHTML = "";
+        
         s.forEach(doc => {
-            box.innerHTML += `<label style="background:#1e293b; padding:5px 10px; border-radius:5px; font-size:13px; cursor:pointer;">
-                <input type="checkbox" value="${doc.id}" name="gameCategory"> ${doc.data().name}
-            </label>`;
+            const d = doc.data();
+            list.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:10px; margin-bottom:5px;">
+                <span>${d.name} (${doc.id})</span>
+                <button class="btn danger" style="padding:5px 10px;" onclick="deleteItem('categories','${doc.id}')">X</button>
+            </div>`;
+            
+            box.innerHTML += `
+                <label class="cat-option">
+                    <input type="checkbox" value="${doc.id}" name="gameCategory">
+                    ${d.name}
+                </label>`;
         });
     });
-    
+
     // Updates
     db.collection("updates").orderBy("timestamp", "desc").onSnapshot(s => {
-        const list = document.getElementById('updatesList'); list.innerHTML = "";
+        const list = document.getElementById('updatesList');
+        list.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div style="border-bottom:1px solid #334155; padding:10px; position:relative;">
-                <button onclick="deleteItem('updates','${doc.id}')" style="position:absolute; right:0; top:5px; background:none; border:none; cursor:pointer;">❌</button>
-                <b>${doc.data().title}</b><br><small style="color:#94a3b8">${doc.data().content}</small>
-            </div>`;
+            const d = doc.data();
+            const date = d.timestamp ? d.timestamp.toDate().toLocaleDateString() : '';
+            list.innerHTML += `
+                <div style="border-bottom:1px solid #334155; padding:10px; position:relative;">
+                    <button onclick="deleteItem('updates', '${doc.id}')" style="position:absolute; right:0; top:10px; color:red; background:none; border:none; cursor:pointer;">🗑️</button>
+                    <small style="color:var(--accent)">${date}</small>
+                    <div style="font-weight:bold">${d.title}</div>
+                    <div style="font-size:13px; color:gray;">${d.content}</div>
+                </div>`;
         });
     });
-    
+
     // Chat
     db.collection("chats").orderBy("timestamp", "desc").limit(20).onSnapshot(s => {
-        const list = document.getElementById('adminChatList'); list.innerHTML = "";
+        const list = document.getElementById('adminChatList');
+        list.innerHTML = "";
         s.forEach(doc => {
-            list.innerHTML += `<div style="background:#1e293b; padding:8px; margin-bottom:5px; border-radius:5px; display:flex; justify-content:space-between;">
-                <span style="font-size:13px;"><b>${doc.data().user}:</b> ${doc.data().text}</span>
-                <button onclick="deleteItem('chats','${doc.id}')" style="background:none; border:none; cursor:pointer;">❌</button>
+            list.innerHTML += `<div class="card" style="padding:10px;">
+                <b>${doc.data().user}:</b> ${doc.data().text} 
+                <button class="btn danger" style="float:right; padding:5px" onclick="deleteItem('chats','${doc.id}')">X</button>
             </div>`;
         });
     });
 }
 
-// --- GEBRUIKERS LOGICA (Aangepast) ---
+/* --- GEBRUIKERS BEHEER LOGICA --- */
 function loadUsers() {
     db.collection("users").get().then(snap => {
         allUsers = [];
-        snap.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+        snap.forEach(doc => {
+            allUsers.push({ id: doc.id, ...doc.data() });
+        });
         renderUsers(allUsers);
     });
 }
@@ -362,26 +307,19 @@ function loadUsers() {
 function renderUsers(users) {
     const list = document.getElementById('usersList');
     list.innerHTML = "";
-    if(users.length === 0) { list.innerHTML = "<p>Geen resultaat.</p>"; return; }
+    if(users.length === 0) { list.innerHTML = "<p>Geen gebruikers gevonden.</p>"; return; }
 
     users.forEach(u => {
-        // Logic: Als er geen naam is, pak email.
-        let mainName = u.username || u.displayName;
-        if (!mainName || mainName.trim() === "") {
-            mainName = u.email || "Naamloos";
-        }
-        // Subtekst is altijd UID
-        const subText = u.id;
-
+        const name = u.username || u.displayName || "Naamloos";
+        const email = u.email || "Geen email";
+        
         list.innerHTML += `
             <div class="user-item">
                 <div class="user-info">
-                    <strong>${mainName}</strong>
-                    <small>UID: ${subText}</small>
+                    <strong>${name}</strong>
+                    <small>${email} (UID: ${u.id})</small>
                 </div>
-                <button class="btn danger btn-icon-small" onclick="deleteFullUser('${u.id}', '${mainName}')" title="Verwijder Gebruiker">
-                    🗑️
-                </button>
+                <button class="btn danger" onclick="deleteFullUser('${u.id}', '${name}')">🗑️ Verwijderen</button>
             </div>
         `;
     });
@@ -390,93 +328,181 @@ function renderUsers(users) {
 function filterUsers() {
     const term = document.getElementById('userSearchInput').value.toLowerCase();
     const filtered = allUsers.filter(u => {
-        const n = (u.username || u.email || "").toLowerCase();
-        return n.includes(term) || u.id.includes(term);
+        const name = (u.username || "").toLowerCase();
+        const email = (u.email || "").toLowerCase();
+        return name.includes(term) || email.includes(term) || u.id.includes(term);
     });
     renderUsers(filtered);
 }
 
-// --- ACTIES ---
 async function deleteFullUser(uid, name) {
-    if(!confirm(`⚠️ Verwijder ${name}?\nDit wist Savegames & Chats.`)) return;
+    if(!confirm(`⚠️ WEET JE HET ZEKER?\n\nJe staat op het punt alle data van ${name} te verwijderen.\nDit verwijdert:\n- Profiel\n- Vrienden (ook bij anderen)\n- Alle privé chats\n- Savegames\n\nDit kan niet ongedaan gemaakt worden.`)) return;
+    
+    notify("Bezig met verwijderen... dit kan even duren.");
     
     try {
-        const ref = db.collection("users").doc(uid);
-        // Wis subcollecties (mag handmatig in code, of via cloud functions, dit is basic client-side delete)
-        const subs = ["favorites", "saveData", "friends", "requests", "sentRequests"];
-        for (const s of subs) {
-            const snap = await ref.collection(s).get();
-            const batch = db.batch();
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
+        const userRef = db.collection("users").doc(uid);
+
+        // STAP 1: Vrienden & Privé Chats opruimen (Wederkerig)
+        // We moeten weten wie de vrienden zijn om de chats en de koppeling bij de ander te wissen.
+        const friendsSnapshot = await userRef.collection("friends").get();
+        const cleanupBatch = db.batch();
+
+        friendsSnapshot.forEach(doc => {
+            const friendId = doc.id;
+
+            // A. Verwijder DEZE user uit de vriendenlijst van de VRIEND
+            // Path: /users/{friendId}/friends/{uid}
+            const otherSideRef = db.collection("users").doc(friendId).collection("friends").doc(uid);
+            cleanupBatch.delete(otherSideRef);
+
+            // B. Verwijder de Private Chat Documenten
+            // Omdat de ID {UID1}_{UID2} kan zijn, proberen we beide combinaties.
+            // Als de doc niet bestaat, negeert de batch delete dit (geen error).
+            const chatOption1 = db.collection("private_chats").doc(`${uid}_${friendId}`);
+            const chatOption2 = db.collection("private_chats").doc(`${friendId}_${uid}`);
+            
+            cleanupBatch.delete(chatOption1);
+            cleanupBatch.delete(chatOption2);
+        });
+
+        // Voer de opschoning van vrienden en chats uit
+        if (!friendsSnapshot.empty) {
+            await cleanupBatch.commit();
+            console.log("Vriendenlijsten van anderen en chats opgeschoond.");
         }
-        await ref.delete();
+
+        // STAP 2: Verwijder Subcollecties van de user zelf
+        // (Handmatig opvragen en deleten omdat web-sdk geen recursive delete heeft)
+        const subCollections = ["favorites", "saveData", "friends", "requests", "sentRequests"];
         
-        // Wis chats van deze user
-        const chats = await db.collection("chats").where("uid","==",uid).get();
-        chats.forEach(d => d.ref.delete());
+        for (const sub of subCollections) {
+            const snapshot = await userRef.collection(sub).get();
+            if (!snapshot.empty) {
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
+        }
 
-        notify("Gebruiker data gewist.");
+        // STAP 3: Verwijder Publieke Chat berichten van deze gebruiker
+        const chatSnap = await db.collection("chats").where("uid", "==", uid).get();
+        if (!chatSnap.empty) {
+            const chatBatch = db.batch();
+            chatSnap.forEach(doc => chatBatch.delete(doc.ref));
+            await chatBatch.commit();
+        }
+
+        // STAP 4: Verwijder het User Document zelf
+        await userRef.delete();
+
+        notify(`✅ Alle data van ${name} succesvol verwijderd!`);
+        
+        // Ververs lijst
         loadUsers();
-    } catch(e) { alert(e.message); }
+        
+    } catch (error) {
+        console.error(error);
+        alert("Fout bij verwijderen: " + error.message);
+    }
 }
+/* -------------------------------- */
 
-function deleteItem(col, id) {
-    if(confirm("Wissen?")) db.collection(col).doc(id).delete();
+function filterGamesTable() {
+    const term = document.getElementById('gameSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('.game-row');
+    rows.forEach(row => {
+        const title = row.querySelector('.game-title-cell').innerText.toLowerCase();
+        row.style.display = title.includes(term) ? '' : 'none';
+    });
 }
 
 function saveGame() {
     const id = document.getElementById('editId').value;
-    if(!id) return notify("Geen ID!");
+    if(!id) return notify("ID is verplicht!");
     
-    const cats = [];
-    document.querySelectorAll('input[name="gameCategory"]:checked').forEach(c => cats.push(c.value));
-    
-    db.collection("games").doc(id).set({
+    const checkboxes = document.querySelectorAll('input[name="gameCategory"]:checked');
+    const categories = Array.from(checkboxes).map(c => c.value);
+
+    const data = {
         title: document.getElementById('editTitle').value,
         image: document.getElementById('editImg').value,
         link: document.getElementById('editLink').value,
-        categories: cats, category: cats[0] || 'all',
+        categories: categories, 
+        category: categories[0] || 'all', 
         hasSave: document.getElementById('editHasSave').checked,
         hasInfo: document.getElementById('editHasInfo').checked,
         infoText: document.getElementById('editInfoText').value
-    }, {merge:true}).then(() => { notify("Opgeslagen"); resetEditor(); });
+    };
+    
+    db.collection("games").doc(id).set(data, {merge:true}).then(() => {
+        notify("Game succesvol opgeslagen!");
+        resetEditor();
+    });
+}
+
+function editGame(id) {
+    db.collection("games").doc(id).get().then(doc => {
+        const g = doc.data();
+        document.getElementById('editId').value = id;
+        document.getElementById('editId').disabled = true;
+        document.getElementById('editTitle').value = g.title;
+        document.getElementById('editImg').value = g.image;
+        document.getElementById('editLink').value = g.link;
+        document.getElementById('editHasSave').checked = g.hasSave || false;
+        document.getElementById('editHasInfo').checked = g.hasInfo || false;
+        document.getElementById('editInfoText').value = g.infoText || "";
+        
+        const cats = Array.isArray(g.categories) ? g.categories : [g.category];
+        document.querySelectorAll('input[name="gameCategory"]').forEach(cb => {
+            cb.checked = cats.includes(cb.value);
+        });
+
+        updatePreview(g.image);
+        showTab('editor');
+    });
+}
+
+function postUpdate() {
+    const title = document.getElementById('updateTitle').value;
+    const content = document.getElementById('updateContent').value;
+    if(!title || !content) return alert("Vul alles in!");
+    
+    db.collection("updates").add({
+        title, content, timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+        notify("Update geplaatst!");
+        document.getElementById('updateTitle').value = "";
+        document.getElementById('updateContent').value = "";
+    }).catch(err => alert("Fout: " + err.message));
 }
 
 function resetEditor() {
     document.getElementById('editId').value = "";
+    document.getElementById('editId').disabled = false;
     document.getElementById('editTitle').value = "";
     document.getElementById('editImg').value = "";
     document.getElementById('editInfoText').value = "";
     document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
-    updateImgPreview("");
+    updatePreview("");
 }
 
-function postUpdate() {
-    const t = document.getElementById('updateTitle').value;
-    const c = document.getElementById('updateContent').value;
-    if(t && c) db.collection("updates").add({
-        title:t, content:c, timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
-        document.getElementById('updateTitle').value="";
-        document.getElementById('updateContent').value="";
-        notify("Update geplaatst");
-    });
+function addCategory() {
+    const id = document.getElementById('catId').value;
+    const name = document.getElementById('catName').value;
+    if(id && name) db.collection("categories").doc(id).set({name});
+}
+
+function deleteItem(col, id) {
+    if(confirm("Zeker weten verwijderen?")) db.collection(col).doc(id).delete().then(() => notify("Verwijderd."));
 }
 
 async function clearAllChat() {
-    if(confirm("Alles wissen?")) {
-        const s = await db.collection("chats").get();
-        s.forEach(d => d.ref.delete());
-        notify("Chat leeg.");
+    if(confirm("Hele chat wissen?")) {
+        const snap = await db.collection("chats").get();
+        snap.forEach(doc => doc.ref.delete());
+        notify("Chat leeggemaakt.");
     }
-}
-
-function filterGamesTable() {
-    const t = document.getElementById('gameSearch').value.toLowerCase();
-    document.querySelectorAll('.game-row').forEach(r => {
-        r.style.display = r.querySelector('.g-title').innerText.toLowerCase().includes(t) ? '' : 'none';
-    });
 }
 </script>
 </body>
