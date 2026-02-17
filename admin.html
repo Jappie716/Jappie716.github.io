@@ -336,33 +336,67 @@ function filterUsers() {
 }
 
 async function deleteFullUser(uid, name) {
-    if(!confirm(`⚠️ WEET JE HET ZEKER?\n\nJe staat op het punt alle data van ${name} te verwijderen.\nDit kan niet ongedaan gemaakt worden.`)) return;
+    if(!confirm(`⚠️ WEET JE HET ZEKER?\n\nJe staat op het punt alle data van ${name} te verwijderen.\nDit verwijdert:\n- Profiel\n- Vrienden (ook bij anderen)\n- Alle privé chats\n- Savegames\n\nDit kan niet ongedaan gemaakt worden.`)) return;
     
-    notify("Bezig met verwijderen... even geduld.");
+    notify("Bezig met verwijderen... dit kan even duren.");
     
     try {
         const userRef = db.collection("users").doc(uid);
 
-        // 1. Verwijder Subcollecties (Handmatig opvragen en deleten omdat web-sdk geen recursive delete heeft)
+        // STAP 1: Vrienden & Privé Chats opruimen (Wederkerig)
+        // We moeten weten wie de vrienden zijn om de chats en de koppeling bij de ander te wissen.
+        const friendsSnapshot = await userRef.collection("friends").get();
+        const cleanupBatch = db.batch();
+
+        friendsSnapshot.forEach(doc => {
+            const friendId = doc.id;
+
+            // A. Verwijder DEZE user uit de vriendenlijst van de VRIEND
+            // Path: /users/{friendId}/friends/{uid}
+            const otherSideRef = db.collection("users").doc(friendId).collection("friends").doc(uid);
+            cleanupBatch.delete(otherSideRef);
+
+            // B. Verwijder de Private Chat Documenten
+            // Omdat de ID {UID1}_{UID2} kan zijn, proberen we beide combinaties.
+            // Als de doc niet bestaat, negeert de batch delete dit (geen error).
+            const chatOption1 = db.collection("private_chats").doc(`${uid}_${friendId}`);
+            const chatOption2 = db.collection("private_chats").doc(`${friendId}_${uid}`);
+            
+            cleanupBatch.delete(chatOption1);
+            cleanupBatch.delete(chatOption2);
+        });
+
+        // Voer de opschoning van vrienden en chats uit
+        if (!friendsSnapshot.empty) {
+            await cleanupBatch.commit();
+            console.log("Vriendenlijsten van anderen en chats opgeschoond.");
+        }
+
+        // STAP 2: Verwijder Subcollecties van de user zelf
+        // (Handmatig opvragen en deleten omdat web-sdk geen recursive delete heeft)
         const subCollections = ["favorites", "saveData", "friends", "requests", "sentRequests"];
         
         for (const sub of subCollections) {
             const snapshot = await userRef.collection(sub).get();
-            const batch = db.batch();
-            snapshot.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
+            if (!snapshot.empty) {
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
         }
 
-        // 2. Verwijder Chat berichten van deze gebruiker
+        // STAP 3: Verwijder Publieke Chat berichten van deze gebruiker
         const chatSnap = await db.collection("chats").where("uid", "==", uid).get();
-        const chatBatch = db.batch();
-        chatSnap.forEach(doc => chatBatch.delete(doc.ref));
-        await chatBatch.commit();
+        if (!chatSnap.empty) {
+            const chatBatch = db.batch();
+            chatSnap.forEach(doc => chatBatch.delete(doc.ref));
+            await chatBatch.commit();
+        }
 
-        // 3. Verwijder het User Document zelf
+        // STAP 4: Verwijder het User Document zelf
         await userRef.delete();
 
-        notify(`✅ Data van ${name} verwijderd uit Database! Vergeet niet het account te wissen in de Console.`);
+        notify(`✅ Alle data van ${name} succesvol verwijderd!`);
         
         // Ververs lijst
         loadUsers();
