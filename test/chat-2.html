@@ -5,11 +5,15 @@
     <title>Game Paradise - Chat</title>
     <link rel="icon" type="image/png" href="/icon/favicon.png">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+
     
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+
     
     <style>
         :root {
@@ -479,6 +483,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+const messaging = firebase.messaging();
+    if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then((registration) => {
+        messaging.useServiceWorker(registration);
+    });
+}
+
+
 
 // SAFARI PERSISTENCE FIX
 try {
@@ -569,7 +582,19 @@ async function checkSetup() {
     if (!doc.exists || !doc.data().name) { document.getElementById('setupOverlay').style.display = 'flex'; }
     else {
         document.getElementById('setupOverlay').style.display = 'none';
-        if (Notification.permission === "default") Notification.requestPermission();
+        async function registerPush() {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+        const token = await messaging.getToken({
+            vapidKey: "HIER_JE_VAPID_KEY"
+        });
+
+        await db.collection("users").doc(user.uid).update({
+            pushToken: token
+        });
+    }
+}
+registerPush();
         initApp();
     }
 }
@@ -1507,45 +1532,9 @@ async function updateGroupInfo() {
     await db.collection("groups").doc(activeChatId).update({ name: newName, pic: imgPreview });
     notify("Aangepast", "Groepsinformatie bijgewerkt"); openChatSettings();
 }
-
-async function deleteGroup() { 
-    // Admin verwijdert groep -> Groep doc weg. (Subcollecties blijven orphans in Firestore, maar UI ziet ze niet meer)
-    await db.collection("groups").doc(activeChatId).delete(); 
-    activeChatId = null; 
-    document.getElementById('chatMessages').innerHTML = ""; 
-    document.getElementById('inputArea').style.display = 'none'; 
-    closeModal('settingsModal'); 
-    renderSidebar(); 
-    location.reload();
-}
-
-async function removeFriend() { 
-    // Vriend verwijderen = ook chatgeschiedenis verwijderen
-    const friendId = activeChatId;
-    const myId = user.uid;
-    const chatId = [myId, friendId].sort().join("_");
-
-    // 1. Vriendschap verbreken
-    await db.collection("users").doc(myId).collection("friends").doc(friendId).delete(); 
-    await db.collection("users").doc(friendId).collection("friends").doc(myId).delete(); 
-    
-    // 2. Chat verwijderen (Dit mag nu door de nieuwe Rules)
-    try {
-        await db.collection("private_chats").doc(chatId).delete();
-    } catch(e) {
-        console.log("Chat kon niet verwijderd worden of bestond niet:", e);
-    }
-
-    location.reload(); 
-}
-
-async function leaveGroup() { 
-    await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`); 
-    // Dit werkt nu omdat de Rules allowen dat je jezelf uit de members array haalt
-    await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) }); 
-    location.reload(); 
-}
-
+async function deleteGroup() { await db.collection("groups").doc(activeChatId).delete(); activeChatId = null; document.getElementById('chatMessages').innerHTML = ""; document.getElementById('inputArea').style.display = 'none'; closeModal('settingsModal'); renderSidebar(); }
+async function removeFriend() { await db.collection("users").doc(user.uid).collection("friends").doc(activeChatId).delete(); await db.collection("users").doc(activeChatId).collection("friends").doc(user.uid).delete(); location.reload(); }
+async function leaveGroup() { await sendSystemMessage(`${document.getElementById('myName').innerText} heeft de groep verlaten.`); await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(user.uid) }); location.reload(); }
 async function kickMember(mid, mName) { await sendSystemMessage(`${mName} is verwijderd door de beheerder.`); await db.collection("groups").doc(activeChatId).update({ members: firebase.firestore.FieldValue.arrayRemove(mid) }); openChatSettings(); }
 async function transferOwner(newId, newName) { await sendSystemMessage(`${document.getElementById('myName').innerText} heeft ${newName} beheerder gemaakt.`); await db.collection("groups").doc(activeChatId).update({ owner: newId }); openChatSettings(); }
 
