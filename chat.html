@@ -137,6 +137,9 @@
         .item-info h4 { margin: 0; font-size: 14px; color: #e2e8f0; }
         .item-info p { margin: 0; font-size: 11px; color: gray; }
         
+        .item:hover .pin-btn:not(.pinned),
+        .item:active .pin-btn:not(.pinned) { display: flex !important; }
+        
         .status-wrapper { position: relative; margin-right: 12px; width: 40px; height: 40px; }
         .status-wrapper img { margin-right: 0; width: 100%; height: 100%; }
         .status-dot {
@@ -517,6 +520,7 @@ let observedUsers = new Set();
 let userCache = new Map(); // Cache voor avatar URL's
 let hasLoadedChats = false;
 let sentRequestIds = new Set(); 
+let pinnedChats = []; 
 
 // Reply & Edit State
 let replyContext = null; 
@@ -597,7 +601,32 @@ function initApp() {
     });
 
     subscribeToChats();
+    loadPinnedChats();
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
+}
+
+function loadPinnedChats() {
+    db.collection("users").doc(user.uid).get().then(doc => {
+        if(doc.exists && doc.data().pinnedChats) {
+            pinnedChats = doc.data().pinnedChats;
+            renderSidebar();
+        }
+    });
+}
+
+function togglePinChat(chatId) {
+    const idx = pinnedChats.indexOf(chatId);
+    if(idx > -1) {
+        pinnedChats.splice(idx, 1);
+    } else {
+        if(pinnedChats.length >= 3) {
+            notify("Maximaal 3 chats vastgezet", "Maak eerst een andere chat los.", null, null, "error");
+            return;
+        }
+        pinnedChats.push(chatId);
+    }
+    db.collection("users").doc(user.uid).update({ pinnedChats: pinnedChats });
+    renderSidebar();
 }
 
 function showSidebarSkeletons() {
@@ -782,7 +811,32 @@ function renderSidebar() {
 
         if(chats.length === 0) { list.innerHTML = "<div style='padding:20px; text-align:center; color:gray'>Geen chats.</div>"; return; }
 
-        chats.forEach(c => {
+        const pinned = chats.filter(c => pinnedChats.includes(c.id));
+        const unpinned = chats.filter(c => !pinnedChats.includes(c.id));
+
+        if(pinned.length > 0) {
+            list.innerHTML += `<div class="req-section-header" style="color:var(--accent)">📌 Vastgezet</div>`;
+            pinned.forEach(c => {
+                if(term && !c.name.toLowerCase().includes(term)) return;
+                const item = document.createElement('div');
+                item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
+                item.onclick = () => openChat(c.id, c.name, c.pic, c.type);
+                
+                let avatarHtml = `<div class="status-wrapper">
+                        <img src="${c.pic || `https://ui-avatars.com/api/?name=${c.name}`}">
+                        ${c.type === 'private' ? `<div class="status-dot ${c.online?'online':''}"></div>` : ''}
+                    </div>`;
+
+                item.innerHTML = `
+                    ${avatarHtml}
+                    <div class="item-info"><h4>${c.name}</h4><p>${c.type==='private'?'Vriend':c.type==='group'?'Groep':'Community'}</p></div>
+                    <div class="unread-badge ${c.unread?'show':''}">${c.unread?'!':''}</div>
+                    <button class="btn btn-sm pin-btn pinned" style="margin-left:5px; padding:5px;" onclick="event.stopPropagation(); togglePinChat('${c.id}')">📌</button>`;
+                list.appendChild(item);
+            });
+        }
+
+        unpinned.forEach(c => {
             if(term && !c.name.toLowerCase().includes(term)) return;
             const item = document.createElement('div');
             item.className = `item ${activeChatId === c.id ? 'active-chat' : ''}`;
@@ -796,7 +850,8 @@ function renderSidebar() {
             item.innerHTML = `
                 ${avatarHtml}
                 <div class="item-info"><h4>${c.name}</h4><p>${c.type==='private'?'Vriend':c.type==='group'?'Groep':'Community'}</p></div>
-                <div class="unread-badge ${c.unread?'show':''}">${c.unread?'!':''}</div>`;
+                <div class="unread-badge ${c.unread?'show':''}">${c.unread?'!':''}</div>
+                <button class="btn btn-sm btn-outline pin-btn" style="margin-left:5px; padding:5px; display:none;" onclick="event.stopPropagation(); togglePinChat('${c.id}')">📍</button>`;
             list.appendChild(item);
         });
     } else if (tab === 'Ontdek') { renderDiscover(list, term); } 
