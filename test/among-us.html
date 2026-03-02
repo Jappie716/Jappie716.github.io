@@ -1,76 +1,347 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Among Us Game</title>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #282c34; color: white; }
-        .login { display: none; }
-        #game { display: none; }
-        .button { padding: 10px 20px; margin-top: 10px; }
-        .task { margin: 5px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Among Us — GameParadise</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 0; padding: 16px; background:#0f1724; color:#e6eef8; }
+    .container { max-width:1000px; margin:0 auto; }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .card { background:#0b1220; padding:12px; border-radius:8px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.6); }
+    input, button, select, textarea { font-size:14px; padding:8px; border-radius:6px; border:1px solid #223; background:#071022; color:#e6eef8; }
+    button { cursor:pointer; border:1px solid #2b6; background:linear-gradient(#0b6,#084); color:#001; }
+    .muted { color:#9fb0c8; }
+    #not-logged { background:#2b0b0b; color:#ffdede; padding:12px; border-radius:8px; }
+    .flex { display:flex; gap:8px; align-items:center; }
+    .players, .chat { max-height:320px; overflow:auto; padding:8px; background:#071022; border-radius:6px; }
+    .player { padding:6px; border-bottom:1px solid rgba(255,255,255,0.03); }
+    .chat-msg { padding:6px; border-bottom:1px solid rgba(255,255,255,0.03); }
+    .small { font-size:12px; color:#9fb0c8; }
+  </style>
 </head>
 <body>
-    <h1>Among Us Game</h1>
-    <div class="login">
-        <input type="text" id="username" placeholder="Enter your username" required>
-        <button id="login-btn" class="button">Login</button>
-    </div>
-    <div id="game">
-        <h2>Game Interface</h2>
-        <div id="tasks"></div>
-        <div id="report-button" class="button" onclick="reportBody()">Report Body</div>
-        <div id="votes"></div>
-        <div class="button" onclick="endGame()">End Game</div>
+  <div class="container">
+    <header>
+      <h1>Among Us — GameParadise</h1>
+      <div id="user-info" class="muted small">Laden...</div>
+    </header>
+
+    <div id="not-logged" class="card" style="display:none;">
+      <strong>Je bent niet ingelogd.</strong>
+      <p class="small">Log in om Among Us te spelen. Je kunt inloggen via de loginpagina.</p>
+      <div class="flex">
+        <button id="go-login">Naar inloggen</button>
+      </div>
     </div>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = { apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM", authDomain: "gameparadise-80490.firebaseapp.com", projectId: "gameparadise-80490", storageBucket: "gameparadise-80490.firebasestorage.app", messagingSenderId: "335620903527", appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2" };
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
+    <div id="main-ui" style="display:none;">
+      <section class="card">
+        <h3>Profiel en Among Us naam</h3>
+        <div id="profile-area" style="display:flex; gap:12px; align-items:center;">
+          <div>
+            <div class="small">Standaardnaam (uit /users/{uid}): <strong id="std-name">—</strong></div>
+            <div class="small">Auth email: <span id="auth-email">—</span></div>
+          </div>
+          <div style="flex:1;">
+            <label class="small">Naam voor Among Us</label><br>
+            <input id="au-name" type="text" placeholder="Kies een naam voor Among Us" style="width:100%;">
+          </div>
+        </div>
+      </section>
 
-        document.getElementById('login-btn').onclick = function() {
-            const username = document.getElementById('username').value;
-            if(username) {
-                login(username);
-            }
+      <section class="card">
+        <h3>Room maken of joinen</h3>
+        <div class="flex" style="margin-bottom:8px;">
+          <button id="create-room">Maak nieuwe room</button>
+          <input id="join-room-id" placeholder="Room ID om te joinen" style="width:220px;">
+          <button id="join-room-btn">Join room</button>
+        </div>
+        <div class="small muted">Als je een room maakt, word je automatisch host en toegevoegd als speler.</div>
+      </section>
+
+      <section id="lobby" class="card" style="display:none;">
+        <h3>Lobby — Room <span id="room-id-display"></span></h3>
+        <div style="display:flex; gap:12px;">
+          <div style="flex:1;">
+            <div class="small">Spelers</div>
+            <div id="players-list" class="players"></div>
+          </div>
+          <div style="flex:2;">
+            <div class="small">Chat</div>
+            <div id="chat-list" class="chat"></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input id="chat-input" placeholder="Typ een bericht..." style="flex:1;">
+              <button id="send-chat">Stuur</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:8px;" class="flex">
+          <button id="leave-room" style="background:linear-gradient(#f66,#c33); color:#fff;">Verlaat room</button>
+          <div class="small muted">Status: <span id="room-status">—</span></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (compat voor eenvoud) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // 🔑 JOUW FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
+      authDomain: "gameparadise-80490.firebaseapp.com",
+      projectId: "gameparadise-80490",
+      storageBucket: "gameparadise-80490.firebasestorage.app",
+      messagingSenderId: "335620903527",
+      appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // UI elementen
+    const notLoggedEl = document.getElementById('not-logged');
+    const mainUi = document.getElementById('main-ui');
+    const userInfo = document.getElementById('user-info');
+    const goLoginBtn = document.getElementById('go-login');
+    const stdNameEl = document.getElementById('std-name');
+    const authEmailEl = document.getElementById('auth-email');
+    const auInput = document.getElementById('au-name');
+    const createRoomBtn = document.getElementById('create-room');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const joinRoomIdInput = document.getElementById('join-room-id');
+    const lobby = document.getElementById('lobby');
+    const roomIdDisplay = document.getElementById('room-id-display');
+    const playersList = document.getElementById('players-list');
+    const chatList = document.getElementById('chat-list');
+    const sendChatBtn = document.getElementById('send-chat');
+    const chatInput = document.getElementById('chat-input');
+    const leaveRoomBtn = document.getElementById('leave-room');
+    const roomStatusEl = document.getElementById('room-status');
+
+    let currentUser = null;
+    let currentRoomId = null;
+    let playersUnsub = null;
+    let chatUnsub = null;
+
+    goLoginBtn.addEventListener('click', () => {
+      // Pas aan naar jouw loginpagina
+      window.location.href = '/login.html';
+    });
+
+    auth.onAuthStateChanged(async user => {
+      currentUser = user;
+      if (!user) {
+        notLoggedEl.style.display = 'block';
+        mainUi.style.display = 'none';
+        userInfo.textContent = 'Niet ingelogd';
+        cleanupListeners();
+        return;
+      }
+      notLoggedEl.style.display = 'none';
+      mainUi.style.display = 'block';
+      userInfo.textContent = `Ingelogd als ${user.email || user.uid}`;
+      authEmailEl.textContent = user.email || '(geen email)';
+      await loadUserProfile(user);
+      // Als url ?room=... aanwezig is, probeer joinen
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get('room');
+      if (roomParam) {
+        try { await joinExistingRoom(roomParam); }
+        catch(e){ console.warn(e); alert('Kon room niet joinen: '+e.message); }
+      }
+    });
+
+    async function loadUserProfile(user) {
+      stdNameEl.textContent = 'Laden...';
+      auInput.value = '';
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        let defaultName = user.displayName || '';
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && data.name) defaultName = data.name;
+        }
+        stdNameEl.textContent = defaultName || '(geen naam)';
+        auInput.value = defaultName || '';
+      } catch (err) {
+        console.error('Fout bij ophalen user doc', err);
+        stdNameEl.textContent = '(fout)';
+      }
+    }
+
+    // Maak nieuwe room en voeg jezelf toe als host
+    createRoomBtn.addEventListener('click', async () => {
+      if (!currentUser) return alert('Je bent niet ingelogd.');
+      const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
+      try {
+        const roomRef = db.collection('rooms').doc(); // nieuw id
+        const roomId = roomRef.id;
+        const roomData = {
+          hostId: currentUser.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          status: 'lobby',
+          maxPlayers: 10
         };
+        await roomRef.set(roomData);
+        // player doc id = uid (veilig volgens je rules)
+        await roomRef.collection('players').doc(currentUser.uid).set({
+          uid: currentUser.uid,
+          displayName: chosenName,
+          isHost: true,
+          ready: false,
+          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        // redirect naar lobby view
+        openLobby(roomId);
+        history.replaceState(null, '', '?room=' + roomId);
+      } catch (err) {
+        console.error(err);
+        alert('Kon room niet aanmaken: ' + err.message);
+      }
+    });
 
-        function login(username) {
-            auth.signInAnonymously().then(() => {
-                loadUsernames();
-                document.querySelector('.login').style.display = 'none';
-                document.getElementById('game').style.display = 'block';
-            });
-        }
+    // Join bestaande room via input
+    joinRoomBtn.addEventListener('click', async () => {
+      const roomId = joinRoomIdInput.value.trim();
+      if (!roomId) return alert('Vul een room ID in.');
+      try { await joinExistingRoom(roomId); history.replaceState(null, '', '?room=' + roomId); }
+      catch(e){ console.warn(e); alert('Kon room niet joinen: '+e.message); }
+    });
 
-        function loadUsernames() {
-            db.collection('users').get().then(snapshot => {
-                snapshot.forEach(doc => {
-                    const userDiv = document.createElement('div');
-                    userDiv.textContent = doc.data().username;
-                    document.getElementById('tasks').appendChild(userDiv);
-                });
-            });
-        }
+    async function joinExistingRoom(roomId) {
+      if (!currentUser) throw new Error('Niet ingelogd');
+      const roomRef = db.collection('rooms').doc(roomId);
+      const roomSnap = await roomRef.get();
+      if (!roomSnap.exists) throw new Error('Room bestaat niet');
+      const roomData = roomSnap.data();
+      if (roomData.status && roomData.status !== 'lobby') throw new Error('Room is niet in lobby status');
+      const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
+      // schrijf player doc (doc id = uid) — rules vereisen request.auth.uid == playerId
+      await roomRef.collection('players').doc(currentUser.uid).set({
+        uid: currentUser.uid,
+        displayName: chosenName,
+        isHost: false,
+        ready: false,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      openLobby(roomId);
+    }
 
-        function reportBody() {
-            console.log('Report body function triggered');
-            // Implement reporting logic
-        }
+    function openLobby(roomId) {
+      currentRoomId = roomId;
+      roomIdDisplay.textContent = roomId;
+      lobby.style.display = 'block';
+      roomStatusEl.textContent = 'lobby';
+      subscribeRoomRealtime(roomId);
+    }
 
-        function endGame() {
-            console.log('Game ended. Cleaning up.');
-            // Implement cleanup logic
-        }
-    </script>
+    function cleanupListeners() {
+      if (playersUnsub) { playersUnsub(); playersUnsub = null; }
+      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      playersList.innerHTML = '';
+      chatList.innerHTML = '';
+      lobby.style.display = 'none';
+      currentRoomId = null;
+    }
+
+    leaveRoomBtn.addEventListener('click', async () => {
+      if (!currentRoomId || !currentUser) return;
+      try {
+        const playerRef = db.collection('rooms').doc(currentRoomId).collection('players').doc(currentUser.uid);
+        await playerRef.delete();
+      } catch (err) {
+        console.warn('Fout bij leave:', err);
+      } finally {
+        cleanupListeners();
+        history.replaceState(null, '', window.location.pathname);
+      }
+    });
+
+    function subscribeRoomRealtime(roomId) {
+      // cleanup oude
+      if (playersUnsub) playersUnsub();
+      if (chatUnsub) chatUnsub();
+
+      const roomRef = db.collection('rooms').doc(roomId);
+
+      // spelerslijst realtime
+      playersUnsub = roomRef.collection('players').orderBy('joinedAt').onSnapshot(snap => {
+        playersList.innerHTML = '';
+        snap.forEach(doc => {
+          const p = doc.data();
+          const el = document.createElement('div');
+          el.className = 'player';
+          el.innerHTML = `<strong>${escapeHtml(p.displayName || 'Speler')}</strong> <span class="small muted">(${escapeHtml(p.uid)})</span>`;
+          playersList.appendChild(el);
+        });
+      }, err => {
+        console.error('players onSnapshot error', err);
+      });
+
+      // chat realtime
+      chatUnsub = roomRef.collection('chat').orderBy('createdAt').limit(200).onSnapshot(snap => {
+        chatList.innerHTML = '';
+        snap.forEach(doc => {
+          const m = doc.data();
+          const el = document.createElement('div');
+          el.className = 'chat-msg';
+          const time = m.createdAt && m.createdAt.toDate ? formatTime(m.createdAt.toDate()) : '';
+          el.innerHTML = `<strong>${escapeHtml(m.displayName || 'Anon')}</strong> <span class="small muted">${time}</span><div>${escapeHtml(m.text)}</div>`;
+          chatList.appendChild(el);
+        });
+        chatList.scrollTop = chatList.scrollHeight;
+      }, err => {
+        console.error('chat onSnapshot error', err);
+      });
+    }
+
+    sendChatBtn.addEventListener('click', async () => {
+      if (!currentRoomId || !currentUser) return alert('Je zit niet in een room.');
+      const text = chatInput.value.trim();
+      if (!text) return;
+      const roomRef = db.collection('rooms').doc(currentRoomId);
+      // haal displayName uit players subdoc (snelle en veilige bron)
+      try {
+        const playerDoc = await roomRef.collection('players').doc(currentUser.uid).get();
+        const displayName = (playerDoc.exists && playerDoc.data().displayName) ? playerDoc.data().displayName : (auInput.value || stdNameEl.textContent || 'Speler');
+        await roomRef.collection('chat').add({
+          uid: currentUser.uid,
+          displayName,
+          text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        chatInput.value = '';
+      } catch (err) {
+        console.error('Fout bij sturen chat', err);
+        alert('Kon bericht niet sturen.');
+      }
+    });
+
+    // Hulpfuncties
+    function escapeHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
+    }
+    function formatTime(d) {
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      return `${hh}:${mm}`;
+    }
+
+    // Optioneel: auto cleanup bij tab sluiten (probeersel)
+    window.addEventListener('beforeunload', async () => {
+      // probeer jezelf uit players te verwijderen (niet gegarandeerd)
+      if (currentRoomId && currentUser) {
+        try {
+          await db.collection('rooms').doc(currentRoomId).collection('players').doc(currentUser.uid).delete();
+        } catch(e){ /* ignore */ }
+      }
+    });
+  </script>
 </body>
 </html>
