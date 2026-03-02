@@ -1317,6 +1317,11 @@ async function sendMessage() {
     const txt = inp.value.trim();
     if(!txt) return;
     
+    if(txt.length > 500) {
+        notify("Bericht te lang", "Maximaal 500 tekens toegestaan.", null, null, "error");
+        return;
+    }
+    
     if(editMessageId) {
         await updateMessageText(editMessageId, txt);
         cancelReplyOrEdit();
