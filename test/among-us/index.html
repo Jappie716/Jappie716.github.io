@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Among Us - Multiplayer Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+    
+    <div id="app">
+        <!-- HOMEPAGE / LOGIN -->
+        <div id="homepage" class="screen">
+            <div class="homepage-container">
+                <div class="logo-section">
+                    <div class="crewmate-icon">
+                        <div class="visor">
+                            <div class="eye left"></div>
+                            <div class="eye right"></div>
+                        </div>
+                    </div>
+                    <h1 class="game-title">AMONG US</h1>
+                    <p class="subtitle">Multiplayer Social Deduction Game</p>
+                </div>
+
+                <div class="login-section">
+                    <div class="login-card">
+                        <h2>Speel Nu!</h2>
+                        <p class="login-info">Log in om te spelen met vrienden</p>
+                        
+                        <button id="google-login" class="btn btn-google">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20">
+                            Inloggen met Google
+                        </button>
+                        
+                        <div class="divider">
+                            <span>OF</span>
+                        </div>
+                        
+                        <input type="text" id="guest-name" placeholder="Speel als gast" maxlength="15">
+                        <button id="guest-login" class="btn btn-guest">Als Gast Spelen</button>
+                    </div>
+                </div>
+
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">👥</span>
+                        <span>4-10 Spelers</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🗳️</span>
+                        <span>Stemmen</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💀</span>
+                        <span>Impostors</span>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">⚡</span>
+                        <span>Real-time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGIN REQUIRED MODAL -->
+        <div id="login-required" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-icon">🔒</div>
+                <h2>Login Vereist</h2>
+                <p>Je moet ingelogd zijn om dit spel te spelen.</p>
+                <p class="modal-sub">Log in om toegang te krijgen tot alle functies:</p>
+                <div class="modal-features">
+                    <div>✓ Spel opslaan</div>
+                    <div>✓ Vrienden toevoegen</div>
+                    <div>✓ Stats bijhouden</div>
+                </div>
+                <button id="modal-google-login" class="btn btn-google">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20">
+                    Inloggen met Google
+                </button>
+                <button id="modal-guest-play" class="btn btn-guest">Als Gast Doorgaan</button>
+            </div>
+        </div>
+
+        <!-- LOBBY SCREEN -->
+        <div id="lobby-screen" class="screen hidden">
+            <div class="lobby-container">
+                <div class="lobby-header">
+                    <div class="lobby-logo">
+                        <div class="crewmate-small">
+                            <div class="visor-small">
+                                <div class="eye-s"></div>
+                                <div class="eye-s"></div>
+                            </div>
+                        </div>
+                        <h2>LOBBY</h2>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-name-display"></span>
+                        <button id="logout-btn" class="btn btn-small">Uitloggen</button>
+                    </div>
+                </div>
+                
+                <div class="lobby-content">
+                    <div class="create-game panel">
+                        <h3>Nieuw Spel</h3>
+                        <input type="text" id="game-name" placeholder="Spelnaam" maxlength="20">
+                        <select id="map-select">
+                            <option value="skeld">🛰️ The Skeld</option>
+                            <option value="mira">🏢 Mira HQ</option>
+                            <option value="polus">❄️ Polus</option>
+                        </select>
+                        <select id="impostor-count">
+                            <option value="1">1 Impostor</option>
+                            <option value="2">2 Impostors</option>
+                        </select>
+                        <button id="create-game-btn" class="btn btn-primary">🎮 Spel Maken</button>
+                    </div>
+
+                    <div class="join-game panel">
+                        <h3>Meedoen</h3>
+                        <input type="text" id="join-code" placeholder="Spelcode" maxlength="6">
+                        <button id="join-game-btn" class="btn btn-primary">🔗 Meedoen</button>
+                    </div>
+
+                    <div class="available-games panel">
+                        <h3>Open Spellen</h3>
+                        <div id="games-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="game-screen" class="screen hidden">
+            <div class="game-header">
+                <div class="game-info">
+                    <span id="game-code-display"></span>
+                    <span id="player-count">Spelers: 0/10</span>
+                </div>
+                <button id="leave-game-btn" class="btn btn-small btn-danger">❌ Verlaten</button>
+            </div>
+
+            <div class="game-content">
+                <div id="map-container">
+                    <svg id="game-map" viewBox="0 0 800 600"></svg>
+                </div>
+
+                <div class="game-sidebar">
+                    <div class="player-list panel">
+                        <h4>👥 Spelers</h4>
+                        <div id="players-list"></div>
+                    </div>
+
+                    <div class="game-controls">
+                        <button id="emergency-btn" class="btn btn-warning">🔔 Noodsmeeting</button>
+                        <button id="kill-btn" class="btn btn-danger hidden">💀 Doden</button>
+                        <button id="sabotage-btn" class="btn btn-danger hidden">⚠️ Saboteren</button>
+                    </div>
+
+                    <div class="tasks-panel hidden" id="tasks-panel">
+                        <h4>📋 Taken</h4>
+                        <div id="tasks-list"></div>
+                        <div id="task-progress">Voortgang: 0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input">
+                    <input type="text" id="chat-input" placeholder="Typ een bericht..." maxlength="200">
+                    <button id="send-chat" class="btn btn-small">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VOTING SCREEN -->
+        <div id="voting-screen" class="screen hidden">
+            <div class="voting-container">
+                <h2>🗳️ Stemronde</h2>
+                <p id="voting-timer">Tijd over: 30s</p>
+                <div id="voting-body" class="hidden">
+                    <p>Wie is de Impostor?</p>
+                    <div id="voting-options"></div>
+                </div>
+                <div id="voting-results" class="hidden">
+                    <h3>Resultaten</h3>
+                    <div id="vote-results"></div>
+                </div>
+                <button id="skip-vote" class="btn btn-secondary">⏭️ Overslaan</button>
+            </div>
+        </div>
+
+        <!-- ROLE SCREEN -->
+        <div id="role-screen" class="screen hidden">
+            <div class="role-container">
+                <h2>🎭 Jouw Rol</h2>
+                <div id="role-display">
+                    <div class="role-icon" id="role-icon"></div>
+                    <h3 id="role-text"></h3>
+                    <p id="role-description"></p>
+                </div>
+                <button id="start-game-btn" class="btn btn-primary hidden">▶️ Spel Starten</button>
+                <p id="waiting-host">Wachten tot host start...</p>
+            </div>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="screen hidden">
+            <div class="result-container">
+                <h2 id="result-title"></h2>
+                <p id="result-message"></p>
+                <button id="back-to-lobby" class="btn btn-primary">🏠 Terug naar Lobby</button>
+            </div>
+        </div>
+
+        <!-- ADMIN PANEL -->
+        <div id="admin-panel" class="hidden">
+            <h3>⚙️ Admin</h3>
+            <button id="kick-all-btn" class="btn btn-danger btn-small">Iedereen Kicken</button>
+            <button id="end-game-btn" class="btn btn-danger btn-small">Spel Beëindigen</button>
+        </div>
+    </div>
+
+    <div id="notification" class="hidden"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
