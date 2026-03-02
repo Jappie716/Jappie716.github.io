@@ -5,86 +5,141 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Among Us — GameParadise</title>
   <style>
-    body { font-family: system-ui, Arial; margin: 0; padding: 16px; background:#0f1724; color:#e6eef8; }
-    .container { max-width:1000px; margin:0 auto; }
-    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-    .card { background:#0b1220; padding:12px; border-radius:8px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.6); }
-    input, button, select, textarea { font-size:14px; padding:8px; border-radius:6px; border:1px solid #223; background:#071022; color:#e6eef8; }
-    button { cursor:pointer; border:1px solid #2b6; background:linear-gradient(#0b6,#084); color:#001; }
-    .muted { color:#9fb0c8; }
-    #not-logged { background:#2b0b0b; color:#ffdede; padding:12px; border-radius:8px; }
-    .flex { display:flex; gap:8px; align-items:center; }
-    .players, .chat { max-height:320px; overflow:auto; padding:8px; background:#071022; border-radius:6px; }
-    .player { padding:6px; border-bottom:1px solid rgba(255,255,255,0.03); }
-    .chat-msg { padding:6px; border-bottom:1px solid rgba(255,255,255,0.03); }
-    .small { font-size:12px; color:#9fb0c8; }
+    :root{
+      --bg:#071022; --card:#0b1220; --accent:#ff6b6b; --muted:#9fb0c8; --glass: rgba(255,255,255,0.03);
+    }
+    body{font-family:Inter, system-ui, Arial; margin:0; padding:18px; background:linear-gradient(180deg,#041022 0%, #071022 100%); color:#e6eef8;}
+    .wrap{max-width:1100px;margin:0 auto;}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    h1{margin:0;font-size:20px}
+    .card{background:var(--card);padding:12px;border-radius:10px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+    .muted{color:var(--muted);font-size:13px}
+    .flex{display:flex;gap:10px;align-items:center}
+    button{padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(180deg,#2ee6a7,#0bb07a);color:#012;cursor:pointer}
+    input,select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    #not-logged{display:none}
+    .welcome{display:flex;gap:18px;align-items:center}
+    .skingrid{display:flex;gap:8px;flex-wrap:wrap}
+    .skin{width:72px;height:72px;border-radius:12px;background:#112233;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent}
+    .skin.selected{border-color:var(--accent);box-shadow:0 6px 18px rgba(255,107,107,0.12)}
+    .players, .chat{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;max-height:320px;overflow:auto}
+    .player{padding:6px;border-bottom:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center}
+    .chat-msg{padding:6px;border-bottom:1px solid rgba(255,255,255,0.02)}
+    .host-badge{background:var(--accent);color:#111;padding:4px 8px;border-radius:8px;font-weight:700}
+    .danger{background:linear-gradient(180deg,#ff8a8a,#ff4b4b);color:#111}
+    .small{font-size:13px;color:var(--muted)}
+    .hidden{display:none}
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <header>
       <h1>Among Us — GameParadise</h1>
-      <div id="user-info" class="muted small">Laden...</div>
+      <div id="user-info" class="small">Laden...</div>
     </header>
 
-    <div id="not-logged" class="card" style="display:none;">
+    <div id="not-logged" class="card">
       <strong>Je bent niet ingelogd.</strong>
-      <p class="small">Log in om Among Us te spelen. Je kunt inloggen via de loginpagina.</p>
+      <p class="small">Log in om Among Us te spelen.</p>
       <div class="flex">
         <button id="go-login">Naar inloggen</button>
       </div>
     </div>
 
-    <div id="main-ui" style="display:none;">
+    <div id="main" class="hidden">
+      <!-- Welcome / skins -->
+      <section class="card welcome">
+        <div style="flex:1">
+          <h3>Welkom</h3>
+          <div class="small">Kies een skin en een naam voor Among Us. Deze naam wordt alleen gebruikt in het Among Us spel.</div>
+          <div style="margin-top:8px;">
+            <div class="small">Standaardnaam: <strong id="std-name">—</strong></div>
+            <input id="au-name" placeholder="Naam voor Among Us" style="width:100%;margin-top:8px;">
+          </div>
+        </div>
+        <div style="width:320px">
+          <div class="small">Kies een skin</div>
+          <div id="skins" class="skingrid" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- Create / join map -->
       <section class="card">
-        <h3>Profiel en Among Us naam</h3>
-        <div id="profile-area" style="display:flex; gap:12px; align-items:center;">
+        <div class="flex" style="justify-content:space-between;align-items:center">
           <div>
-            <div class="small">Standaardnaam (uit /users/{uid}): <strong id="std-name">—</strong></div>
-            <div class="small">Auth email: <span id="auth-email">—</span></div>
+            <button id="create-map">Maak Among Us map</button>
+            <input id="join-map-id" placeholder="Map ID om te joinen" style="width:220px">
+            <button id="join-map">Join map</button>
           </div>
-          <div style="flex:1;">
-            <label class="small">Naam voor Among Us</label><br>
-            <input id="au-name" type="text" placeholder="Kies een naam voor Among Us" style="width:100%;">
-          </div>
+          <div class="small">Je kunt een map maken of direct joinen met een ID.</div>
         </div>
       </section>
 
-      <section class="card">
-        <h3>Room maken of joinen</h3>
-        <div class="flex" style="margin-bottom:8px;">
-          <button id="create-room">Maak nieuwe room</button>
-          <input id="join-room-id" placeholder="Room ID om te joinen" style="width:220px;">
-          <button id="join-room-btn">Join room</button>
-        </div>
-        <div class="small muted">Als je een room maakt, word je automatisch host en toegevoegd als speler.</div>
-      </section>
+      <!-- Lobby / game area -->
+      <section id="game-area" class="card hidden">
+        <div style="display:flex;gap:12px">
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><strong>Map</strong> <span id="map-id-display" class="small muted"></span></div>
+              <div id="host-controls" class="flex"></div>
+            </div>
 
-      <section id="lobby" class="card" style="display:none;">
-        <h3>Lobby — Room <span id="room-id-display"></span></h3>
-        <div style="display:flex; gap:12px;">
-          <div style="flex:1;">
-            <div class="small">Spelers</div>
-            <div id="players-list" class="players"></div>
-          </div>
-          <div style="flex:2;">
-            <div class="small">Chat</div>
-            <div id="chat-list" class="chat"></div>
-            <div style="display:flex; gap:8px; margin-top:8px;">
-              <input id="chat-input" placeholder="Typ een bericht..." style="flex:1;">
-              <button id="send-chat">Stuur</button>
+            <div style="margin-top:8px">
+              <div class="small">Spelers</div>
+              <div id="players-list" class="players" style="margin-top:8px"></div>
+            </div>
+
+            <div style="margin-top:8px">
+              <div class="small">Acties</div>
+              <div style="display:flex;gap:8px;margin-top:6px">
+                <button id="ready-btn">Ready</button>
+                <button id="unready-btn">Unready</button>
+                <button id="change-name-btn">Sla Among Us naam op</button>
+                <button id="leave-btn" class="danger">Verlaat map</button>
+              </div>
             </div>
           </div>
-        </div>
-        <div style="margin-top:8px;" class="flex">
-          <button id="leave-room" style="background:linear-gradient(#f66,#c33); color:#fff;">Verlaat room</button>
-          <div class="small muted">Status: <span id="room-status">—</span></div>
+
+          <div style="width:420px">
+            <div class="small">Chat</div>
+            <div id="chat-list" class="chat" style="margin-top:8px"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input id="chat-input" placeholder="Typ bericht..." style="flex:1">
+              <button id="send-chat">Stuur</button>
+            </div>
+
+            <div id="game-screen" style="margin-top:12px">
+              <!-- Dynamische game UI: lobby, in-game, voting -->
+              <div id="lobby-screen" class="small muted">Wacht op host om te starten.</div>
+
+              <div id="in-game-screen" class="hidden">
+                <div class="small">Je rol: <strong id="my-role">—</strong></div>
+                <div style="margin-top:8px">
+                  <div id="task-area" class="small muted">Taken: (vereenvoudigd)</div>
+                  <div id="impostor-actions" class="hidden" style="margin-top:8px">
+                    <button id="kill-btn" class="danger">Kill geselecteerde speler</button>
+                    <select id="kill-target" style="width:100%;margin-top:6px"></select>
+                  </div>
+                </div>
+              </div>
+
+              <div id="voting-screen" class="hidden" style="margin-top:8px">
+                <div class="small">Stemronde</div>
+                <div id="vote-list" style="margin-top:8px"></div>
+                <div style="margin-top:8px">
+                  <button id="cast-vote">Stem</button>
+                </div>
+              </div>
+
+              <div id="result-screen" class="hidden" style="margin-top:8px"></div>
+            </div>
+          </div>
         </div>
       </section>
     </div>
   </div>
 
-  <!-- Firebase SDKs (compat voor eenvoud) -->
+  <!-- Firebase SDKs compat -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -103,60 +158,101 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // UI elementen
+    // UI refs
     const notLoggedEl = document.getElementById('not-logged');
-    const mainUi = document.getElementById('main-ui');
+    const mainEl = document.getElementById('main');
     const userInfo = document.getElementById('user-info');
     const goLoginBtn = document.getElementById('go-login');
     const stdNameEl = document.getElementById('std-name');
-    const authEmailEl = document.getElementById('auth-email');
     const auInput = document.getElementById('au-name');
-    const createRoomBtn = document.getElementById('create-room');
-    const joinRoomBtn = document.getElementById('join-room-btn');
-    const joinRoomIdInput = document.getElementById('join-room-id');
-    const lobby = document.getElementById('lobby');
-    const roomIdDisplay = document.getElementById('room-id-display');
+    const skinsEl = document.getElementById('skins');
+    const createMapBtn = document.getElementById('create-map');
+    const joinMapBtn = document.getElementById('join-map');
+    const joinMapIdInput = document.getElementById('join-map-id');
+    const gameArea = document.getElementById('game-area');
+    const mapIdDisplay = document.getElementById('map-id-display');
     const playersList = document.getElementById('players-list');
     const chatList = document.getElementById('chat-list');
-    const sendChatBtn = document.getElementById('send-chat');
     const chatInput = document.getElementById('chat-input');
-    const leaveRoomBtn = document.getElementById('leave-room');
-    const roomStatusEl = document.getElementById('room-status');
+    const sendChatBtn = document.getElementById('send-chat');
+    const leaveBtn = document.getElementById('leave-btn');
+    const readyBtn = document.getElementById('ready-btn');
+    const unreadyBtn = document.getElementById('unready-btn');
+    const changeNameBtn = document.getElementById('change-name-btn');
+    const hostControls = document.getElementById('host-controls');
+    const lobbyScreen = document.getElementById('lobby-screen');
+    const inGameScreen = document.getElementById('in-game-screen');
+    const myRoleEl = document.getElementById('my-role');
+    const impostorActions = document.getElementById('impostor-actions');
+    const killBtn = document.getElementById('kill-btn');
+    const killTarget = document.getElementById('kill-target');
+    const votingScreen = document.getElementById('voting-screen');
+    const voteList = document.getElementById('vote-list');
+    const castVoteBtn = document.getElementById('cast-vote');
+    const resultScreen = document.getElementById('result-screen');
+
+    // skins data (voorbeeld)
+    const SKINS = [
+      {id:'red', label:'Rood'},
+      {id:'blue', label:'Blauw'},
+      {id:'green', label:'Groen'},
+      {id:'yellow', label:'Geel'},
+      {id:'purple', label:'Paars'},
+      {id:'black', label:'Zwart'}
+    ];
 
     let currentUser = null;
-    let currentRoomId = null;
+    let currentMapId = null;
     let playersUnsub = null;
     let chatUnsub = null;
+    let mapUnsub = null;
+    let selectedSkin = SKINS[0].id;
+    let isHost = false;
+    let myPlayerDoc = null;
 
-    goLoginBtn.addEventListener('click', () => {
-      // Pas aan naar jouw loginpagina
-      window.location.href = '/login.html';
-    });
+    goLoginBtn.addEventListener('click', () => window.location.href = '/login.html');
+
+    // render skins
+    function renderSkins() {
+      skinsEl.innerHTML = '';
+      SKINS.forEach(s => {
+        const el = document.createElement('div');
+        el.className = 'skin' + (s.id === selectedSkin ? ' selected' : '');
+        el.dataset.skin = s.id;
+        el.title = s.label;
+        el.innerHTML = `<div style="text-align:center">${s.label}</div>`;
+        el.addEventListener('click', () => {
+          selectedSkin = s.id;
+          document.querySelectorAll('.skin').forEach(x => x.classList.remove('selected'));
+          el.classList.add('selected');
+        });
+        skinsEl.appendChild(el);
+      });
+    }
+    renderSkins();
 
     auth.onAuthStateChanged(async user => {
       currentUser = user;
       if (!user) {
         notLoggedEl.style.display = 'block';
-        mainUi.style.display = 'none';
+        mainEl.classList.add('hidden');
         userInfo.textContent = 'Niet ingelogd';
-        cleanupListeners();
+        cleanup();
         return;
       }
       notLoggedEl.style.display = 'none';
-      mainUi.style.display = 'block';
+      mainEl.classList.remove('hidden');
       userInfo.textContent = `Ingelogd als ${user.email || user.uid}`;
-      authEmailEl.textContent = user.email || '(geen email)';
-      await loadUserProfile(user);
-      // Als url ?room=... aanwezig is, probeer joinen
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomParam = urlParams.get('room');
-      if (roomParam) {
-        try { await joinExistingRoom(roomParam); }
-        catch(e){ console.warn(e); alert('Kon room niet joinen: '+e.message); }
+      await loadProfile(user);
+      // auto join via ?map=...
+      const params = new URLSearchParams(window.location.search);
+      const mapParam = params.get('map');
+      if (mapParam) {
+        try { await joinMap(mapParam); } catch(e){ console.warn(e); }
       }
     });
 
-    async function loadUserProfile(user) {
+    async function loadProfile(user) {
       stdNameEl.textContent = 'Laden...';
       auInput.value = '';
       try {
@@ -174,142 +270,124 @@
       }
     }
 
-    // Maak nieuwe room en voeg jezelf toe als host
-    createRoomBtn.addEventListener('click', async () => {
+    // Create map (amongus_map collection)
+    createMapBtn.addEventListener('click', async () => {
       if (!currentUser) return alert('Je bent niet ingelogd.');
+      const mapRef = db.collection('amongus_map').doc(); // nieuw id
+      const mapId = mapRef.id;
+      const mapData = {
+        hostId: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: 'lobby', // lobby | playing | voting | ended
+        settings: {maxPlayers:10, mapName:'Skeld'},
+        votes: {}
+      };
+      await mapRef.set(mapData);
+      // add player doc
       const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
-      try {
-        const roomRef = db.collection('rooms').doc(); // nieuw id
-        const roomId = roomRef.id;
-        const roomData = {
-          hostId: currentUser.uid,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          status: 'lobby',
-          maxPlayers: 10
-        };
-        await roomRef.set(roomData);
-        // player doc id = uid (veilig volgens je rules)
-        await roomRef.collection('players').doc(currentUser.uid).set({
-          uid: currentUser.uid,
-          displayName: chosenName,
-          isHost: true,
-          ready: false,
-          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        // redirect naar lobby view
-        openLobby(roomId);
-        history.replaceState(null, '', '?room=' + roomId);
-      } catch (err) {
-        console.error(err);
-        alert('Kon room niet aanmaken: ' + err.message);
-      }
-    });
-
-    // Join bestaande room via input
-    joinRoomBtn.addEventListener('click', async () => {
-      const roomId = joinRoomIdInput.value.trim();
-      if (!roomId) return alert('Vul een room ID in.');
-      try { await joinExistingRoom(roomId); history.replaceState(null, '', '?room=' + roomId); }
-      catch(e){ console.warn(e); alert('Kon room niet joinen: '+e.message); }
-    });
-
-    async function joinExistingRoom(roomId) {
-      if (!currentUser) throw new Error('Niet ingelogd');
-      const roomRef = db.collection('rooms').doc(roomId);
-      const roomSnap = await roomRef.get();
-      if (!roomSnap.exists) throw new Error('Room bestaat niet');
-      const roomData = roomSnap.data();
-      if (roomData.status && roomData.status !== 'lobby') throw new Error('Room is niet in lobby status');
-      const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
-      // schrijf player doc (doc id = uid) — rules vereisen request.auth.uid == playerId
-      await roomRef.collection('players').doc(currentUser.uid).set({
+      await mapRef.collection('players').doc(currentUser.uid).set({
         uid: currentUser.uid,
         displayName: chosenName,
-        isHost: false,
+        skin: selectedSkin,
+        isHost: true,
         ready: false,
+        dead: false,
+        role: null,
         joinedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      openLobby(roomId);
+      openMap(mapId);
+      history.replaceState(null,'','?map='+mapId);
+    });
+
+    joinMapBtn.addEventListener('click', async () => {
+      const mapId = joinMapIdInput.value.trim();
+      if (!mapId) return alert('Vul een map ID in.');
+      try { await joinMap(mapId); history.replaceState(null,'','?map='+mapId); }
+      catch(e){ alert('Kon map niet joinen: '+e.message); }
+    });
+
+    async function joinMap(mapId) {
+      if (!currentUser) throw new Error('Niet ingelogd');
+      const mapRef = db.collection('amongus_map').doc(mapId);
+      const snap = await mapRef.get();
+      if (!snap.exists) throw new Error('Map bestaat niet');
+      const mapData = snap.data();
+      if (mapData.status && mapData.status !== 'lobby') throw new Error('Map is niet in lobby status');
+      const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
+      await mapRef.collection('players').doc(currentUser.uid).set({
+        uid: currentUser.uid,
+        displayName: chosenName,
+        skin: selectedSkin,
+        isHost: false,
+        ready: false,
+        dead: false,
+        role: null,
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      openMap(mapId);
     }
 
-    function openLobby(roomId) {
-      currentRoomId = roomId;
-      roomIdDisplay.textContent = roomId;
-      lobby.style.display = 'block';
-      roomStatusEl.textContent = 'lobby';
-      subscribeRoomRealtime(roomId);
+    function openMap(mapId) {
+      currentMapId = mapId;
+      mapIdDisplay.textContent = mapId;
+      gameArea.classList.remove('hidden');
+      setupRealtime(mapId);
     }
 
-    function cleanupListeners() {
+    function cleanup() {
       if (playersUnsub) { playersUnsub(); playersUnsub = null; }
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      if (mapUnsub) { mapUnsub(); mapUnsub = null; }
+      currentMapId = null;
+      gameArea.classList.add('hidden');
       playersList.innerHTML = '';
       chatList.innerHTML = '';
-      lobby.style.display = 'none';
-      currentRoomId = null;
     }
 
-    leaveRoomBtn.addEventListener('click', async () => {
-      if (!currentRoomId || !currentUser) return;
+    leaveBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
       try {
-        const playerRef = db.collection('rooms').doc(currentRoomId).collection('players').doc(currentUser.uid);
-        await playerRef.delete();
+        await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).delete();
+      } catch(e){ console.warn(e); }
+      cleanup();
+      history.replaceState(null,'',window.location.pathname);
+    });
+
+    // Save Among Us name only (updates players subdoc, not /users)
+    changeNameBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return alert('Je zit niet in een map.');
+      const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
+      try {
+        await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).update({
+          displayName: chosenName
+        });
+        alert('Among Us naam opgeslagen voor deze map.');
       } catch (err) {
-        console.warn('Fout bij leave:', err);
-      } finally {
-        cleanupListeners();
-        history.replaceState(null, '', window.location.pathname);
+        console.error(err);
+        alert('Kon naam niet opslaan.');
       }
     });
 
-    function subscribeRoomRealtime(roomId) {
-      // cleanup oude
-      if (playersUnsub) playersUnsub();
-      if (chatUnsub) chatUnsub();
+    // Ready / unready
+    readyBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
+      await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).update({ready:true});
+    });
+    unreadyBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
+      await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).update({ready:false});
+    });
 
-      const roomRef = db.collection('rooms').doc(roomId);
-
-      // spelerslijst realtime
-      playersUnsub = roomRef.collection('players').orderBy('joinedAt').onSnapshot(snap => {
-        playersList.innerHTML = '';
-        snap.forEach(doc => {
-          const p = doc.data();
-          const el = document.createElement('div');
-          el.className = 'player';
-          el.innerHTML = `<strong>${escapeHtml(p.displayName || 'Speler')}</strong> <span class="small muted">(${escapeHtml(p.uid)})</span>`;
-          playersList.appendChild(el);
-        });
-      }, err => {
-        console.error('players onSnapshot error', err);
-      });
-
-      // chat realtime
-      chatUnsub = roomRef.collection('chat').orderBy('createdAt').limit(200).onSnapshot(snap => {
-        chatList.innerHTML = '';
-        snap.forEach(doc => {
-          const m = doc.data();
-          const el = document.createElement('div');
-          el.className = 'chat-msg';
-          const time = m.createdAt && m.createdAt.toDate ? formatTime(m.createdAt.toDate()) : '';
-          el.innerHTML = `<strong>${escapeHtml(m.displayName || 'Anon')}</strong> <span class="small muted">${time}</span><div>${escapeHtml(m.text)}</div>`;
-          chatList.appendChild(el);
-        });
-        chatList.scrollTop = chatList.scrollHeight;
-      }, err => {
-        console.error('chat onSnapshot error', err);
-      });
-    }
-
+    // Chat
     sendChatBtn.addEventListener('click', async () => {
-      if (!currentRoomId || !currentUser) return alert('Je zit niet in een room.');
+      if (!currentMapId || !currentUser) return alert('Je zit niet in een map.');
       const text = chatInput.value.trim();
       if (!text) return;
-      const roomRef = db.collection('rooms').doc(currentRoomId);
-      // haal displayName uit players subdoc (snelle en veilige bron)
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
       try {
-        const playerDoc = await roomRef.collection('players').doc(currentUser.uid).get();
+        const playerDoc = await mapRef.collection('players').doc(currentUser.uid).get();
         const displayName = (playerDoc.exists && playerDoc.data().displayName) ? playerDoc.data().displayName : (auInput.value || stdNameEl.textContent || 'Speler');
-        await roomRef.collection('chat').add({
+        await mapRef.collection('chat').add({
           uid: currentUser.uid,
           displayName,
           text,
@@ -317,12 +395,300 @@
         });
         chatInput.value = '';
       } catch (err) {
-        console.error('Fout bij sturen chat', err);
-        alert('Kon bericht niet sturen.');
+        console.error(err);
       }
     });
 
-    // Hulpfuncties
+    // Realtime subscriptions
+    function setupRealtime(mapId) {
+      // cleanup previous
+      if (playersUnsub) playersUnsub();
+      if (chatUnsub) chatUnsub();
+      if (mapUnsub) mapUnsub();
+
+      const mapRef = db.collection('amongus_map').doc(mapId);
+
+      // map meta listener (status, host)
+      mapUnsub = mapRef.onSnapshot(snap => {
+        if (!snap.exists) { cleanup(); return; }
+        const data = snap.data();
+        isHost = currentUser && data.hostId === currentUser.uid;
+        renderHostControls(isHost, data);
+        // show status
+        if (data.status === 'lobby') {
+          lobbyScreen.classList.remove('hidden');
+          inGameScreen.classList.add('hidden');
+          votingScreen.classList.add('hidden');
+          resultScreen.classList.add('hidden');
+        } else if (data.status === 'playing') {
+          lobbyScreen.classList.add('hidden');
+          inGameScreen.classList.remove('hidden');
+          votingScreen.classList.add('hidden');
+          resultScreen.classList.add('hidden');
+        } else if (data.status === 'voting') {
+          lobbyScreen.classList.add('hidden');
+          inGameScreen.classList.add('hidden');
+          votingScreen.classList.remove('hidden');
+        } else if (data.status === 'ended') {
+          lobbyScreen.classList.add('hidden');
+          inGameScreen.classList.add('hidden');
+          votingScreen.classList.add('hidden');
+          resultScreen.classList.remove('hidden');
+          resultScreen.textContent = data.resultText || 'Einde van het spel';
+        }
+      });
+
+      // players list
+      playersUnsub = mapRef.collection('players').orderBy('joinedAt').onSnapshot(snap => {
+        playersList.innerHTML = '';
+        const players = [];
+        snap.forEach(doc => {
+          const p = doc.data();
+          players.push({id: doc.id, ...p});
+          const el = document.createElement('div');
+          el.className = 'player';
+          const left = document.createElement('div');
+          left.innerHTML = `<strong>${escapeHtml(p.displayName || 'Speler')}</strong><div class="small">${escapeHtml(p.uid)}</div>`;
+          const right = document.createElement('div');
+          if (p.isHost) right.innerHTML = `<span class="host-badge">HOST</span>`;
+          if (p.dead) right.innerHTML += ` <span class="small muted">dead</span>`;
+          el.appendChild(left);
+          el.appendChild(right);
+          playersList.appendChild(el);
+        });
+
+        // update kill target select for impostor
+        updateKillTargets(players);
+      });
+
+      // chat
+      chatUnsub = mapRef.collection('chat').orderBy('createdAt').limit(200).onSnapshot(snap => {
+        chatList.innerHTML = '';
+        snap.forEach(doc => {
+          const m = doc.data();
+          const el = document.createElement('div');
+          el.className = 'chat-msg';
+          const time = m.createdAt && m.createdAt.toDate ? formatTime(m.createdAt.toDate()) : '';
+          el.innerHTML = `<strong>${escapeHtml(m.displayName||'Anon')}</strong> <span class="small muted">${time}</span><div>${escapeHtml(m.text)}</div>`;
+          chatList.appendChild(el);
+        });
+        chatList.scrollTop = chatList.scrollHeight;
+      });
+    }
+
+    function renderHostControls(isHost, mapData) {
+      hostControls.innerHTML = '';
+      if (!isHost) return;
+      const startBtn = document.createElement('button');
+      startBtn.textContent = 'Start spel';
+      startBtn.addEventListener('click', startGame);
+      const forceVoteBtn = document.createElement('button');
+      forceVoteBtn.textContent = 'Forceer stem';
+      forceVoteBtn.addEventListener('click', () => beginVoting(true));
+      hostControls.appendChild(startBtn);
+      hostControls.appendChild(forceVoteBtn);
+    }
+
+    // Start game: assign roles and set status playing
+    async function startGame() {
+      if (!currentMapId) return;
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const playersSnap = await mapRef.collection('players').get();
+      const players = [];
+      playersSnap.forEach(d => players.push({id:d.id, ...d.data()}));
+      if (players.length < 3) return alert('Minimaal 3 spelers nodig.');
+      // determine impostor count (simple rule)
+      const impostorCount = players.length <= 6 ? 1 : Math.floor(players.length / 4);
+      // shuffle and pick impostors
+      const shuffled = players.slice().sort(() => Math.random() - 0.5);
+      const impostors = shuffled.slice(0, impostorCount).map(p => p.id);
+      // assign roles in batch
+      const batch = db.batch();
+      players.forEach(p => {
+        const pRef = mapRef.collection('players').doc(p.id);
+        const role = impostors.includes(p.id) ? 'impostor' : 'crewmate';
+        batch.update(pRef, {role, dead:false, ready:false});
+      });
+      batch.update(mapRef, {status:'playing', startedAt: firebase.firestore.FieldValue.serverTimestamp(), votes: {}});
+      await batch.commit();
+      alert('Spel gestart. Rollen zijn toegewezen.');
+    }
+
+    // Update kill targets select
+    function updateKillTargets(players) {
+      killTarget.innerHTML = '';
+      const aliveOthers = players.filter(p => !p.dead && p.id !== currentUser.uid);
+      aliveOthers.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.displayName || p.uid;
+        killTarget.appendChild(opt);
+      });
+    }
+
+    // Kill action (impostor)
+    killBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
+      const targetId = killTarget.value;
+      if (!targetId) return alert('Selecteer een target.');
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      // check my role
+      const myDoc = await mapRef.collection('players').doc(currentUser.uid).get();
+      if (!myDoc.exists) return;
+      const myData = myDoc.data();
+      if (myData.role !== 'impostor') return alert('Alleen impostors kunnen killen.');
+      // mark target dead
+      await mapRef.collection('players').doc(targetId).update({dead:true});
+      // optional: add chat event
+      await mapRef.collection('chat').add({
+        uid: currentUser.uid,
+        displayName: myData.displayName || 'Impostor',
+        text: `Heeft ${targetId} uitgeschakeld.`,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      // after a kill, host or any player can call voting; here we auto-trigger voting for demo
+      setTimeout(() => beginVoting(false), 1500);
+    });
+
+    // Begin voting: set map.status = 'voting' and prepare vote options
+    async function beginVoting(force) {
+      if (!currentMapId) return;
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const playersSnap = await mapRef.collection('players').get();
+      const players = [];
+      playersSnap.forEach(d => {
+        const p = d.data();
+        if (!p.dead) players.push({id:d.id, displayName:p.displayName});
+      });
+      // initialize votes object
+      const votesInit = {};
+      players.forEach(p => votesInit[p.id] = null);
+      await mapRef.update({status:'voting', votes: votesInit, votingStartedAt: firebase.firestore.FieldValue.serverTimestamp()});
+      // render vote options client-side via onSnapshot of players
+    }
+
+    // Voting UI: build vote list when voting status active
+    castVoteBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
+      // find selected radio
+      const selected = document.querySelector('input[name="vote-option"]:checked');
+      if (!selected) return alert('Kies iemand om op te stemmen of kies Skip.');
+      const target = selected.value; // 'skip' or playerId
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      // write vote into map.votes[currentUser.uid] = target
+      const mapSnap = await mapRef.get();
+      if (!mapSnap.exists) return;
+      const mapData = mapSnap.data();
+      const votes = mapData.votes || {};
+      votes[currentUser.uid] = target;
+      await mapRef.update({votes});
+      alert('Stem geregistreerd.');
+      // check if all alive players voted -> tally
+      await tryTallyVotes();
+    });
+
+    // Try tally votes: if all alive players have voted, compute result
+    async function tryTallyVotes() {
+      if (!currentMapId) return;
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const mapSnap = await mapRef.get();
+      if (!mapSnap.exists) return;
+      const mapData = mapSnap.data();
+      const votes = mapData.votes || {};
+      // count alive players
+      const playersSnap = await mapRef.collection('players').get();
+      const alive = [];
+      playersSnap.forEach(d => { const p = d.data(); if (!p.dead) alive.push(d.id); });
+      const allVoted = alive.every(id => votes[id] !== null && votes[id] !== undefined);
+      if (!allVoted) return;
+      // tally
+      const tally = {};
+      Object.values(votes).forEach(v => {
+        const key = v || 'skip';
+        tally[key] = (tally[key] || 0) + 1;
+      });
+      // find max
+      let max = -1, maxKey = null;
+      Object.keys(tally).forEach(k => { if (tally[k] > max) { max = tally[k]; maxKey = k; }});
+      // if skip or tie -> no eject
+      const entries = Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+      const topCount = entries[0] ? entries[0][1] : 0;
+      const topKeys = entries.filter(e=>e[1]===topCount).map(e=>e[0]);
+      if (topKeys.length !== 1 || topKeys[0] === 'skip') {
+        await mapRef.update({status:'playing', votes:{}, resultText:'Geen ejectie (tie of skip).'});
+        return;
+      }
+      const ejectId = topKeys[0];
+      // eject player
+      await mapRef.collection('players').doc(ejectId).update({dead:true});
+      // check win conditions: if all impostors dead -> crewmates win; if impostors >= crewmates -> impostors win
+      const playersAfterSnap = await mapRef.collection('players').get();
+      let impostors = 0, crewmates = 0;
+      playersAfterSnap.forEach(d => {
+        const p = d.data();
+        if (p.dead) return;
+        if (p.role === 'impostor') impostors++;
+        else crewmates++;
+      });
+      if (impostors === 0) {
+        await mapRef.update({status:'ended', resultText:'Crewmates winnen!'});
+      } else if (impostors >= crewmates) {
+        await mapRef.update({status:'ended', resultText:'Impostors winnen!'});
+      } else {
+        await mapRef.update({status:'playing', votes:{}, resultText:''});
+      }
+    }
+
+    // Listen for voting UI changes: when map.status === 'voting', render vote options
+    // We'll watch map doc in mapUnsub and render vote options when voting
+    // But also provide a small helper to render vote options from players snapshot
+    // We'll re-use playersUnsub data by reading current players collection
+    async function renderVoteOptions() {
+      if (!currentMapId) return;
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const mapSnap = await mapRef.get();
+      if (!mapSnap.exists) return;
+      const mapData = mapSnap.data();
+      if (mapData.status !== 'voting') {
+        votingScreen.classList.add('hidden');
+        return;
+      }
+      votingScreen.classList.remove('hidden');
+      voteList.innerHTML = '';
+      const playersSnap = await mapRef.collection('players').get();
+      playersSnap.forEach(d => {
+        const p = d.data();
+        if (p.dead) return;
+        const id = d.id;
+        const label = p.displayName || id;
+        const row = document.createElement('div');
+        row.innerHTML = `<label><input type="radio" name="vote-option" value="${escapeHtml(id)}"> ${escapeHtml(label)}</label>`;
+        voteList.appendChild(row);
+      });
+      // add skip option
+      const skipRow = document.createElement('div');
+      skipRow.innerHTML = `<label><input type="radio" name="vote-option" value="skip"> Skip</label>`;
+      voteList.appendChild(skipRow);
+    }
+
+    // When map doc changes to voting, call renderVoteOptions
+    // We'll hook into mapUnsub's onSnapshot above; add a small interval to check status changes
+    setInterval(() => {
+      if (!currentMapId) return;
+      db.collection('amongus_map').doc(currentMapId).get().then(snap => {
+        if (!snap.exists) return;
+        const data = snap.data();
+        if (data.status === 'voting') renderVoteOptions();
+      }).catch(()=>{});
+    }, 1500);
+
+    // Try tally periodically in case host left
+    setInterval(() => {
+      if (!currentMapId) return;
+      tryTallyVotes().catch(()=>{});
+    }, 3000);
+
+    // Utility helpers
     function escapeHtml(s) {
       if (!s) return '';
       return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
@@ -333,15 +699,50 @@
       return `${hh}:${mm}`;
     }
 
-    // Optioneel: auto cleanup bij tab sluiten (probeersel)
+    // Update UI for my role and impostor actions when players snapshot updates
+    // We'll poll my player doc occasionally to update role UI
+    setInterval(async () => {
+      if (!currentMapId || !currentUser) return;
+      const pRef = db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid);
+      const pSnap = await pRef.get();
+      if (!pSnap.exists) return;
+      const p = pSnap.data();
+      myRoleEl.textContent = p.role || '—';
+      if (p.role === 'impostor' && p.dead === false) {
+        impostorActions.classList.remove('hidden');
+      } else {
+        impostorActions.classList.add('hidden');
+      }
+    }, 1200);
+
+    // Update kill target list periodically (in addition to players listener)
+    setInterval(async () => {
+      if (!currentMapId) return;
+      const playersSnap = await db.collection('amongus_map').doc(currentMapId).collection('players').get();
+      const players = [];
+      playersSnap.forEach(d => players.push({id:d.id, ...d.data()}));
+      updateKillTargets(players);
+    }, 2000);
+
+    // Auto cleanup on unload: try to remove player doc
     window.addEventListener('beforeunload', async () => {
-      // probeer jezelf uit players te verwijderen (niet gegarandeerd)
-      if (currentRoomId && currentUser) {
+      if (currentMapId && currentUser) {
         try {
-          await db.collection('rooms').doc(currentRoomId).collection('players').doc(currentUser.uid).delete();
-        } catch(e){ /* ignore */ }
+          await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).delete();
+        } catch(e){}
       }
     });
+
+    // small helper to watch map status changes and render vote UI when needed
+    // (mapUnsub already handles status UI; this ensures vote options are built)
+    setInterval(() => {
+      if (!currentMapId) return;
+      db.collection('amongus_map').doc(currentMapId).get().then(snap => {
+        if (!snap.exists) return;
+        const data = snap.data();
+        if (data.status === 'voting') renderVoteOptions();
+      });
+    }, 1000);
   </script>
 </body>
 </html>
