@@ -4,55 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Among Us Game</title>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database.js"></script>
-    <link rel="stylesheet" href="styles.css">
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #282c34; color: white; }
+        .login { display: none; }
+        #game { display: none; }
+        .button { padding: 10px 20px; margin-top: 10px; }
+        .task { margin: 5px; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <h1>Among Us Game</h1>
-        <div id="login">
-            <input type="text" id="username" placeholder="Enter username">
-            <button id="loginButton">Login</button>
-        </div>
-        <div id="gameArea" style="display: none;">
-            <h2>Welcome, <span id="displayUsername"></span>!</h2>
-            <div id="gameFeatures">
-                <!-- Game features go here -->
-            </div>
-        </div>
+    <h1>Among Us Game</h1>
+    <div class="login">
+        <input type="text" id="username" placeholder="Enter your username" required>
+        <button id="login-btn" class="button">Login</button>
     </div>
+    <div id="game">
+        <h2>Game Interface</h2>
+        <div id="tasks"></div>
+        <div id="report-button" class="button" onclick="reportBody()">Report Body</div>
+        <div id="votes"></div>
+        <div class="button" onclick="endGame()">End Game</div>
+    </div>
+
     <script>
         // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",  
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM", authDomain: "gameparadise-80490.firebaseapp.com", projectId: "gameparadise-80490", storageBucket: "gameparadise-80490.firebasestorage.app", messagingSenderId: "335620903527", appId: "1:335620903527:web:1bc1e01a386bf6e4e7fac2" };
         // Initialize Firebase
         const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
         const auth = firebase.auth();
-        const database = firebase.database();
 
-        document.getElementById('loginButton').addEventListener('click', function() {
+        document.getElementById('login-btn').onclick = function() {
             const username = document.getElementById('username').value;
-            if (username) {
-                // Set username in the database
-                const userId = firebase.auth().currentUser ? firebase.auth().currentUser.uid : firebase.database().ref().child('users').push().key;
-                firebase.database().ref('users/' + userId).set({ username: username });
-                document.getElementById('displayUsername').innerText = username;
-                document.getElementById('gameArea').style.display = 'block';
-                document.getElementById('login').style.display = 'none';
-            } else {
-                alert('Please enter a username.');
+            if(username) {
+                login(username);
             }
-        });
+        };
+
+        function login(username) {
+            auth.signInAnonymously().then(() => {
+                loadUsernames();
+                document.querySelector('.login').style.display = 'none';
+                document.getElementById('game').style.display = 'block';
+            });
+        }
+
+        function loadUsernames() {
+            db.collection('users').get().then(snapshot => {
+                snapshot.forEach(doc => {
+                    const userDiv = document.createElement('div');
+                    userDiv.textContent = doc.data().username;
+                    document.getElementById('tasks').appendChild(userDiv);
+                });
+            });
+        }
+
+        function reportBody() {
+            console.log('Report body function triggered');
+            // Implement reporting logic
+        }
+
+        function endGame() {
+            console.log('Game ended. Cleaning up.');
+            // Implement cleanup logic
+        }
     </script>
 </body>
 </html>
