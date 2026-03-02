@@ -1,4 +1,3 @@
-// Firebase Config
 const firebaseConfig = {
     apiKey: "AIzaSyA0K4geAuueVfiItB_98-LkqRTnpYNUNvM",
     authDomain: "gameparadise-80490.firebaseapp.com",
@@ -12,1013 +11,249 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let gameState = {
-    currentUser: null,
-    currentGame: null,
-    currentPlayer: null,
-    isHost: false,
-    role: null,
-    gameStarted: false,
-    players: [],
-    tasks: [],
-    votes: {},
-    myVote: null,
-    votingActive: false,
-    emergencyCooldown: false,
-    canKill: false,
-    killCooldown: false
-};
+let state = { user: null, game: null, host: false, role: null, players: [], tasks: [], votes: {}, voting: false, killTarget: null };
 
-const PLAYER_COLORS = ['#ff4d4d', '#4da6ff', '#4dff88', '#ffcc00', '#ff884d', '#ff88cc', '#aa88ff', '#ffffff', '#88ff88', '#888888'];
+const COLORS = ['#ff4d4d', '#3d8bff', '#2eb82e', '#e6c300', '#ff884d', '#ff88cc', '#9b59b6', '#ffffff', '#88ff88', '#888888'];
 
-const MAPS = {
-    skeld: {
-        name: 'The Skeld',
-        rooms: [
-            { id: 'cafeteria', x: 100, y: 100, w: 120, h: 80, name: 'Cafeteria' },
-            { id: 'weapons', x: 250, y: 50, w: 80, h: 60, name: 'Weapons' },
-            { id: 'o2', x: 380, y: 50, w: 80, h: 60, name: 'O2' },
-            { id: 'navigation', x: 500, y: 50, w: 100, h: 70, name: 'Navigation' },
-            { id: 'shields', x: 100, y: 220, w: 80, h: 60, name: 'Shields' },
-            { id: 'medbay', x: 220, y: 200, w: 80, h: 70, name: 'MedBay' },
-            { id: 'security', x: 340, y: 180, w: 80, h: 60, name: 'Security' },
-            { id: 'admin', x: 460, y: 160, w: 80, h: 60, name: 'Admin' },
-            { id: 'electrical', x: 100, y: 340, w: 80, h: 60, name: 'Electrical' },
-60, name:            { id: 'lowerengine', x: 220, y: 320, w: 80, h: 60, name: 'Lower Engine' },
-            { id: 'upperengine', x: 340, y: 320, w: 80, h: 60, name: 'Upper Engine' },
-            { id: 'reactor', x: 480, y: 300, w: 80, h: 80, name: 'Reactor' },
-            { id: 'storage', x: 600, y: 150, w: 80, h: 100, name: 'Storage' },
-            { id: 'vents', x: 500, y: 420, w: 100, h: 80, name: 'Vent Network' }
-        ],
-        taskLocations: {
-            'cafeteria': ['Fix Wires', 'Empty Chute'],
-            'weapons': ['Clear Asteroids'],
-            'o2': ['Clean O2 Filter', 'Replace Water Jug'],
-            'navigation': ['Chart Course'],
-            'shields': ['Align Engine Output'],
-            'medbay': ['Submit Scan', 'Clean Vent'],
-            'security': ['Monitor Cameras'],
-            'admin': ['Download Data'],
-            'electrical': ['Fix Wiring', 'Reset Breakers'],
-            'lowerengine': ['Align Engine'],
-            'upperengine': ['Align Engine'],
-            'reactor': ['Start Reactor', 'Unlock Manifolds'],
-            'storage': ['Clean Trash']
-        }
-    },
-    mira: {
-        name: 'Mira HQ',
-        rooms: [
-            { id: 'launchpad', x: 50, y: 50, w: 100, h: 80, name: 'Launchpad' },
-            { id: 'comms', x: 180, y: 50, w: 80, h: 60, name: 'Comms' },
-            { id: 'storage', x: 300, y: 50, w: 80, h: 60, name: 'Storage' },
-            { id: 'admin', x: 420, y: 50, w: 80, h: 60, name: 'Admin' },
-            { id: 'medbay', x: 50, y: 180, w: 100, h: 70, name: 'MedBay' },
-            { id: 'laboratory', x: 180, y: 160, w: 100, h: 80, name: 'Laboratory' },
-            { id: 'balcony', x: 330, y: 150, w: 80, h: 60, name: 'Balcony' },
-            { id: 'reactor', x: 50, y: 300, w: 100, h: 80, name: 'Reactor' },
-            { id: 'office', x: 180, y: 280, w: 80, h: 60, name: 'Office' },
-            { id: 'hallway', x: 300, y: 260, w: 120, h: 80, name: 'Hallway' },
-            { id: 'vault', x: 450, y: 200, w: 80, h: 80, name: 'Vault' }
-        ],
-        taskLocations: {
-            'launchpad': ['Prime Launcher'],
-            'comms': ['Reboot WiFi'],
-            'storage': ['Fill Canisters'],
-            'admin': ['Download Data'],
-            'medbay': ['Submit Scan'],
-            'laboratory': ['Process Data', 'Unlock Containers'],
-            'balcony': ['Clear Debris'],
-            'reactor': ['Start Reactor'],
-            'office': ['Fix Wiring'],
-            'vault': ['Enter ID Code']
-        }
-    },
-    polus: {
-        name: 'Polus',
-        rooms: [
-            { id: 'dropship', x: 50, y: 50, w: 100, h: 80, name: 'Dropship' },
-            { id: 'weapons', x: 180, y: 30, w: 80, h: 60, name: 'Weapons' },
-            { id: 'o2', x: 300, y: 30, w: 80, h: 60, name: 'O2' },
-            { id: 'nav', x: 420, y: 30, w: 80, h: 60, name: 'Nav' },
-            { id: 'shields', x: 50, y: 180, w: 80, h: 60, name: 'Shields' },
-            { id: 'teleporters', x: 160, y: 160, w: 80, h: 70, name: 'Teleporters' },
-            { id: 'admin', x: 280, y: 150, w: 80, h: 60, name: 'Admin' },
-            { id: 'electrical', x: 400, y: 140, w: 80, h: 60, name: 'Electrical' },
-            { id: 'medbay', x: 50, y: 290, w: 100, h: 80, name: 'MedBay' },
-            { id: 'laboratory', x: 180, y: 270, w: 100, h: 80, name: 'Laboratory' },
-            { id: 'storage', x: 320, y: 260, w: 80, h: 60, name: 'Storage' },
-            { id: 'office', x: 440, y: 240, w: 80, h: 60, name: 'Office' },
-            { id: 'seismic', x: 50, y: 420, w: 120, h: 80, name: 'Seismic' },
-            { id: 'lavapool', x: 220, y: 400, w: 80, h: 60, name: 'Lava Pool' },
-            { id: 'snowfield', x: 350, y: 380, w: 100, h: 80, name: 'Snowfield' }
-        ],
-        taskLocations: {
-            'dropship': ['Drop Ship'],
-            'weapons': ['Clear Asteroids'],
-            'o2': ['Replace Water Jug'],
-            'nav': ['Chart Course'],
-            'shields': ['Align Engine'],
-            'teleporters': ['Reset Tefs'],
-            'admin': ['Download Data'],
-            'electrical': ['Fix Wiring'],
-            'medbay': ['Submit Scan'],
-            'laboratory': ['Unlock Manifolds'],
-            'storage': ['Clean Up'],
-            'office': ['Scan Board'],
-            'seismic': ['Inspect Sample'],
-            'lavapool': ['Place Artifact'],
-            'snowfield': ['Record Temperature']
-        }
-    }
-};
+function code() { return 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'.split('').sort(() => .5 - Math.random()).slice(0, 6).join(''); }
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden')); document.getElementById(id)?.classList.remove('hidden'); }
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 3000); }
+function loggedIn() { return state.user !== null; }
 
-function generateGameCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return code;
-}
+// ==================== HOME ====================
 
-function showNotification(message, duration = 3000) {
-    const notif = document.getElementById('notification');
-    notif.textContent = message;
-    notif.classList.remove('hidden');
-    setTimeout(() => notif.classList.add('hidden'), duration);
-}
-
-function showScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById(screenId).classList.remove('hidden');
-}
-
-function showLoginRequired() {
-    document.getElementById('login-required').classList.remove('hidden');
-}
-
-function hideLoginRequired() {
-    document.getElementById('login-required').classList.add('hidden');
-}
-
-// Auth handlers - Homepage
-document.getElementById('google-login').addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => showNotification('Inloggen mislukt: ' + err.message));
+document.getElementById('btn-play').addEventListener('click', () => {
+    if (!loggedIn()) { toast('Je bent niet ingelogd!'); return; }
+    show('lobby');
+    subGames();
 });
 
-document.getElementById('guest-login').addEventListener('click', () => {
+document.getElementById('btn-google').addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+
+document.getElementById('btn-guest').addEventListener('click', () => {
     const name = document.getElementById('guest-name').value.trim();
-    if (!name) {
-        showNotification('Voer een naam in');
-        return;
-    }
+    if (!name) { toast('Voer een naam in!'); return; }
     auth.signInAnonymously().then(() => {
-        gameState.currentUser = {
-            uid: 'guest_' + Date.now(),
-            displayName: name,
-            isGuest: true
-        };
-        hideLoginRequired();
-        showScreen('lobby-screen');
-        document.getElementById('user-name-display').textContent = name;
-        subscribeToGames();
-    }).catch(err => showNotification('Inloggen mislukt: ' + err.message));
+        state.user = { uid: 'g' + Date.now(), name, guest: true };
+    });
 });
 
-// Modal handlers
-document.getElementById('modal-google-login').addEventListener('click', () => {
-    hideLoginRequired();
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => showNotification('Inloggen mislukt: ' + err.message));
-});
+document.getElementById('btn-logout').addEventListener('click', () => auth.signOut());
 
-document.getElementById('modal-guest-play').addEventListener('click', () => {
-    const name = prompt('Voer je naam in:');
-    if (!name || !name.trim()) {
-        showNotification('Voer een naam in');
-        return;
-    }
-    hideLoginRequired();
-    auth.signInAnonymously().then(() => {
-        gameState.currentUser = {
-            uid: 'guest_' + Date.now(),
-            displayName: name.trim(),
-            isGuest: true
-        };
-        showScreen('lobby-screen');
-        document.getElementById('user-name-display').textContent = name.trim();
-        subscribeToGames();
-    }).catch(err => showNotification('Inloggen mislukt: ' + err.message));
-});
+// ==================== AUTH ====================
 
-document.getElementById('logout-btn').addEventListener('click', () => {
-    auth.signOut();
-    gameState.currentUser = null;
-    showScreen('homepage');
-    if (gamesUnsubscribe) gamesUnsubscribe();
-});
-
-// Auth state listener
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(user => {
     if (user) {
-        gameState.currentUser = {
-            uid: user.uid,
-            displayName: user.displayName || user.email?.split('@')[0] || 'Speler',
-            email: user.email,
-            photoURL: user.photoURL,
-            isGuest: user.isAnonymous
-        };
-        hideLoginRequired();
-        showScreen('lobby-screen');
-        document.getElementById('user-name-display').textContent = gameState.currentUser.displayName;
-        subscribeToGames();
+        state.user = { uid: user.uid, name: user.displayName || user.email?.split('@')[0] || 'Player', email: user.email, guest: user.isAnonymous };
+        document.getElementById('player-name').textContent = state.user.name;
+        show('lobby');
+        subGames();
     } else {
-        showScreen('homepage');
+        state.user = null;
+        show('home');
     }
 });
 
-// Game creation
-document.getElementById('create-game-btn').addEventListener('click', async () => {
-    if (!gameState.currentUser) {
-        showLoginRequired();
-        return;
-    }
-    
-    const gameName = document.getElementById('game-name').value.trim() || 'Spel ' + generateGameCode();
+// ==================== LOBBY ====================
+
+document.getElementById('btn-create').addEventListener('click', async () => {
+    if (!loggedIn()) { toast('Je bent niet ingelogd!'); return; }
+    const name = document.getElementById('game-name').value.trim() || 'Game';
     const map = document.getElementById('map-select').value;
-    const impostorCount = parseInt(document.getElementById('impostor-count').value);
-    
-    const gameCode = generateGameCode();
-    
-    try {
-        await db.collection('amongus_map').doc(gameCode).set({
-            name: gameName,
-            map: map,
-            impostorCount: impostorCount,
-            hostId: gameState.currentUser.uid,
-            hostName: gameState.currentUser.displayName,
-            status: 'waiting',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            gameStarted: false,
-            emergencyUsed: false,
-            votingActive: false
-        });
-        
-        joinGame(gameCode, true);
-        showNotification('Spel aangemaakt!');
-    } catch (err) {
-        showNotification('Fout bij maken spel: ' + err.message);
-    }
+    const imps = parseInt(document.getElementById('impostor-count').value);
+    const id = code();
+    await db.collection('amongus_map').doc(id).set({ name, map, impostors: imps, host: state.user.uid, hostName: state.user.name, status: 'waiting', created: Date.now() });
+    joinGame(id, true);
+    toast('Spel aangemaakt!');
 });
 
-// Join game
-document.getElementById('join-game-btn').addEventListener('click', () => {
-    if (!gameState.currentUser) {
-        showLoginRequired();
-        return;
-    }
-    
-    const code = document.getElementById('join-code').value.trim().toUpperCase();
-    if (code.length !== 6) {
-        showNotification('Ongeldige spelcode');
-        return;
-    }
-    joinGame(code, false);
+document.getElementById('btn-join').addEventListener('click', () => {
+    if (!loggedIn()) { toast('Je bent niet ingelogd!'); return; }
+    const id = document.getElementById('join-code').value.trim().toUpperCase();
+    if (id.length !== 6) { toast('Ongeldige code!'); return; }
+    joinGame(id, false);
 });
 
-async function joinGame(gameCode, asHost = false) {
-    try {
-        const gameDoc = await db.collection('amongus_map').doc(gameCode).get();
-        if (!gameDoc.exists) {
-            showNotification('Spel niet gevonden');
-            return;
-        }
-        
-        const gameData = gameDoc.data();
-        
-        if (gameData.status === 'playing') {
-            showNotification('Spel is al bezig');
-            return;
-        }
-        
-        gameState.currentGame = gameCode;
-        gameState.isHost = asHost || gameData.hostId === gameState.currentUser.uid;
-        
-        const playerRef = db.collection('amongus_map').doc(gameCode).collection('players').doc(gameState.currentUser.uid);
-        const playerData = {
-            uid: gameState.currentUser.uid,
-            name: gameState.currentUser.displayName,
-            color: 0,
-            isAlive: true,
-            isHost: gameState.isHost,
-            x: 100,
-            y: 100,
-            currentRoom: 'cafeteria',
-            tasksCompleted: 0,
-            joinedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await playerRef.set(playerData);
-        
-        gameState.currentPlayer = playerData;
-        
-        showScreen('game-screen');
-        document.getElementById('game-code-display').textContent = gameCode;
-        
-        if (gameState.isHost) {
-            document.getElementById('start-game-btn').classList.remove('hidden');
-            document.getElementById('waiting-host').classList.add('hidden');
-        } else {
-            document.getElementById('start-game-btn').classList.add('hidden');
-            document.getElementById('waiting-host').classList.remove('hidden');
-        }
-        
-        subscribeToGame(gameCode);
-        
-    } catch (err) {
-        showNotification('Fout bij joinen: ' + err.message);
-    }
+document.getElementById('btn-back').addEventListener('click', () => show('home'));
+
+async function joinGame(id, asHost) {
+    const doc = await db.collection('amongus_map').doc(id).get();
+    if (!doc.exists) { toast('Spel niet gevonden!'); return; }
+    const data = doc.data();
+    if (data.status === 'playing') { toast('Spel al begonnen!'); return; }
+    state.game = id;
+    state.host = asHost || data.host === state.user.uid;
+    await db.collection('amongus_map').doc(id).collection('players').doc(state.user.uid).set({ uid: state.user.uid, name: state.user.name, alive: true, host: state.host, x: 130, y: 115 });
+    show('game');
+    document.getElementById('game-code').textContent = id;
+    document.getElementById('btn-start').classList.toggle('hidden', !state.host);
+    document.getElementById('wait-host').classList.toggle('hidden', state.host);
+    subGame(id);
 }
 
-let gamesUnsubscribe = null;
-function subscribeToGames() {
-    if (gamesUnsubscribe) gamesUnsubscribe();
-    
-    gamesUnsubscribe = db.collection('amongus_map')
-        .where('status', '==', 'waiting')
-        .onSnapshot((snapshot) => {
-            const gamesList = document.getElementById('games-list');
-            if (!gamesList) return;
-            gamesList.innerHTML = '';
-            
-            snapshot.forEach(doc => {
-                const game = doc.data();
-                const div = document.createElement('div');
-                div.className = 'game-item';
-                div.innerHTML = `
-                    <div class="game-name">${game.name}</div>
-                    <div class="game-info">${MAPS[game.map]?.name || game.map} - ${game.impostorCount} Impostor(s)</div>
-                `;
-                div.onclick = () => {
-                    document.getElementById('join-code').value = doc.id;
-                };
-                gamesList.appendChild(div);
-            });
-        });
-}
+let unsubGames, unsubGame, unsubPlayers, unsubChat, unsubVotes;
 
-let gameUnsubscribe = null;
-let playersUnsubscribe = null;
-let chatUnsubscribe = null;
-let votesUnsubscribe = null;
-
-function subscribeToGame(gameCode) {
-    if (gameUnsubscribe) gameUnsubscribe();
-    if (playersUnsubscribe) playersUnsubscribe();
-    if (chatUnsubscribe) chatUnsubscribe();
-    if (votesUnsubscribe) votesUnsubscribe();
-    
-    gameUnsubscribe = db.collection('amongus_map').doc(gameCode)
-        .onSnapshot((doc) => {
-            if (!doc.exists) {
-                showNotification('Spel is verwijderd');
-                showScreen('lobby-screen');
-                return;
-            }
-            
-            const game = doc.data();
-            document.getElementById('player-count').textContent = `Spelers: ${gameState.players.length}/10`;
-            
-            if (game.status === 'playing' && !gameState.gameStarted) {
-                startGame(game);
-            }
-            
-            if (game.votingActive && !gameState.votingActive) {
-                startVoting();
-            } else if (!game.votingActive && gameState.votingActive) {
-                endVoting();
-            }
-            
-            if (gameState.currentUser.email === 'someoeneheilig@gmail.com' || 
-                gameState.currentUser.email === 'melle1337k@gmail.com') {
-                document.getElementById('admin-panel').classList.remove('hidden');
-            }
-        });
-    
-    playersUnsubscribe = db.collection('amongus_map').doc(gameCode).collection('players')
-        .onSnapshot((snapshot) => {
-            gameState.players = [];
-            snapshot.forEach(doc => {
-                gameState.players.push({ id: doc.id, ...doc.data() });
-            });
-            updatePlayersList();
-            updateMap();
-        });
-    
-    chatUnsubscribe = db.collection('amongus_map').doc(gameCode).collection('chat')
-        .orderBy('timestamp', 'asc')
-        .onSnapshot((snapshot) => {
-            const chatMessages = document.getElementById('chat-messages');
-            if (!chatMessages) return;
-            chatMessages.innerHTML = '';
-            snapshot.forEach(doc => {
-                const msg = doc.data();
-                const div = document.createElement('div');
-                div.className = 'chat-message';
-                if (msg.type === 'system') {
-                    div.classList.add('system');
-                    div.textContent = msg.text;
-                } else {
-                    div.innerHTML = `<span class="sender" style="color:${PLAYER_COLORS[msg.color || 0]}">${msg.name}:</span> <span class="text">${msg.text}</span>`;
-                }
-                chatMessages.appendChild(div);
-            });
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-    
-    votesUnsubscribe = db.collection('amongus_map').doc(gameCode).collection('votes')
-        .onSnapshot((snapshot) => {
-            gameState.votes = {};
-            snapshot.forEach(doc => {
-                gameState.votes[doc.id] = doc.data();
-            });
-            if (gameState.votingActive) {
-                updateVotingUI();
-            }
-        });
-}
-
-function updatePlayersList() {
-    const list = document.getElementById('players-list');
-    if (!list) return;
-    list.innerHTML = '';
-    
-    gameState.players.forEach((player, index) => {
-        const div = document.createElement('div');
-        div.className = 'player-item';
-        div.innerHTML = `
-            <div class="player-color-dot" style="background:${PLAYER_COLORS[player.color || index % 10]}"></div>
-            <span class="player-name">${player.name}${player.isHost ? ' 👑' : ''}</span>
-            <span class="player-status ${player.isAlive ? 'alive' : 'dead'}">${player.isAlive ? '🔵' : '💀'}</span>
-        `;
-        if (gameState.role === 'impostor' && player.isAlive && !player.isImpostor) {
-            div.style.cursor = 'pointer';
-            div.onclick = () => selectKillTarget(player);
-        }
-        list.appendChild(div);
+function subGames() {
+    if (unsubGames) unsubGames();
+    unsubGames = db.collection('amongus_map').where('status', '==', 'waiting').onSnapshot(snap => {
+        const list = document.getElementById('games-list');
+        list.innerHTML = '';
+        snap.forEach(d => { const g = d.data(); const div = document.createElement('div'); div.className = 'game-item'; div.innerHTML = `<div class="game-name">${g.name}</div><div class="game-info">${g.impostors} Impostor</div>`; div.onclick = () => document.getElementById('join-code').value = d.id; list.appendChild(div); });
     });
 }
 
-function updateMap() {
-    const svg = document.getElementById('game-map');
-    if (!svg) return;
-    svg.innerHTML = '';
+function subGame(id) {
+    if (unsubGame) unsubGame(); if (unsubPlayers) unsubPlayers(); if (unsubChat) unsubChat(); if (unsubVotes) unsubVotes();
     
-    if (!gameState.currentGame) return;
-    
-    const mapData = MAPS.skeld;
-    
-    mapData.rooms.forEach(room => {
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', room.x);
-        rect.setAttribute('y', room.y);
-        rect.setAttribute('width', room.w);
-        rect.setAttribute('height', room.h);
-        rect.setAttribute('fill', '#2a2a4a');
-        rect.setAttribute('stroke', '#4a4a6a');
-        rect.setAttribute('stroke-width', '2');
-        rect.setAttribute('rx', '5');
-        svg.appendChild(rect);
-        
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', room.x + room.w/2);
-        text.setAttribute('y', room.y + room.h/2 + 4);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#888');
-        text.setAttribute('font-size', '9');
-        text.textContent = room.name;
-        svg.appendChild(text);
+    unsubGame = db.collection('amongus_map').doc(id).onSnapshot(d => {
+        if (!d.exists) { toast('Spel verwijderd!'); return lobby(); }
+        const g = d.data();
+        document.getElementById('players-count').textContent = `${state.players.length}/10`;
+        if (g.status === 'playing' && !state.role) startGame(g);
+        if (g.voting && !state.voting) startVote();
+        else if (!g.voting && state.voting) endVote();
+        if (state.user.email === 'someoeneheilig@gmail.com' || state.user.email === 'melle1337k@gmail.com') document.getElementById('admin').classList.remove('hidden');
     });
     
-    gameState.players.forEach((player, index) => {
-        if (!player.isAlive && gameState.role !== 'impostor') return;
-        
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', player.x || (100 + index * 50));
-        circle.setAttribute('cy', player.y || 150);
-        circle.setAttribute('r', '15');
-        circle.setAttribute('fill', PLAYER_COLORS[player.color || index % 10]);
-        circle.setAttribute('stroke', '#fff');
-        circle.setAttribute('stroke-width', '2');
-        svg.appendChild(circle);
-        
-        const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        name.setAttribute('x', player.x || (100 + index * 50));
-        name.setAttribute('y', (player.y || 150) - 20);
-        name.setAttribute('text-anchor', 'middle');
-        name.setAttribute('fill', '#fff');
-        name.setAttribute('font-size', '10');
-        name.textContent = player.name.split(' ')[0];
-        svg.appendChild(name);
-    });
+    unsubPlayers = db.collection('amongus_map').doc(id).collection('players').onSnapshot(snap => { state.players = snap.docs.map(d => ({ id: d.id, ...d.data() })); updatePlayers(); drawMap(); });
+    
+    unsubChat = db.collection('amongus_map').doc(id).collection('chat').orderBy('time').onSnapshot(snap => { const box = document.getElementById('chat-messages'); box.innerHTML = ''; snap.forEach(d => { const m = d.data(); const div = document.createElement('div'); div.className = 'chat-msg' + (m.sys ? ' system' : ''); div.innerHTML = m.sys ? m.text : `<span class="name">${m.name}:</span> ${m.text}`; box.appendChild(div); }); box.scrollTop = box.scrollHeight; });
+    
+    unsubVotes = db.collection('amongus_map').doc(id).collection('votes').onSnapshot(snap => { state.votes = {}; snap.forEach(d => state.votes[d.id] = d.data()); });
 }
 
-document.getElementById('start-game-btn').addEventListener('click', async () => {
-    if (!gameState.isHost) return;
-    
-    const gameRef = db.collection('amongus_map').doc(gameState.currentGame);
-    await gameRef.update({
-        status: 'playing',
-        gameStarted: true
-    });
-    
-    const impostorCount = (await gameRef.get()).data().impostorCount;
-    const shuffled = [...gameState.players].sort(() => Math.random() - 0.5);
-    
-    for (let i = 0; i < shuffled.length; i++) {
-        const isImpostor = i < impostorCount;
-        await db.collection('amongus_map').doc(gameState.currentGame)
-            .collection('players').doc(shuffled[i].id)
-            .update({ isImpostor: isImpostor });
-        
-        if (shuffled[i].id === gameState.currentUser.uid) {
-            gameState.role = isImpostor ? 'impostor' : 'crewmate';
-        }
-    }
-    
-    const mapData = MAPS.skeld;
-    const tasks = [];
-    
-    for (const room of mapData.rooms) {
-        const roomTasks = mapData.taskLocations[room.id] || [];
-        roomTasks.forEach(taskName => {
-            tasks.push({
-                name: taskName,
-                room: room.id,
-                completed: false,
-                location: { x: room.x + room.w/2, y: room.y + room.h/2 }
-            });
-        });
-    }
-    
-    const crewmates = shuffled.slice(impostorCount);
-    const tasksPerPlayer = Math.ceil(tasks.length / crewmates.length);
-    
-    for (let i = 0; i < crewmates.length; i++) {
-        const playerTasks = tasks.slice(i * tasksPerPlayer, (i + 1) * tasksPerPlayer);
-        await db.collection('amongus_map').doc(gameState.currentGame)
-            .collection('players').doc(crewmates[i].id)
-            .update({ tasks: playerTasks });
-    }
-    
-    for (const imp of shuffled.slice(0, impostorCount)) {
-        await db.collection('amongus_map').doc(gameState.currentGame)
-            .collection('players').doc(imp.id)
-            .update({ tasks: [] });
-    }
+function updatePlayers() {
+    const list = document.getElementById('players-list'); list.innerHTML = '';
+    state.players.forEach((p, i) => { const div = document.createElement('div'); div.className = 'player-item'; div.innerHTML = `<div class="player-color" style="background:${COLORS[i % 10]}"></div><span class="player-name">${p.name}${p.host ? ' ★' : ''}</span><span class="player-status">${p.alive ? '🟢' : '🔴'}</span>`; if (state.role === 'impostor' && p.alive && !p.impostor) { div.style.cursor = 'pointer'; div.onclick = () => selectTarget(p); } list.appendChild(div); });
+}
+
+function drawMap() {
+    const svg = document.getElementById('game-map'); svg.innerHTML = '';
+    const rooms = [
+        { id: 'cafeteria', x: 80, y: 80, w: 100, h: 70, name: 'Cafeteria' },
+        { id: 'weapons', x: 210, y: 40, w: 70, h: 50, name: 'Weapons' },
+        { id: 'o2', x: 310, y: 40, w: 70, h: 50, name: 'O2' },
+        { id: 'nav', x: 410, y: 40, w: 90, h: 60, name: 'Navigation' },
+        { id: 'shields', x: 80, y: 180, w: 70, h: 50, name: 'Shields' },
+        { id: 'medbay', x: 180, y: 170, w: 70, h: 60, name: 'MedBay' },
+        { id: 'security', x: 280, y: 150, w: 70, h: 50, name: 'Security' },
+        { id: 'admin', x: 380, y: 130, w: 70, h: 50, name: 'Admin' },
+        { id: 'electrical', x: 80, y: 280, w: 70, h: 50, name: 'Electrical' },
+        { id: 'lowereng', x: 180, y: 270, w: 70, h: 50, name: 'Lower Eng' },
+        { id: 'uppereng', x: 280, y: 270, w: 70, h: 50, name: 'Upper Eng' },
+        { id: 'reactor', x: 400, y: 250, w: 70, h: 70, name: 'Reactor' },
+        { id: 'storage', x: 500, y: 120, w: 70, h: 90, name: 'Storage' }
+    ];
+    rooms.forEach(r => { const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); rect.setAttribute('x', r.x); rect.setAttribute('y', r.y); rect.setAttribute('width', r.w); rect.setAttribute('height', r.h); rect.setAttribute('fill', '#1e1e30'); rect.setAttribute('stroke', '#3a3a50'); rect.setAttribute('rx', '5'); svg.appendChild(rect); const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text'); txt.setAttribute('x', r.x + r.w/2); txt.setAttribute('y', r.y + r.h/2 + 4); txt.setAttribute('text-anchor', 'middle'); txt.setAttribute('fill', '#666'); txt.setAttribute('font-size', '9'); txt.textContent = r.name; svg.appendChild(txt); });
+    state.players.forEach((p, i) => { if (!p.alive && state.role !== 'impostor') return; const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', p.x || 130); c.setAttribute('cy', p.y || 115); c.setAttribute('r', '12'); c.setAttribute('fill', COLORS[i % 10]); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '2'); svg.appendChild(c); });
+}
+
+// ==================== GAME ====================
+
+document.getElementById('btn-start').addEventListener('click', async () => {
+    const ref = db.collection('amongus_map').doc(state.game);
+    const imps = (await ref.get()).data().impostors;
+    const shuffled = [...state.players].sort(() => .5 - Math.random());
+    for (let i = 0; i < shuffled.length; i++) { const isImp = i < imps; await ref.collection('players').doc(shuffled[i].id).update({ impostor: isImp }); if (shuffled[i].id === state.user.uid) state.role = isImp ? 'impostor' : 'crewmate'; }
+    await ref.update({ status: 'playing' });
 });
 
-async function startGame(game) {
-    gameState.gameStarted = true;
-    const myPlayer = gameState.players.find(p => p.id === gameState.currentUser.uid);
-    gameState.role = myPlayer?.isImpostor ? 'impostor' : 'crewmate';
-    
-    showScreen('role-screen');
-    
-    const roleIcon = document.getElementById('role-icon');
-    const roleText = document.getElementById('role-text');
-    const roleDesc = document.getElementById('role-description');
-    
-    if (gameState.role === 'impostor') {
-        roleIcon.className = 'role-icon impostor';
-        roleText.textContent = '🧑‍🚀 Impostor';
-        roleDesc.textContent = 'Vermoed alle Crewmates zonder gepakt te worden!';
-        document.getElementById('kill-btn').classList.remove('hidden');
-        document.getElementById('sabotage-btn').classList.remove('hidden');
+function startGame(g) {
+    const me = state.players.find(p => p.id === state.user.uid);
+    state.role = me?.impostor ? 'impostor' : 'crewmate';
+    show('role-screen');
+    const disp = document.getElementById('role-display');
+    const name = document.getElementById('role-name');
+    const desc = document.getElementById('role-desc');
+    if (state.role === 'impostor') {
+        disp.className = 'role-crewmate impostor';
+        name.textContent = 'IMPOSTOR';
+        name.style.color = '#e62e2e';
+        desc.textContent = 'Kill alle Crewmates!';
+        document.getElementById('btn-kill').classList.remove('hidden');
+        document.getElementById('btn-sabotage').classList.remove('hidden');
     } else {
-        roleIcon.className = 'role-icon crewmate';
-        roleText.textContent = '👨‍🚀 Crewmate';
-        roleDesc.textContent = 'Voltooi je taken en vind de Impostor(s)!';
-        document.getElementById('tasks-panel').classList.remove('hidden');
-    }
-    
-    const playerData = gameState.players.find(p => p.id === gameState.currentUser.uid);
-    if (playerData?.tasks) {
-        gameState.tasks = playerData.tasks;
-        updateTasksList();
+        disp.className = 'role-crewmate';
+        name.textContent = 'CREWMATE';
+        name.style.color = '#3d8bff';
+        desc.textContent = 'Doe je taken en vind de Impostor!';
+        document.getElementById('tasks-box').classList.remove('hidden');
+        if (me?.tasks) { state.tasks = me.tasks; updateTasks(); }
     }
 }
 
-function updateTasksList() {
-    const list = document.getElementById('tasks-list');
-    if (!list) return;
-    list.innerHTML = '';
-    
-    const completed = gameState.tasks.filter(t => t.completed).length;
-    const progress = gameState.tasks.length > 0 ? Math.round((completed / gameState.tasks.length) * 100) : 0;
-    
-    document.getElementById('task-progress').textContent = `Voortgang: ${progress}%`;
-    
-    gameState.tasks.forEach((task, index) => {
-        const div = document.createElement('div');
-        div.className = `task-item ${task.completed ? 'completed' : ''}`;
-        div.innerHTML = `
-            <div class="task-status"></div>
-            <span>${task.name}</span>
-        `;
-        if (!task.completed) {
-            div.onclick = () => completeTask(index);
-        }
-        list.appendChild(div);
-    });
+function updateTasks() {
+    const list = document.getElementById('tasks-list'); list.innerHTML = '';
+    const done = state.tasks.filter(t => t.done).length;
+    document.getElementById('task-progress').textContent = Math.round(done / state.tasks.length * 100) + '%';
+    state.tasks.forEach((t, i) => { const div = document.createElement('div'); div.className = 'task-item' + (t.done ? ' completed' : ''); div.innerHTML = `<div class="task-check"></div><span>${t.name}</span>`; if (!t.done) div.onclick = () => doTask(i); list.appendChild(div); });
 }
 
-async function completeTask(index) {
-    if (gameState.role !== 'crewmate' || gameState.tasks[index]?.completed) return;
-    
-    gameState.tasks[index].completed = true;
-    updateTasksList();
-    
-    await db.collection('amongus_map').doc(gameState.currentGame)
-        .collection('players').doc(gameState.currentUser.uid)
-        .update({ 
-            tasks: gameState.tasks,
-            tasksCompleted: firebase.firestore.FieldValue.increment(1)
-        });
-    
-    checkTasksWin();
-}
+async function doTask(i) { state.tasks[i].done = true; updateTasks(); await db.collection('amongus_map').doc(state.game).collection('players').doc(state.user.uid).update({ tasks: state.tasks }); }
 
-async function checkTasksWin() {
-    const allTasks = gameState.players
-        .filter(p => !p.isImpostor)
-        .reduce((sum, p) => sum + (p.tasks?.filter(t => t.completed).length || 0), 0);
-    
-    const totalTasks = gameState.players
-        .filter(p => !p.isImpostor)
-        .reduce((sum, p) => sum + (p.tasks?.length || 0), 0);
-    
-    if (totalTasks > 0 && allTasks >= totalTasks) {
-        await endGame('crewmates');
-    }
-}
+document.getElementById('btn-emergency').addEventListener('click', async () => { await db.collection('amongus_map').doc(state.game).update({ voting: true }); chat('🔔 Noodsmeeting!'); });
 
-document.getElementById('emergency-btn').addEventListener('click', async () => {
-    if (!gameState.currentUser) {
-        showLoginRequired();
-        return;
-    }
-    if (gameState.emergencyCooldown) {
-        showNotification('Noodsmeeting nog niet beschikbaar');
-        return;
-    }
-    
-    await db.collection('amongus_map').doc(gameState.currentGame).update({
-        votingActive: true,
-        votingType: 'emergency',
-        votingStartTime: firebase.firestore.FieldValue.serverTimestamp(),
-        emergencyUsed: true
-    });
-    
-    gameState.emergencyCooldown = true;
-    setTimeout(() => gameState.emergencyCooldown = false, 60000);
-    
-    addSystemMessage('🔔 Noodsmeeting is geopend!');
-});
+function selectTarget(p) { if (!p.alive || state.role !== 'impostor') return; state.killTarget = p; toast(`Klik nogmaals om ${p.name} te doden`); }
 
-let selectedKillTarget = null;
+document.getElementById('btn-kill').addEventListener('click', async () => { if (!state.killTarget) { toast('Selecteer een speler!'); return; } await db.collection('amongus_map').doc(state.game).collection('players').doc(state.killTarget.id).update({ alive: false }); chat(`💀 ${state.killTarget.name} is vermoord!`); checkWin(); state.killTarget = null; });
 
-function selectKillTarget(player) {
-    if (gameState.role !== 'impostor' || !player.isAlive) return;
-    if (gameState.killCooldown) {
-        showNotification('Nog even wachten om te doden');
-        return;
-    }
-    
-    selectedKillTarget = player;
-    showNotification(`Klik nogmaals om ${player.name} te doden`);
-}
-
-document.getElementById('kill-btn').addEventListener('click', async () => {
-    if (!selectedKillTarget) {
-        showNotification('Selecteer een speler om te doden');
-        return;
-    }
-    
-    gameState.killCooldown = true;
-    setTimeout(() => gameState.killCooldown = false, 30000);
-    
-    await db.collection('amongus_map').doc(gameState.currentGame)
-        .collection('players').doc(selectedKillTarget.id)
-        .update({ isAlive: false });
-    
-    addSystemMessage(`💀 ${selectedKillTarget.name} is vermoord!`);
-    
-    checkWinCondition();
-    
-    selectedKillTarget = null;
-});
-
-async function checkWinCondition() {
-    const players = gameState.players;
-    const aliveCrewmates = players.filter(p => p.isAlive && !p.isImpostor).length;
-    const aliveImpostors = players.filter(p => p.isAlive && p.isImpostor).length;
-    
-    if (aliveImpostors === 0) {
-        await endGame('crewmates');
-    } else if (aliveImpostors >= aliveCrewmates) {
-        await endGame('impostors');
-    }
-}
+async function checkWin() { const aliveC = state.players.filter(p => p.alive && !p.impostor).length; const aliveI = state.players.filter(p => p.alive && p.impostor).length; if (aliveI === 0) endGame('crewmates'); else if (aliveI >= aliveC) endGame('impostors'); }
 
 async function endGame(winner) {
-    await db.collection('amongus_map').doc(gameState.currentGame).update({
-        status: 'ended',
-        winner: winner
-    });
-    
-    showScreen('result-screen');
-    
-    const title = document.getElementById('result-title');
-    const message = document.getElementById('result-message');
-    
-    if (winner === 'crewmates') {
-        title.textContent = '🎉 Crewmates Winnen!';
-        title.className = 'crewmates-win';
-        message.textContent = 'De Impostors zijn gevonden of alle taken zijn voltooid!';
-    } else {
-        title.textContent = '😈 Impostors Winnen!';
-        title.className = 'impostors-win';
-        message.textContent = 'De Impostors hebben het schip overgenomen!';
-    }
+    await db.collection('amongus_map').doc(state.game).update({ status: 'ended', winner });
+    show('result');
+    const title = document.getElementById('result-title'); const msg = document.getElementById('result-msg');
+    if (winner === 'crewmates') { title.textContent = 'CREWMATES WINS!'; title.className = 'crewmates'; msg.textContent = 'Impostors gevonden!'; }
+    else { title.textContent = 'IMPOSTORS WINS!'; title.className = 'impostors'; msg.textContent = 'Impostors hebben gewonnen!'; }
 }
 
-async function startVoting() {
-    gameState.votingActive = true;
-    gameState.myVote = null;
-    
-    showScreen('voting-screen');
-    
-    const votingBody = document.getElementById('voting-body');
-    const votingResults = document.getElementById('voting-results');
-    votingBody.classList.remove('hidden');
-    votingResults.classList.add('hidden');
-    
-    const optionsDiv = document.getElementById('voting-options');
-    optionsDiv.innerHTML = '';
-    
-    const alivePlayers = gameState.players.filter(p => p.isAlive);
-    
-    alivePlayers.forEach(player => {
-        const div = document.createElement('div');
-        div.className = 'voting-option';
-        div.innerHTML = `
-            <div style="width:30px;height:30px;background:${PLAYER_COLORS[player.color || 0]};border-radius:50%;margin:0 auto 10px;"></div>
-            <div>${player.name}</div>
-        `;
-        div.onclick = () => castVote(player);
-        optionsDiv.appendChild(div);
-    });
-    
-    let timeLeft = 30;
-    const timerEl = document.getElementById('voting-timer');
-    const timer = setInterval(() => {
-        timeLeft--;
-        timerEl.textContent = `Tijd over: ${timeLeft}s`;
-        if (timeLeft <= 0) clearInterval(timer);
-    }, 1000);
-    
-    setTimeout(async () => {
-        if (gameState.votingActive) {
-            await finishVoting();
-        }
-    }, 30000);
+// ==================== VOTING ====================
+
+function startVote() {
+    state.voting = true; state.myVote = null;
+    show('vote');
+    const opts = document.getElementById('vote-options'); opts.innerHTML = '';
+    state.players.filter(p => p.alive).forEach(p => { const div = document.createElement('div'); div.className = 'vote-option'; div.innerHTML = `<div class="color-box" style="background:${COLORS[state.players.indexOf(p) % 10]}"></div><div>${p.name}</div>`; div.onclick = () => castVote(p); opts.appendChild(div); });
+    let t = 30; const timer = setInterval(() => { document.getElementById('vote-timer').textContent = t-- + 's'; if (t < 0) clearInterval(timer); }, 1000);
+    setTimeout(finishVote, 30000);
 }
 
-async function castVote(player) {
-    if (gameState.myVote) return;
-    
-    gameState.myVote = player.id;
-    
-    await db.collection('amongus_map').doc(gameState.currentGame)
-        .collection('votes').doc(gameState.currentUser.uid).set({
-        targetId: player.id,
-        targetName: player.name,
-        voterId: gameState.currentUser.uid,
-        voterName: gameState.currentUser.displayName,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    showNotification(`Gestemt op ${player.name}`);
-    
-    document.querySelectorAll('.voting-option').forEach(opt => {
-        if (opt.querySelector('div:last-child').textContent === player.name) {
-            opt.classList.add('selected');
-        }
-    });
+async function castVote(p) { if (state.myVote) return; state.myVote = p.id; await db.collection('amongus_map').doc(state.game).collection('votes').doc(state.user.uid).set({ target: p.id, targetName: p.name, voter: state.user.uid }); toast('Gestemt op ' + p.name); }
+
+async function finishVote() {
+    const counts = {}; state.players.forEach(p => counts[p.id] = 0); Object.values(state.votes).forEach(v => counts[v.target] = (counts[v.target] || 0) + 1);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]); const max = sorted[0]?.[1] || 0; const total = Object.keys(state.votes).length;
+    if (max > total / 2) { const ejected = state.players.find(p => p.id === sorted[0][0]); if (ejected) { await db.collection('amongus_map').doc(state.game).collection('players').doc(ejected.id).update({ alive: false }); chat(`🗳️ ${ejected.name} weggestemd!`); if (ejected.impostor) { await endGame('crewmates'); return; } else checkWin(); } }
+    await db.collection('amongus_map').doc(state.game).update({ voting: false });
 }
 
-async function finishVoting() {
-    const voteCounts = {};
-    gameState.players.forEach(p => voteCounts[p.id] = 0);
-    
-    Object.values(gameState.votes).forEach(vote => {
-        voteCounts[vote.targetId] = (voteCounts[vote.targetId] || 0) + 1;
-    });
-    
-    document.getElementById('voting-body').classList.add('hidden');
-    document.getElementById('voting-results').classList.remove('hidden');
-    
-    const resultsDiv = document.getElementById('vote-results');
-    resultsDiv.innerHTML = '';
-    
-    const sorted = Object.entries(voteCounts).sort((a, b) => b[1] - a[1]);
-    
-    sorted.forEach(([playerId, count]) => {
-        const player = gameState.players.find(p => p.id === playerId);
-        if (!player || count === 0) return;
-        
-        const div = document.createElement('div');
-        div.className = 'vote-result-item';
-        div.innerHTML = `
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:20px;height:20px;background:${PLAYER_COLORS[player.color || 0]};border-radius:50%;"></div>
-                <span>${player.name}</span>
-            </div>
-            <span class="vote-count">${count} stem(men)</span>
-        `;
-        resultsDiv.appendChild(div);
-    });
-    
-    const totalVotes = Object.values(gameState.votes).length;
-    const maxVotes = sorted[0]?.[1] || 0;
-    
-    if (maxVotes > totalVotes / 2) {
-        const ejectedId = sorted[0][0];
-        const ejected = gameState.players.find(p => p.id === ejectedId);
-        
-        if (ejected) {
-            await db.collection('amongus_map').doc(gameState.currentGame)
-                .collection('players').doc(ejectedId).update({ isAlive: false });
-            
-            addSystemMessage(`🗳️ ${ejected.name} is weggestemd!`);
-            
-            if (ejected.isImpostor) {
-                await endGame('crewmates');
-                return;
-            } else {
-                await checkWinCondition();
-            }
-        }
-    }
-    
-    // Reset voting
-    await db.collection('amongus_map').doc(gameState.currentGame).update({
-        votingActive: false
-    });
+function endVote() { state.voting = false; state.myVote = null; show('game'); }
+document.getElementById('btn-skip').addEventListener('click', async () => { if (state.myVote) return; await db.collection('amongus_map').doc(state.game).collection('votes').doc(state.user.uid).set({ target: 'skip', targetName: 'Skip', voter: state.user.uid }); });
+
+// ==================== CHAT ====================
+
+document.getElementById('btn-send').addEventListener('click', sendChat);
+document.getElementById('chat-msg').addEventListener('keypress', e => { if (e.key === 'Enter') sendChat(); });
+
+async function sendChat() { const input = document.getElementById('chat-msg'); const text = input.value.trim(); if (!text) return; await db.collection('amongus_map').doc(state.game).collection('chat').add({ name: state.user.name, text, time: Date.now() }); input.value = ''; }
+async function chat(text) { await db.collection('amongus_map').doc(state.game).collection('chat').add({ name: 'SYSTEM', text, sys: true, time: Date.now() }); }
+
+// ==================== NAV ====================
+
+document.getElementById('btn-leave').addEventListener('click', lobby);
+document.getElementById('btn-lobby').addEventListener('click', lobby);
+
+async function lobby() {
+    if (state.game) { try { await db.collection('amongus_map').doc(state.game).collection('players').doc(state.user.uid).delete(); } catch(e) {} }
+    cleanup();
+    state.game = null; state.host = false; state.role = null; state.players = [];
+    show('lobby'); subGames();
 }
 
-async function endVoting() {
-    gameState.votingActive = false;
-    gameState.myVote = null;
-    showScreen('game-screen');
-}
+function cleanup() { if (unsubGame) unsubGame(); if (unsubPlayers) unsubPlayers(); if (unsubChat) unsubChat(); if (unsubVotes) unsubVotes(); }
 
-document.getElementById('skip-vote').addEventListener('click', async () => {
-    if (gameState.myVote) {
-        showNotification('Je hebt al gestemd');
-        return;
-    }
-    
-    await db.collection('amongus_map').doc(gameState.currentGame)
-        .collection('votes').doc(gameState.currentUser.uid).set({
-        targetId: 'skip',
-        targetName: 'Overslaan',
-        voterId: gameState.currentUser.uid,
-        voterName: gameState.currentUser.displayName,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    showNotification('Gestemd om over te slaan');
-});
+document.getElementById('btn-kick').addEventListener('click', async () => { const ps = await db.collection('amongus_map').doc(state.game).collection('players').get(); ps.forEach(d => { if (d.id !== state.user.uid) d.ref.delete(); }); });
+document.getElementById('btn-end').addEventListener('click', async () => { await db.collection('amongus_map').doc(state.game).update({ status: 'ended' }); lobby(); });
+document.getElementById('btn-sabotage').addEventListener('click', () => toast('Sabotage binnenkort!'));
 
-function updateVotingUI() {}
-
-document.getElementById('send-chat').addEventListener('click', sendChat);
-document.getElementById('chat-input').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendChat();
-});
-
-async function sendChat() {
-    if (!gameState.currentUser) {
-        showLoginRequired();
-        return;
-    }
-    
-    const input = document.getElementById('chat-input');
-    const text = input.value.trim();
-    
-    if (!text) return;
-    
-    const player = gameState.players.find(p => p.id === gameState.currentUser.uid);
-    
-    await db.collection('amongus_map').doc(gameState.currentGame).collection('chat').add({
-        uid: gameState.currentUser.uid,
-        name: gameState.currentUser.displayName,
-        text: text,
-        color: player?.color || 0,
-        type: 'player',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    
-    input.value = '';
-}
-
-async function addSystemMessage(text) {
-    if (!gameState.currentGame) return;
-    await db.collection('amongus_map').doc(gameState.currentGame).collection('chat').add({
-        uid: 'system',
-        name: 'System',
-        text: text,
-        type: 'system',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-}
-
-document.getElementById('leave-game-btn').addEventListener('click', async () => {
-    if (gameState.currentGame) {
-        await db.collection('amongus_map').doc(gameState.currentGame)
-            .collection('players').doc(gameState.currentUser.uid).delete();
-        
-        if (gameUnsubscribe) gameUnsubscribe();
-        if (playersUnsubscribe) playersUnsubscribe();
-        if (chatUnsubscribe) chatUnsubscribe();
-        if (votesUnsubscribe) votesUnsubscribe();
-    }
-    
-    gameState = {
-        currentUser: gameState.currentUser,
-        currentGame: null,
-        currentPlayer: null,
-        isHost: false,
-        role: null,
-        gameStarted: false,
-        players: [],
-        tasks: [],
-        votes: {},
-        myVote: null,
-        votingActive: false,
-        emergencyCooldown: false,
-        canKill: false,
-        killCooldown: false
-    };
-    
-    showScreen('lobby-screen');
-    subscribeToGames();
-});
-
-document.getElementById('back-to-lobby').addEventListener('click', async () => {
-    if (gameState.currentGame) {
-        await db.collection('amongus_map').doc(gameState.currentGame)
-            .collection('players').doc(gameState.currentUser.uid).delete();
-    }
-    
-    gameState.currentGame = null;
-    showScreen('lobby-screen');
-    subscribeToGames();
-});
-
-document.getElementById('kick-all-btn').addEventListener('click', async () => {
-    if (!gameState.currentGame) return;
-    
-    const players = await db.collection('amongus_map').doc(gameState.currentGame)
-        .collection('players').get();
-    
-    players.forEach(async doc => {
-        if (doc.id !== gameState.currentUser.uid) {
-            await doc.ref.delete();
-        }
-    });
-    
-    showNotification('Iedereen gekickt');
-});
-
-document.getElementById('end-game-btn').addEventListener('click', async () => {
-    if (!gameState.currentGame) return;
-    
-    await db.collection('amongus_map').doc(gameState.currentGame).update({
-        status: 'ended'
-    });
-    
-    showNotification('Spel beëindigd');
-    showScreen('lobby-screen');
-});
-
-document.getElementById('sabotage-btn').addEventListener('click', () => {
-    showNotification('Sabotage binnenkort beschikbaar!');
-});
-
-// Initialize
-showScreen('homepage');
+show('home');
