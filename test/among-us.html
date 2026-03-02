@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Among Us - Game Paradise</title>
+<title>Space Impostor</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -11,86 +11,89 @@
 <style>
 body {
   margin:0;
-  background: radial-gradient(circle at top, #1b1f3a, #000);
+  background:black;
+  background-image: radial-gradient(white 1px, transparent 1px);
+  background-size: 40px 40px;
   color:white;
-  font-family: Arial;
+  font-family: 'Arial Black', Arial;
 }
 
-.container {
-  max-width:800px;
-  margin:auto;
-  padding:20px;
+.center {
   text-align:center;
+  padding-top:40px;
+}
+
+.title {
+  font-size:50px;
+  color:#ff0044;
+  text-shadow: 0 0 20px red;
 }
 
 button {
-  background:#ff0055;
+  background:#ff0044;
   border:none;
-  padding:10px 20px;
+  padding:15px 30px;
+  margin:10px;
+  font-size:18px;
+  border-radius:40px;
   color:white;
-  border-radius:8px;
   cursor:pointer;
-  margin:5px;
+  box-shadow:0 0 20px #ff0044;
 }
 
 button:hover {
-  background:#ff3377;
+  transform:scale(1.05);
 }
 
-.card {
+.room-box {
   background:#111;
-  padding:15px;
-  border-radius:12px;
-  margin-top:15px;
+  padding:20px;
+  border-radius:20px;
+  margin:20px auto;
+  width:400px;
 }
 
 .player {
-  padding:5px;
+  margin:5px;
+  padding:10px;
+  border-radius:20px;
+  background:#222;
 }
+
 .impostor {
   color:red;
+  font-size:28px;
+  text-shadow:0 0 15px red;
 }
+
 .crewmate {
   color:#00ffff;
-}
-.admin-panel {
-  background:#300;
-  padding:10px;
-  margin-top:20px;
-  border-radius:8px;
+  font-size:28px;
+  text-shadow:0 0 15px cyan;
 }
 </style>
 </head>
-
 <body>
-<div class="container">
 
-<h1>Among Us</h1>
+<div class="center">
+
+<div class="title">SPACE IMPOSTOR</div>
 
 <div id="lobby">
-  <button onclick="createRoom()">Create Room</button>
-  <input id="roomInput" placeholder="Room ID">
-  <button onclick="joinRoom()">Join Room</button>
+  <button onclick="createRoom()">CREATE GAME</button><br>
+  <input id="roomInput" placeholder="Room Code" style="padding:10px;border-radius:20px;">
+  <button onclick="joinRoom()">JOIN</button>
 </div>
 
 <div id="game" style="display:none;">
-  <h2 id="roomTitle"></h2>
-  <div class="card">
-    <h3>Players</h3>
+  <div class="room-box">
+    <h2 id="roomTitle"></h2>
     <div id="players"></div>
   </div>
 
-  <button id="startBtn" style="display:none;" onclick="startGame()">Start Game</button>
+  <div id="roleDisplay"></div>
 
-  <div class="card">
-    <h3>Your Role</h3>
-    <div id="roleDisplay">Waiting...</div>
-  </div>
-</div>
-
-<div id="adminPanel" class="admin-panel" style="display:none;">
-  <h3>Admin Controls</h3>
-  <button onclick="deleteRoom()">Delete Room</button>
+  <button id="startBtn" style="display:none;" onclick="startGame()">START</button>
 </div>
 
 </div>
@@ -112,8 +115,15 @@ let username = "";
 let isHost = false;
 
 auth.onAuthStateChanged(async user => {
+
   if(!user){
-    location.href = "index.html";
+    document.body.innerHTML = `
+      <div style="color:white;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+        <h1>Account Required</h1>
+        <p>You must be logged in to play.</p>
+        <a href="index.html" style="color:#00ffff;">Back to homepage</a>
+      </div>
+    `;
     return;
   }
 
@@ -125,10 +135,9 @@ async function createRoom(){
   const user = auth.currentUser;
 
   const roomRef = await db.collection("rooms").add({
-    hostId: user.uid,
+    hostId:user.uid,
     status:"waiting",
-    maxPlayers:8,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
   });
 
   joinRoomById(roomRef.id);
@@ -148,24 +157,23 @@ async function joinRoomById(roomId){
     .collection("players")
     .doc(user.uid)
     .set({
-      name: username,
+      name:username,
       role:null,
       alive:true
     });
 
   const roomDoc = await db.collection("rooms").doc(roomId).get();
-  isHost = roomDoc.data().hostId === user.uid;
+  isHost = roomDoc.data().hostId===user.uid;
 
   document.getElementById("lobby").style.display="none";
   document.getElementById("game").style.display="block";
-  document.getElementById("roomTitle").innerText="Room: "+roomId;
+  document.getElementById("roomTitle").innerText="ROOM: "+roomId;
 
   if(isHost)
     document.getElementById("startBtn").style.display="block";
 
   listenPlayers();
   listenRole();
-  checkAdmin();
 }
 
 function listenPlayers(){
@@ -189,44 +197,27 @@ function listenRole(){
     .collection("players")
     .doc(user.uid)
     .onSnapshot(doc=>{
-      const role = doc.data()?.role;
+      const role=doc.data()?.role;
       if(!role) return;
 
-      const div = document.getElementById("roleDisplay");
-      div.innerText = role.toUpperCase();
-      div.className = role;
+      const div=document.getElementById("roleDisplay");
+      div.innerText=role.toUpperCase();
+      div.className=role;
     });
 }
 
 async function startGame(){
-  const playersSnap = await db.collection("rooms")
+  const snap = await db.collection("rooms")
     .doc(currentRoom)
     .collection("players")
     .get();
 
-  const players = playersSnap.docs;
-  const randomIndex = Math.floor(Math.random()*players.length);
+  const players=snap.docs;
+  const randomIndex=Math.floor(Math.random()*players.length);
 
   for(let i=0;i<players.length;i++){
-    const role = (i===randomIndex) ? "impostor" : "crewmate";
-    await players[i].ref.update({ role });
-  }
-
-  await db.collection("rooms")
-    .doc(currentRoom)
-    .update({ status:"playing" });
-}
-
-async function deleteRoom(){
-  await db.collection("rooms").doc(currentRoom).delete();
-  location.reload();
-}
-
-function checkAdmin(){
-  const user = auth.currentUser;
-  if(user.email==="someoeneheilig@gmail.com" ||
-     user.email==="melle1337k@gmail.com"){
-    document.getElementById("adminPanel").style.display="block";
+    const role=(i===randomIndex)?"impostor":"crewmate";
+    await players[i].ref.update({role});
   }
 }
 </script>
