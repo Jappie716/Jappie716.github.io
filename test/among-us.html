@@ -5,30 +5,84 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Among Us — GameParadise</title>
   <style>
+    /* ---------- Basis en thema ---------- */
     :root{
-      --bg:#071022; --card:#0b1220; --accent:#ff6b6b; --muted:#9fb0c8; --glass: rgba(255,255,255,0.03);
+      --bg:#0b1220; --panel:#0f1a2a; --accent:#ff5b5b; --accent-2:#ffd166;
+      --muted:#9fb0c8; --glass: rgba(255,255,255,0.03);
+      --card-radius:14px;
+      --ui-gap:12px;
+      --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
-    body{font-family:Inter, system-ui, Arial; margin:0; padding:18px; background:linear-gradient(180deg,#041022 0%, #071022 100%); color:#e6eef8;}
-    .wrap{max-width:1100px;margin:0 auto;}
+    html,body{height:100%;margin:0;font-family:var(--font-sans);background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(255,91,91,0.04), transparent 6%),
+      linear-gradient(180deg,#071022 0%, #081426 100%);color:#eaf2ff}
+    .wrap{max-width:1200px;margin:18px auto;padding:18px;box-sizing:border-box}
     header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-    h1{margin:0;font-size:20px}
-    .card{background:var(--card);padding:12px;border-radius:10px;margin-bottom:12px;box-shadow:0 6px 20px rgba(0,0,0,0.6)}
-    .muted{color:var(--muted);font-size:13px}
-    .flex{display:flex;gap:10px;align-items:center}
-    button{padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(180deg,#2ee6a7,#0bb07a);color:#012;cursor:pointer}
-    input,select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
-    #not-logged{display:none}
-    .welcome{display:flex;gap:18px;align-items:center}
-    .skingrid{display:flex;gap:8px;flex-wrap:wrap}
-    .skin{width:72px;height:72px;border-radius:12px;background:#112233;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid transparent}
-    .skin.selected{border-color:var(--accent);box-shadow:0 6px 18px rgba(255,107,107,0.12)}
-    .players, .chat{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;max-height:320px;overflow:auto}
-    .player{padding:6px;border-bottom:1px solid rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center}
-    .chat-msg{padding:6px;border-bottom:1px solid rgba(255,255,255,0.02)}
-    .host-badge{background:var(--accent);color:#111;padding:4px 8px;border-radius:8px;font-weight:700}
-    .danger{background:linear-gradient(180deg,#ff8a8a,#ff4b4b);color:#111}
+    h1{margin:0;font-size:20px;letter-spacing:0.6px}
     .small{font-size:13px;color:var(--muted)}
-    .hidden{display:none}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:var(--card-radius);box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+
+    /* ---------- Layout ---------- */
+    .grid{display:grid;grid-template-columns: 420px 1fr; gap:16px; align-items:start}
+    .full{grid-column:1/-1}
+
+    /* ---------- Welcome / hero ---------- */
+    .hero{display:flex;gap:16px;align-items:center}
+    .hero-left{flex:1}
+    .hero-right{width:320px}
+    .title-hero{font-size:28px;margin:0 0 6px 0}
+    .subtitle{color:var(--muted);margin:0 0 12px 0}
+
+    /* ---------- Skins (avatars) ---------- */
+    .skingrid{display:flex;gap:10px;flex-wrap:wrap}
+    .skin{width:72px;height:72px;border-radius:14px;background:linear-gradient(180deg,#0d2233,#071a2a);display:flex;align-items:center;justify-content:center;cursor:pointer;border:3px solid transparent;transition:transform .12s, box-shadow .12s}
+    .skin:hover{transform:translateY(-6px)}
+    .skin.selected{border-color:var(--accent);box-shadow:0 12px 30px rgba(255,91,91,0.12)}
+    .skin .crew{width:44px;height:44px;border-radius:10px;position:relative;box-shadow:inset 0 -6px 12px rgba(0,0,0,0.35)}
+    .skin .vis{position:absolute;right:6px;top:10px;width:18px;height:12px;border-radius:4px;background:rgba(255,255,255,0.12);box-shadow:inset 0 -2px 4px rgba(0,0,0,0.25)}
+
+    /* color variants */
+    .skin[data-color="red"] .crew{background:#ff5b5b}
+    .skin[data-color="blue"] .crew{background:#4aa3ff}
+    .skin[data-color="green"] .crew{background:#4cd97b}
+    .skin[data-color="yellow"] .crew{background:#ffd166}
+    .skin[data-color="purple"] .crew{background:#b07bff}
+    .skin[data-color="black"] .crew{background:#222}
+
+    /* ---------- Lobby / map UI ---------- */
+    .lobby-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .players{background:var(--panel);padding:10px;border-radius:12px;max-height:420px;overflow:auto}
+    .player-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .player-avatar{width:48px;height:48px;border-radius:10px;position:relative;flex-shrink:0}
+    .player-name{font-weight:700}
+    .player-meta{font-size:12px;color:var(--muted)}
+    .host-badge{background:var(--accent);color:#081426;padding:6px 8px;border-radius:10px;font-weight:700;font-size:12px}
+
+    /* ---------- Chat ---------- */
+    .chat{background:var(--panel);padding:10px;border-radius:12px;display:flex;flex-direction:column;height:420px}
+    .chat-messages{flex:1;overflow:auto;padding-right:6px}
+    .chat-input{display:flex;gap:8px;margin-top:8px}
+    .chat-msg{padding:8px;border-radius:8px;margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+    .chat-msg .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+
+    /* ---------- Game screen ---------- */
+    .game-screen{background:linear-gradient(180deg,#071a2a,#04101a);border-radius:12px;padding:12px;margin-top:12px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .big-role{font-size:20px;font-weight:800;color:var(--accent-2);margin-bottom:8px}
+    .impostor-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+
+    /* ---------- Buttons ---------- */
+    .btn{padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(180deg,#2ee6a7,#0bb07a);color:#012;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    .btn.danger{background:linear-gradient(180deg,#ff8a8a,#ff4b4b);color:#111}
+    .btn.small{padding:6px 8px;font-size:13px}
+
+    /* ---------- Animations ---------- */
+    .logo-anim{width:120px;height:120px;border-radius:18px;background:linear-gradient(180deg,#ff7b7b,#ff4b4b);display:flex;align-items:center;justify-content:center;font-weight:900;color:#081426;font-size:28px;box-shadow:0 18px 60px rgba(255,91,91,0.12);transform:rotate(-6deg)}
+    .pulse{animation:pulse 2s infinite}
+    @keyframes pulse{0%{box-shadow:0 8px 30px rgba(255,91,91,0.06)}50%{box-shadow:0 28px 80px rgba(255,91,91,0.12)}100%{box-shadow:0 8px 30px rgba(255,91,91,0.06)}}
+
+    /* responsive */
+    @media (max-width:980px){ .grid{grid-template-columns:1fr} .hero-right{display:none} }
   </style>
 </head>
 <body>
@@ -38,108 +92,115 @@
       <div id="user-info" class="small">Laden...</div>
     </header>
 
-    <div id="not-logged" class="card">
+    <!-- NOT LOGGED -->
+    <div id="not-logged" class="card" style="display:none;margin-bottom:12px">
       <strong>Je bent niet ingelogd.</strong>
       <p class="small">Log in om Among Us te spelen.</p>
-      <div class="flex">
-        <button id="go-login">Naar inloggen</button>
+      <div style="margin-top:8px">
+        <button id="go-login" class="btn">Naar inloggen</button>
       </div>
     </div>
 
-    <div id="main" class="hidden">
-      <!-- Welcome / skins -->
-      <section class="card welcome">
-        <div style="flex:1">
-          <h3>Welkom</h3>
-          <div class="small">Kies een skin en een naam voor Among Us. Deze naam wordt alleen gebruikt in het Among Us spel.</div>
-          <div style="margin-top:8px;">
-            <div class="small">Standaardnaam: <strong id="std-name">—</strong></div>
-            <input id="au-name" placeholder="Naam voor Among Us" style="width:100%;margin-top:8px;">
-          </div>
-        </div>
-        <div style="width:320px">
-          <div class="small">Kies een skin</div>
-          <div id="skins" class="skingrid" style="margin-top:8px"></div>
-        </div>
-      </section>
-
-      <!-- Create / join map -->
-      <section class="card">
-        <div class="flex" style="justify-content:space-between;align-items:center">
-          <div>
-            <button id="create-map">Maak Among Us map</button>
-            <input id="join-map-id" placeholder="Map ID om te joinen" style="width:220px">
-            <button id="join-map">Join map</button>
-          </div>
-          <div class="small">Je kunt een map maken of direct joinen met een ID.</div>
-        </div>
-      </section>
-
-      <!-- Lobby / game area -->
-      <section id="game-area" class="card hidden">
-        <div style="display:flex;gap:12px">
-          <div style="flex:1">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div><strong>Map</strong> <span id="map-id-display" class="small muted"></span></div>
-              <div id="host-controls" class="flex"></div>
-            </div>
-
-            <div style="margin-top:8px">
-              <div class="small">Spelers</div>
-              <div id="players-list" class="players" style="margin-top:8px"></div>
-            </div>
-
-            <div style="margin-top:8px">
-              <div class="small">Acties</div>
-              <div style="display:flex;gap:8px;margin-top:6px">
-                <button id="ready-btn">Ready</button>
-                <button id="unready-btn">Unready</button>
-                <button id="change-name-btn">Sla Among Us naam op</button>
-                <button id="leave-btn" class="danger">Verlaat map</button>
-              </div>
+    <!-- MAIN -->
+    <div id="main" style="display:none">
+      <div class="card hero">
+        <div class="hero-left">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div class="logo-anim pulse">AU</div>
+            <div>
+              <div class="title-hero">Welkom bij Among Us — GameParadise</div>
+              <div class="subtitle">Kies je skin en naam. Deze naam wordt alleen gebruikt in het Among Us spel.</div>
             </div>
           </div>
 
-          <div style="width:420px">
-            <div class="small">Chat</div>
-            <div id="chat-list" class="chat" style="margin-top:8px"></div>
+          <div style="margin-top:14px;display:flex;gap:12px;align-items:center">
+            <div style="flex:1">
+              <div class="small">Standaardnaam (uit /users/{uid}): <strong id="std-name">—</strong></div>
+              <input id="au-name" placeholder="Naam voor Among Us" style="width:100%;margin-top:8px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+            </div>
+            <div style="width:160px;text-align:center">
+              <div class="small">Geselecteerde skin</div>
+              <div id="selected-skin-preview" style="margin-top:8px"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">Kies een skin</div>
+            <div id="skins" class="skingrid" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="card" style="padding:12px">
+            <div class="small">Maak of join een map</div>
             <div style="display:flex;gap:8px;margin-top:8px">
-              <input id="chat-input" placeholder="Typ bericht..." style="flex:1">
-              <button id="send-chat">Stuur</button>
+              <button id="create-map" class="btn">Maak map</button>
+              <input id="join-map-id" placeholder="Map ID" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+              <button id="join-map" class="btn ghost">Join</button>
             </div>
-
-            <div id="game-screen" style="margin-top:12px">
-              <!-- Dynamische game UI: lobby, in-game, voting -->
-              <div id="lobby-screen" class="small muted">Wacht op host om te starten.</div>
-
-              <div id="in-game-screen" class="hidden">
-                <div class="small">Je rol: <strong id="my-role">—</strong></div>
-                <div style="margin-top:8px">
-                  <div id="task-area" class="small muted">Taken: (vereenvoudigd)</div>
-                  <div id="impostor-actions" class="hidden" style="margin-top:8px">
-                    <button id="kill-btn" class="danger">Kill geselecteerde speler</button>
-                    <select id="kill-target" style="width:100%;margin-top:6px"></select>
-                  </div>
-                </div>
-              </div>
-
-              <div id="voting-screen" class="hidden" style="margin-top:8px">
-                <div class="small">Stemronde</div>
-                <div id="vote-list" style="margin-top:8px"></div>
-                <div style="margin-top:8px">
-                  <button id="cast-vote">Stem</button>
-                </div>
-              </div>
-
-              <div id="result-screen" class="hidden" style="margin-top:8px"></div>
-            </div>
+            <div class="small" style="margin-top:8px">Je wordt host als je een map maakt.</div>
           </div>
         </div>
-      </section>
+      </div>
+
+      <div class="grid" style="margin-top:14px">
+        <!-- Left column: players & controls -->
+        <div class="card">
+          <div class="lobby-top">
+            <div><strong>Lobby</strong> <span class="small" id="map-id-display"></span></div>
+            <div id="host-controls"></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">Spelers</div>
+            <div id="players-list" class="players" style="margin-top:8px"></div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button id="ready-btn" class="btn small">Ready</button>
+            <button id="unready-btn" class="btn small ghost">Unready</button>
+            <button id="change-name-btn" class="btn small ghost">Sla Among Us naam op</button>
+            <button id="leave-btn" class="btn small danger">Verlaat</button>
+          </div>
+
+          <div class="game-screen" id="game-screen" style="margin-top:12px">
+            <div id="lobby-screen" class="small muted">Wacht tot host start.</div>
+            <div id="in-game-screen" class="hidden" style="width:100%">
+              <div class="big-role">Je rol: <span id="my-role">—</span></div>
+              <div id="task-area" class="small muted">Taken: vereenvoudigd</div>
+              <div id="impostor-actions" class="impostor-actions hidden">
+                <select id="kill-target" style="padding:8px;border-radius:8px;background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.04)"></select>
+                <button id="kill-btn" class="btn danger">Kill</button>
+              </div>
+            </div>
+
+            <div id="voting-screen" class="hidden" style="width:100%">
+              <div class="small">Stemronde</div>
+              <div id="vote-list" style="margin-top:8px"></div>
+              <div style="margin-top:8px"><button id="cast-vote" class="btn small">Stem</button></div>
+            </div>
+
+            <div id="result-screen" class="hidden small"></div>
+          </div>
+        </div>
+
+        <!-- Right column: chat -->
+        <div class="card chat">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><strong>Chat</strong></div>
+            <div class="small muted" id="chat-status">Realtime</div>
+          </div>
+          <div id="chat-list" class="chat-messages" style="margin-top:8px"></div>
+          <div class="chat-input">
+            <input id="chat-input" placeholder="Typ bericht..." style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
+            <button id="send-chat" class="btn small">Stuur</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Firebase SDKs compat -->
+  <!-- Firebase SDKs (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -166,10 +227,10 @@
     const stdNameEl = document.getElementById('std-name');
     const auInput = document.getElementById('au-name');
     const skinsEl = document.getElementById('skins');
+    const selectedSkinPreview = document.getElementById('selected-skin-preview');
     const createMapBtn = document.getElementById('create-map');
     const joinMapBtn = document.getElementById('join-map');
     const joinMapIdInput = document.getElementById('join-map-id');
-    const gameArea = document.getElementById('game-area');
     const mapIdDisplay = document.getElementById('map-id-display');
     const playersList = document.getElementById('players-list');
     const chatList = document.getElementById('chat-list');
@@ -180,6 +241,7 @@
     const unreadyBtn = document.getElementById('unready-btn');
     const changeNameBtn = document.getElementById('change-name-btn');
     const hostControls = document.getElementById('host-controls');
+    const gameScreen = document.getElementById('game-screen');
     const lobbyScreen = document.getElementById('lobby-screen');
     const inGameScreen = document.getElementById('in-game-screen');
     const myRoleEl = document.getElementById('my-role');
@@ -191,7 +253,7 @@
     const castVoteBtn = document.getElementById('cast-vote');
     const resultScreen = document.getElementById('result-screen');
 
-    // skins data (voorbeeld)
+    // skins
     const SKINS = [
       {id:'red', label:'Rood'},
       {id:'blue', label:'Blauw'},
@@ -208,43 +270,48 @@
     let mapUnsub = null;
     let selectedSkin = SKINS[0].id;
     let isHost = false;
-    let myPlayerDoc = null;
 
     goLoginBtn.addEventListener('click', () => window.location.href = '/login.html');
 
-    // render skins
+    // render skins UI
     function renderSkins() {
       skinsEl.innerHTML = '';
       SKINS.forEach(s => {
         const el = document.createElement('div');
         el.className = 'skin' + (s.id === selectedSkin ? ' selected' : '');
-        el.dataset.skin = s.id;
+        el.dataset.color = s.id;
         el.title = s.label;
-        el.innerHTML = `<div style="text-align:center">${s.label}</div>`;
+        el.innerHTML = `<div class="crew" style=""></div><div class="vis"></div>`;
         el.addEventListener('click', () => {
           selectedSkin = s.id;
           document.querySelectorAll('.skin').forEach(x => x.classList.remove('selected'));
           el.classList.add('selected');
+          updateSelectedPreview();
         });
         skinsEl.appendChild(el);
       });
+      updateSelectedPreview();
+    }
+    function updateSelectedPreview(){
+      selectedSkinPreview.innerHTML = `<div style="width:64px;height:64px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#081426;font-weight:800">${selectedSkin[0].toUpperCase()}</div>`;
     }
     renderSkins();
 
+    // Auth state
     auth.onAuthStateChanged(async user => {
       currentUser = user;
       if (!user) {
         notLoggedEl.style.display = 'block';
-        mainEl.classList.add('hidden');
+        mainEl.style.display = 'none';
         userInfo.textContent = 'Niet ingelogd';
         cleanup();
         return;
       }
       notLoggedEl.style.display = 'none';
-      mainEl.classList.remove('hidden');
+      mainEl.style.display = 'block';
       userInfo.textContent = `Ingelogd als ${user.email || user.uid}`;
       await loadProfile(user);
-      // auto join via ?map=...
+      // auto join via ?map=
       const params = new URLSearchParams(window.location.search);
       const mapParam = params.get('map');
       if (mapParam) {
@@ -270,20 +337,19 @@
       }
     }
 
-    // Create map (amongus_map collection)
+    // Create map
     createMapBtn.addEventListener('click', async () => {
       if (!currentUser) return alert('Je bent niet ingelogd.');
-      const mapRef = db.collection('amongus_map').doc(); // nieuw id
+      const mapRef = db.collection('amongus_map').doc();
       const mapId = mapRef.id;
       const mapData = {
         hostId: currentUser.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        status: 'lobby', // lobby | playing | voting | ended
+        status: 'lobby',
         settings: {maxPlayers:10, mapName:'Skeld'},
         votes: {}
       };
       await mapRef.set(mapData);
-      // add player doc
       const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
       await mapRef.collection('players').doc(currentUser.uid).set({
         uid: currentUser.uid,
@@ -299,6 +365,7 @@
       history.replaceState(null,'','?map='+mapId);
     });
 
+    // Join map
     joinMapBtn.addEventListener('click', async () => {
       const mapId = joinMapIdInput.value.trim();
       if (!mapId) return alert('Vul een map ID in.');
@@ -330,7 +397,6 @@
     function openMap(mapId) {
       currentMapId = mapId;
       mapIdDisplay.textContent = mapId;
-      gameArea.classList.remove('hidden');
       setupRealtime(mapId);
     }
 
@@ -339,11 +405,12 @@
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }
       if (mapUnsub) { mapUnsub(); mapUnsub = null; }
       currentMapId = null;
-      gameArea.classList.add('hidden');
       playersList.innerHTML = '';
       chatList.innerHTML = '';
+      mapIdDisplay.textContent = '';
     }
 
+    // Leave
     leaveBtn.addEventListener('click', async () => {
       if (!currentMapId || !currentUser) return;
       try {
@@ -353,7 +420,7 @@
       history.replaceState(null,'',window.location.pathname);
     });
 
-    // Save Among Us name only (updates players subdoc, not /users)
+    // Save Among Us name only
     changeNameBtn.addEventListener('click', async () => {
       if (!currentMapId || !currentUser) return alert('Je zit niet in een map.');
       const chosenName = (auInput.value || '').trim() || stdNameEl.textContent || 'Speler';
@@ -378,7 +445,7 @@
       await db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid).update({ready:false});
     });
 
-    // Chat
+    // Chat send
     sendChatBtn.addEventListener('click', async () => {
       if (!currentMapId || !currentUser) return alert('Je zit niet in een map.');
       const text = chatInput.value.trim();
@@ -399,22 +466,20 @@
       }
     });
 
-    // Realtime subscriptions
+    // Realtime listeners
     function setupRealtime(mapId) {
-      // cleanup previous
       if (playersUnsub) playersUnsub();
       if (chatUnsub) chatUnsub();
       if (mapUnsub) mapUnsub();
 
       const mapRef = db.collection('amongus_map').doc(mapId);
 
-      // map meta listener (status, host)
       mapUnsub = mapRef.onSnapshot(snap => {
         if (!snap.exists) { cleanup(); return; }
         const data = snap.data();
         isHost = currentUser && data.hostId === currentUser.uid;
         renderHostControls(isHost, data);
-        // show status
+        // status UI
         if (data.status === 'lobby') {
           lobbyScreen.classList.remove('hidden');
           inGameScreen.classList.add('hidden');
@@ -438,30 +503,30 @@
         }
       });
 
-      // players list
       playersUnsub = mapRef.collection('players').orderBy('joinedAt').onSnapshot(snap => {
         playersList.innerHTML = '';
         const players = [];
         snap.forEach(doc => {
           const p = doc.data();
-          players.push({id: doc.id, ...p});
-          const el = document.createElement('div');
-          el.className = 'player';
-          const left = document.createElement('div');
-          left.innerHTML = `<strong>${escapeHtml(p.displayName || 'Speler')}</strong><div class="small">${escapeHtml(p.uid)}</div>`;
+          players.push({id:doc.id, ...p});
+          const row = document.createElement('div');
+          row.className = 'player-row';
+          const avatar = document.createElement('div');
+          avatar.className = 'player-avatar';
+          avatar.innerHTML = `<div style="width:100%;height:100%;border-radius:10px;background:${colorFor(p.skin)}"></div>`;
+          const info = document.createElement('div');
+          info.style.flex = '1';
+          info.innerHTML = `<div class="player-name">${escapeHtml(p.displayName||'Speler')}</div><div class="player-meta">${p.uid}</div>`;
           const right = document.createElement('div');
-          if (p.isHost) right.innerHTML = `<span class="host-badge">HOST</span>`;
-          if (p.dead) right.innerHTML += ` <span class="small muted">dead</span>`;
-          el.appendChild(left);
-          el.appendChild(right);
-          playersList.appendChild(el);
+          if (p.isHost) right.innerHTML = `<div class="host-badge">HOST</div>`;
+          if (p.ready) right.innerHTML += `<div class="small" style="margin-top:6px;color:#9fe6b8">Ready</div>`;
+          if (p.dead) right.innerHTML += `<div class="small" style="margin-top:6px;color:#ff9b9b">Dead</div>`;
+          row.appendChild(avatar); row.appendChild(info); row.appendChild(right);
+          playersList.appendChild(row);
         });
-
-        // update kill target select for impostor
         updateKillTargets(players);
       });
 
-      // chat
       chatUnsub = mapRef.collection('chat').orderBy('createdAt').limit(200).onSnapshot(snap => {
         chatList.innerHTML = '';
         snap.forEach(doc => {
@@ -469,27 +534,30 @@
           const el = document.createElement('div');
           el.className = 'chat-msg';
           const time = m.createdAt && m.createdAt.toDate ? formatTime(m.createdAt.toDate()) : '';
-          el.innerHTML = `<strong>${escapeHtml(m.displayName||'Anon')}</strong> <span class="small muted">${time}</span><div>${escapeHtml(m.text)}</div>`;
+          el.innerHTML = `<div class="meta"><strong>${escapeHtml(m.displayName||'Anon')}</strong> <span class="small muted">${time}</span></div><div>${escapeHtml(m.text)}</div>`;
           chatList.appendChild(el);
         });
         chatList.scrollTop = chatList.scrollHeight;
       });
     }
 
+    // Host controls
     function renderHostControls(isHost, mapData) {
       hostControls.innerHTML = '';
       if (!isHost) return;
       const startBtn = document.createElement('button');
+      startBtn.className = 'btn small';
       startBtn.textContent = 'Start spel';
       startBtn.addEventListener('click', startGame);
       const forceVoteBtn = document.createElement('button');
+      forceVoteBtn.className = 'btn small ghost';
       forceVoteBtn.textContent = 'Forceer stem';
       forceVoteBtn.addEventListener('click', () => beginVoting(true));
       hostControls.appendChild(startBtn);
       hostControls.appendChild(forceVoteBtn);
     }
 
-    // Start game: assign roles and set status playing
+    // Start game: assign roles
     async function startGame() {
       if (!currentMapId) return;
       const mapRef = db.collection('amongus_map').doc(currentMapId);
@@ -497,60 +565,41 @@
       const players = [];
       playersSnap.forEach(d => players.push({id:d.id, ...d.data()}));
       if (players.length < 3) return alert('Minimaal 3 spelers nodig.');
-      // determine impostor count (simple rule)
-      const impostorCount = players.length <= 6 ? 1 : Math.floor(players.length / 4);
-      // shuffle and pick impostors
+      const impostorCount = players.length <= 6 ? 1 : Math.max(1, Math.floor(players.length/4));
       const shuffled = players.slice().sort(() => Math.random() - 0.5);
       const impostors = shuffled.slice(0, impostorCount).map(p => p.id);
-      // assign roles in batch
       const batch = db.batch();
       players.forEach(p => {
         const pRef = mapRef.collection('players').doc(p.id);
         const role = impostors.includes(p.id) ? 'impostor' : 'crewmate';
         batch.update(pRef, {role, dead:false, ready:false});
       });
-      batch.update(mapRef, {status:'playing', startedAt: firebase.firestore.FieldValue.serverTimestamp(), votes: {}});
+      batch.update(mapRef, {status:'playing', startedAt: firebase.firestore.FieldValue.serverTimestamp(), votes:{}});
       await batch.commit();
-      alert('Spel gestart. Rollen zijn toegewezen.');
+      alert('Spel gestart.');
     }
 
-    // Update kill targets select
-    function updateKillTargets(players) {
-      killTarget.innerHTML = '';
-      const aliveOthers = players.filter(p => !p.dead && p.id !== currentUser.uid);
-      aliveOthers.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.displayName || p.uid;
-        killTarget.appendChild(opt);
-      });
-    }
-
-    // Kill action (impostor)
+    // Kill action
     killBtn.addEventListener('click', async () => {
       if (!currentMapId || !currentUser) return;
       const targetId = killTarget.value;
       if (!targetId) return alert('Selecteer een target.');
       const mapRef = db.collection('amongus_map').doc(currentMapId);
-      // check my role
       const myDoc = await mapRef.collection('players').doc(currentUser.uid).get();
       if (!myDoc.exists) return;
       const myData = myDoc.data();
       if (myData.role !== 'impostor') return alert('Alleen impostors kunnen killen.');
-      // mark target dead
       await mapRef.collection('players').doc(targetId).update({dead:true});
-      // optional: add chat event
       await mapRef.collection('chat').add({
         uid: currentUser.uid,
         displayName: myData.displayName || 'Impostor',
         text: `Heeft ${targetId} uitgeschakeld.`,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      // after a kill, host or any player can call voting; here we auto-trigger voting for demo
-      setTimeout(() => beginVoting(false), 1500);
+      setTimeout(() => beginVoting(false), 1200);
     });
 
-    // Begin voting: set map.status = 'voting' and prepare vote options
+    // Begin voting
     async function beginVoting(force) {
       if (!currentMapId) return;
       const mapRef = db.collection('amongus_map').doc(currentMapId);
@@ -560,89 +609,12 @@
         const p = d.data();
         if (!p.dead) players.push({id:d.id, displayName:p.displayName});
       });
-      // initialize votes object
       const votesInit = {};
       players.forEach(p => votesInit[p.id] = null);
       await mapRef.update({status:'voting', votes: votesInit, votingStartedAt: firebase.firestore.FieldValue.serverTimestamp()});
-      // render vote options client-side via onSnapshot of players
     }
 
-    // Voting UI: build vote list when voting status active
-    castVoteBtn.addEventListener('click', async () => {
-      if (!currentMapId || !currentUser) return;
-      // find selected radio
-      const selected = document.querySelector('input[name="vote-option"]:checked');
-      if (!selected) return alert('Kies iemand om op te stemmen of kies Skip.');
-      const target = selected.value; // 'skip' or playerId
-      const mapRef = db.collection('amongus_map').doc(currentMapId);
-      // write vote into map.votes[currentUser.uid] = target
-      const mapSnap = await mapRef.get();
-      if (!mapSnap.exists) return;
-      const mapData = mapSnap.data();
-      const votes = mapData.votes || {};
-      votes[currentUser.uid] = target;
-      await mapRef.update({votes});
-      alert('Stem geregistreerd.');
-      // check if all alive players voted -> tally
-      await tryTallyVotes();
-    });
-
-    // Try tally votes: if all alive players have voted, compute result
-    async function tryTallyVotes() {
-      if (!currentMapId) return;
-      const mapRef = db.collection('amongus_map').doc(currentMapId);
-      const mapSnap = await mapRef.get();
-      if (!mapSnap.exists) return;
-      const mapData = mapSnap.data();
-      const votes = mapData.votes || {};
-      // count alive players
-      const playersSnap = await mapRef.collection('players').get();
-      const alive = [];
-      playersSnap.forEach(d => { const p = d.data(); if (!p.dead) alive.push(d.id); });
-      const allVoted = alive.every(id => votes[id] !== null && votes[id] !== undefined);
-      if (!allVoted) return;
-      // tally
-      const tally = {};
-      Object.values(votes).forEach(v => {
-        const key = v || 'skip';
-        tally[key] = (tally[key] || 0) + 1;
-      });
-      // find max
-      let max = -1, maxKey = null;
-      Object.keys(tally).forEach(k => { if (tally[k] > max) { max = tally[k]; maxKey = k; }});
-      // if skip or tie -> no eject
-      const entries = Object.entries(tally).sort((a,b)=>b[1]-a[1]);
-      const topCount = entries[0] ? entries[0][1] : 0;
-      const topKeys = entries.filter(e=>e[1]===topCount).map(e=>e[0]);
-      if (topKeys.length !== 1 || topKeys[0] === 'skip') {
-        await mapRef.update({status:'playing', votes:{}, resultText:'Geen ejectie (tie of skip).'});
-        return;
-      }
-      const ejectId = topKeys[0];
-      // eject player
-      await mapRef.collection('players').doc(ejectId).update({dead:true});
-      // check win conditions: if all impostors dead -> crewmates win; if impostors >= crewmates -> impostors win
-      const playersAfterSnap = await mapRef.collection('players').get();
-      let impostors = 0, crewmates = 0;
-      playersAfterSnap.forEach(d => {
-        const p = d.data();
-        if (p.dead) return;
-        if (p.role === 'impostor') impostors++;
-        else crewmates++;
-      });
-      if (impostors === 0) {
-        await mapRef.update({status:'ended', resultText:'Crewmates winnen!'});
-      } else if (impostors >= crewmates) {
-        await mapRef.update({status:'ended', resultText:'Impostors winnen!'});
-      } else {
-        await mapRef.update({status:'playing', votes:{}, resultText:''});
-      }
-    }
-
-    // Listen for voting UI changes: when map.status === 'voting', render vote options
-    // We'll watch map doc in mapUnsub and render vote options when voting
-    // But also provide a small helper to render vote options from players snapshot
-    // We'll re-use playersUnsub data by reading current players collection
+    // Render vote options when voting
     async function renderVoteOptions() {
       if (!currentMapId) return;
       const mapRef = db.collection('amongus_map').doc(currentMapId);
@@ -662,33 +634,77 @@
         const id = d.id;
         const label = p.displayName || id;
         const row = document.createElement('div');
-        row.innerHTML = `<label><input type="radio" name="vote-option" value="${escapeHtml(id)}"> ${escapeHtml(label)}</label>`;
+        row.innerHTML = `<label style="display:block;margin-bottom:6px"><input type="radio" name="vote-option" value="${escapeHtml(id)}"> ${escapeHtml(label)}</label>`;
         voteList.appendChild(row);
       });
-      // add skip option
       const skipRow = document.createElement('div');
-      skipRow.innerHTML = `<label><input type="radio" name="vote-option" value="skip"> Skip</label>`;
+      skipRow.innerHTML = `<label style="display:block"><input type="radio" name="vote-option" value="skip"> Skip</label>`;
       voteList.appendChild(skipRow);
     }
 
-    // When map doc changes to voting, call renderVoteOptions
-    // We'll hook into mapUnsub's onSnapshot above; add a small interval to check status changes
-    setInterval(() => {
-      if (!currentMapId) return;
-      db.collection('amongus_map').doc(currentMapId).get().then(snap => {
-        if (!snap.exists) return;
-        const data = snap.data();
-        if (data.status === 'voting') renderVoteOptions();
-      }).catch(()=>{});
-    }, 1500);
+    // Cast vote
+    castVoteBtn.addEventListener('click', async () => {
+      if (!currentMapId || !currentUser) return;
+      const selected = document.querySelector('input[name="vote-option"]:checked');
+      if (!selected) return alert('Kies iemand om op te stemmen of kies Skip.');
+      const target = selected.value;
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const mapSnap = await mapRef.get();
+      if (!mapSnap.exists) return;
+      const mapData = mapSnap.data();
+      const votes = mapData.votes || {};
+      votes[currentUser.uid] = target;
+      await mapRef.update({votes});
+      alert('Stem geregistreerd.');
+      await tryTallyVotes();
+    });
 
-    // Try tally periodically in case host left
-    setInterval(() => {
+    // Tally votes
+    async function tryTallyVotes() {
       if (!currentMapId) return;
-      tryTallyVotes().catch(()=>{});
-    }, 3000);
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const mapSnap = await mapRef.get();
+      if (!mapSnap.exists) return;
+      const mapData = mapSnap.data();
+      const votes = mapData.votes || {};
+      const playersSnap = await mapRef.collection('players').get();
+      const alive = [];
+      playersSnap.forEach(d => { const p = d.data(); if (!p.dead) alive.push(d.id); });
+      const allVoted = alive.every(id => votes[id] !== null && votes[id] !== undefined);
+      if (!allVoted) return;
+      const tally = {};
+      Object.values(votes).forEach(v => {
+        const key = v || 'skip';
+        tally[key] = (tally[key] || 0) + 1;
+      });
+      const entries = Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+      const topCount = entries[0] ? entries[0][1] : 0;
+      const topKeys = entries.filter(e=>e[1]===topCount).map(e=>e[0]);
+      if (topKeys.length !== 1 || topKeys[0] === 'skip') {
+        await mapRef.update({status:'playing', votes:{}, resultText:'Geen ejectie (tie of skip).'});
+        return;
+      }
+      const ejectId = topKeys[0];
+      await mapRef.collection('players').doc(ejectId).update({dead:true});
+      // check win conditions
+      const playersAfterSnap = await mapRef.collection('players').get();
+      let impostors = 0, crewmates = 0;
+      playersAfterSnap.forEach(d => {
+        const p = d.data();
+        if (p.dead) return;
+        if (p.role === 'impostor') impostors++;
+        else crewmates++;
+      });
+      if (impostors === 0) {
+        await mapRef.update({status:'ended', resultText:'Crewmates winnen!'});
+      } else if (impostors >= crewmates) {
+        await mapRef.update({status:'ended', resultText:'Impostors winnen!'});
+      } else {
+        await mapRef.update({status:'playing', votes:{}, resultText:''});
+      }
+    }
 
-    // Utility helpers
+    // Helpers
     function escapeHtml(s) {
       if (!s) return '';
       return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); });
@@ -698,33 +714,52 @@
       const mm = String(d.getMinutes()).padStart(2,'0');
       return `${hh}:${mm}`;
     }
+    function colorFor(skin) {
+      switch(skin){
+        case 'red': return '#ff5b5b';
+        case 'blue': return '#4aa3ff';
+        case 'green': return '#4cd97b';
+        case 'yellow': return '#ffd166';
+        case 'purple': return '#b07bff';
+        case 'black': return '#222';
+        default: return '#888';
+      }
+    }
 
-    // Update UI for my role and impostor actions when players snapshot updates
-    // We'll poll my player doc occasionally to update role UI
+    // Update kill targets and role UI periodically
     setInterval(async () => {
       if (!currentMapId || !currentUser) return;
-      const pRef = db.collection('amongus_map').doc(currentMapId).collection('players').doc(currentUser.uid);
-      const pSnap = await pRef.get();
-      if (!pSnap.exists) return;
-      const p = pSnap.data();
-      myRoleEl.textContent = p.role || '—';
-      if (p.role === 'impostor' && p.dead === false) {
+      const mapRef = db.collection('amongus_map').doc(currentMapId);
+      const mySnap = await mapRef.collection('players').doc(currentUser.uid).get();
+      if (!mySnap.exists) return;
+      const me = mySnap.data();
+      myRoleEl.textContent = me.role || '—';
+      if (me.role === 'impostor' && me.dead === false) {
         impostorActions.classList.remove('hidden');
       } else {
         impostorActions.classList.add('hidden');
       }
+      // update kill targets
+      const playersSnap = await mapRef.collection('players').get();
+      const aliveOthers = [];
+      playersSnap.forEach(d => { const p = d.data(); if (!p.dead && d.id !== currentUser.uid) aliveOthers.push({id:d.id, name:p.displayName}); });
+      killTarget.innerHTML = '';
+      aliveOthers.forEach(p => {
+        const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.name || p.id; killTarget.appendChild(opt);
+      });
     }, 1200);
 
-    // Update kill target list periodically (in addition to players listener)
-    setInterval(async () => {
+    // Render vote options periodically when voting
+    setInterval(() => {
       if (!currentMapId) return;
-      const playersSnap = await db.collection('amongus_map').doc(currentMapId).collection('players').get();
-      const players = [];
-      playersSnap.forEach(d => players.push({id:d.id, ...d.data()}));
-      updateKillTargets(players);
-    }, 2000);
+      db.collection('amongus_map').doc(currentMapId).get().then(snap => {
+        if (!snap.exists) return;
+        const data = snap.data();
+        if (data.status === 'voting') renderVoteOptions();
+      }).catch(()=>{});
+    }, 1000);
 
-    // Auto cleanup on unload: try to remove player doc
+    // Auto cleanup on unload
     window.addEventListener('beforeunload', async () => {
       if (currentMapId && currentUser) {
         try {
@@ -732,17 +767,6 @@
         } catch(e){}
       }
     });
-
-    // small helper to watch map status changes and render vote UI when needed
-    // (mapUnsub already handles status UI; this ensures vote options are built)
-    setInterval(() => {
-      if (!currentMapId) return;
-      db.collection('amongus_map').doc(currentMapId).get().then(snap => {
-        if (!snap.exists) return;
-        const data = snap.data();
-        if (data.status === 'voting') renderVoteOptions();
-      });
-    }, 1000);
   </script>
 </body>
 </html>
