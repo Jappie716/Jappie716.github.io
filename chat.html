@@ -521,6 +521,8 @@ let userCache = new Map(); // Cache voor avatar URL's
 let hasLoadedChats = false;
 let sentRequestIds = new Set(); 
 let pinnedChats = []; 
+let readStatus = new Map(); // Unread status from Firestore
+let readStatusLoaded = false;
 
 // Reply & Edit State
 let replyContext = null; 
@@ -602,6 +604,7 @@ function initApp() {
 
     subscribeToChats();
     loadPinnedChats();
+    loadReadStatus();
     setTimeout(() => { ignoreInitialGroups = false; }, 2000);
 }
 
@@ -612,6 +615,35 @@ function loadPinnedChats() {
             renderSidebar();
         }
     });
+}
+
+function loadReadStatus() {
+    db.collection("users").doc(user.uid).collection("readStatus").get().then(snap => {
+        readStatus.clear();
+        snap.forEach(doc => {
+            readStatus.set(doc.id, doc.data().lastRead || 0);
+        });
+        readStatusLoaded = true;
+        if(hasLoadedChats) applyReadStatus();
+    }).catch(err => {
+        console.error("Error loading read status:", err);
+        readStatusLoaded = true;
+    });
+}
+
+function applyReadStatus() {
+    if(!chatDataMap || chatDataMap.size === 0) return;
+    chatDataMap.forEach((c, id) => {
+        const lastRead = readStatus.get(id) || 0;
+        const msgTime = c.timestamp || 0;
+        if(msgTime > 0 && msgTime > lastRead) {
+            c.unread = true;
+        } else {
+            c.unread = false;
+        }
+        chatDataMap.set(id, c);
+    });
+    renderSidebar();
 }
 
 function togglePinChat(chatId) {
@@ -765,18 +797,29 @@ function setupListener(id, name, pic, type, ref) {
         const m = snap.docs[0].data();
         const time = m.timestamp ? m.timestamp.toMillis() : Date.now();
         const cData = chatDataMap.get(id);
+        const lastRead = readStatus.get(id) || 0;
+        
         cData.timestamp = time;
-        if (m.uid !== user.uid) {
-            // Als chat niet open is OF de chat wel open is maar het scherm niet actief: ongelezen
-            if (activeChatId !== id || document.hidden) {
-                cData.unread = true;
-                if(type !== 'global' && !ignoreInitialGroups) {
-                    notify(name, m.type==='system'?m.text:(m.text || "Foto"), pic, id, type);
-                    flashTitle("Nieuw bericht!");
-                    playNotificationSound();
-                }
+        
+        // Only mark as unread if chat is NOT active OR page is hidden
+        if (activeChatId === id && !document.hidden) {
+            // Chat is open and visible - mark as read
+            if (time > lastRead) {
+                readStatus.set(id, time);
+                db.collection("users").doc(user.uid).collection("readStatus").doc(id).set({
+                    lastRead: time
+                });
             }
-        } else if (activeChatId === id) { cData.unread = false; }
+            cData.unread = false;
+        } else if (m.uid !== user.uid && time > lastRead) {
+            // Chat is not open - mark as unread if from someone else
+            cData.unread = true;
+            if(type !== 'global' && !ignoreInitialGroups) {
+                notify(name, m.type==='system'?m.text:(m.text || "Foto"), pic, id, type);
+                flashTitle("Nieuw bericht!");
+                playNotificationSound();
+            }
+        }
         chatDataMap.set(id, cData);
         hasLoadedChats = true;
         renderSidebar();
@@ -798,6 +841,18 @@ function playNotificationSound() { const audio = new Audio('https://assets.mixki
 function renderSidebar() {
     if(!hasLoadedChats && chatDataMap.size === 0) return;
 
+    // Apply read status to ensure unread badges are correct
+    if(readStatus.size > 0) {
+        chatDataMap.forEach((c, id) => {
+            const lastRead = readStatus.get(id);
+            if(lastRead !== undefined) {
+                const msgTime = c.timestamp || 0;
+                c.unread = (msgTime > 0 && msgTime > lastRead);
+                chatDataMap.set(id, c);
+            }
+        });
+    }
+
     const list = document.getElementById('sidebarList');
     const tab = document.querySelector('.tab.active').innerText.split(' ')[0];
     const term = document.getElementById('searchBar').value.toLowerCase();
@@ -815,7 +870,12 @@ function renderSidebar() {
         const unpinned = chats.filter(c => !pinnedChats.includes(c.id));
 
         if(pinned.length > 0) {
-            list.innerHTML += `<div class="req-section-header" style="color:var(--accent)">📌 Vastgezet</div>`;
+            const pinnedHeader = document.createElement('div');
+            pinnedHeader.className = 'req-section-header';
+            pinnedHeader.style.color = 'var(--accent)';
+            pinnedHeader.textContent = '📌 Vastgezet';
+            list.appendChild(pinnedHeader);
+            
             pinned.forEach(c => {
                 if(term && !c.name.toLowerCase().includes(term)) return;
                 const item = document.createElement('div');
@@ -834,6 +894,13 @@ function renderSidebar() {
                     <button class="btn btn-sm pin-btn pinned" style="margin-left:5px; padding:5px;" onclick="event.stopPropagation(); togglePinChat('${c.id}')">📌</button>`;
                 list.appendChild(item);
             });
+            
+            if(unpinned.length > 0) {
+                const unpinnedHeader = document.createElement('div');
+                unpinnedHeader.className = 'req-section-header';
+                unpinnedHeader.textContent = '💬 Overige chats';
+                list.appendChild(unpinnedHeader);
+            }
         }
 
         unpinned.forEach(c => {
@@ -962,6 +1029,13 @@ function getFormattedDate(date) {
 function markAsRead() {
     if(activeChatId && chatDataMap.has(activeChatId)) {
         const c = chatDataMap.get(activeChatId);
+        const timestamp = c.timestamp || Date.now();
+        
+        readStatus.set(activeChatId, timestamp);
+        db.collection("users").doc(user.uid).collection("readStatus").doc(activeChatId).set({
+            lastRead: timestamp
+        });
+        
         c.unread = false;
         chatDataMap.set(activeChatId, c);
         renderSidebar();
@@ -1665,6 +1739,7 @@ async function cancelSentRequest(targetId) {
     await db.collection("users").doc(user.uid).collection("sentRequests").doc(targetId).delete();
     
     notify("Geannuleerd", "Vriendschapsverzoek ingetrokken");
+    renderSidebar();
 }
 
 async function acceptFriend(senderId, senderName, senderPic) {
