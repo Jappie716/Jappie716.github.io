@@ -1446,7 +1446,7 @@ async function sendMessage() {
     const txt = inp.value.trim();
     if(!txt) return;
     
-    if(txt.length > 500) {
+    if(!isAdmin() && txt.length > 500) {
         notify("Bericht te lang", "Maximaal 500 tekens toegestaan.", null, null, "error");
         return;
     }
