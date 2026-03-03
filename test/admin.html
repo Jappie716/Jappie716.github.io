@@ -57,6 +57,10 @@
         /* User List Specific */
         .user-item { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 8px; }
         .user-info small { color: #94a3b8; display: block; }
+        
+        /* Task Specific */
+        .task-item { transition: all 0.2s ease; }
+        .task-item:hover { background: #273449 !important; }
     </style>
 </head>
 <body>
@@ -72,6 +76,7 @@
     <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
     <button class="nav-btn" id="btn-updates" onclick="showTab('updates')">🔔 Updates</button>
     <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
+    <button class="nav-btn" id="btn-tasks" onclick="showTab('tasks')">✅ Ideeën & Taken</button>
     
     <div style="margin-top: auto;">
         <button class="btn" style="width:100%; background:#1e293b; color:white; margin-bottom:10px" onclick="location.href='index.html'">🌐 Bekijk Site</button>
@@ -168,6 +173,27 @@
         <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Hele Chat</button></div>
         <div id="adminChatList"></div>
     </div>
+
+    <div id="tasksSection" class="section">
+        <div class="card">
+            <h3>➕ Nieuw Idee / Taak</h3>
+            <input id="taskTitle" placeholder="Titel van idee of taak...">
+            <textarea id="taskDesc" placeholder="Beschrijving (optioneel)..." rows="2"></textarea>
+            <button class="btn success" onclick="addTask()">Toevoegen</button>
+        </div>
+        <div class="card">
+            <h3>📋 Ideeën & Taken</h3>
+            <div style="margin-bottom:15px;">
+                <label style="color:#94a3b8; font-size:13px;">Filter:</label>
+                <select id="taskFilter" onchange="renderTasks()" style="width:auto; margin-left:10px; padding:5px;">
+                    <option value="all">Alle</option>
+                    <option value="open">Open</option>
+                    <option value="done">Afgerond</option>
+                </select>
+            </div>
+            <div id="tasksList"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -186,11 +212,17 @@ const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
 // Global user list cache
 let allUsers = [];
+let currentUser = null;
+let userNamesCache = {};
 
 auth.onAuthStateChanged(user => {
     if (user && ADMINS.includes(user.email.toLowerCase())) {
-        init();
-        loadUsers(); // Users inladen bij start
+        currentUser = { uid: user.uid, email: user.email };
+        loadUserNames().then(() => {
+            init();
+            loadUsers();
+            loadTasks();
+        });
     } else {
         alert("Geen toegang! Log in met een admin account.");
         location.href = "index.html";
@@ -504,6 +536,152 @@ async function clearAllChat() {
         snap.forEach(doc => doc.ref.delete());
         notify("Chat leeggemaakt.");
     }
+}
+
+/* ---------------- TAKEN / IDEEËN ---------------- */
+async function loadUserNames() {
+    const snap = await db.collection("users").get();
+    snap.forEach(doc => {
+        const data = doc.data();
+        userNamesCache[doc.id] = data.name || data.username || data.displayName || "Onbekend";
+    });
+}
+
+function getUserName(uid) {
+    return userNamesCache[uid] || "Laden...";
+}
+
+function addTask() {
+    const title = document.getElementById('taskTitle').value.trim();
+    const desc = document.getElementById('taskDesc').value.trim();
+    if (!title) return notify("Titel is verplicht!");
+
+    const taskData = {
+        title: title,
+        description: desc,
+        completed: false,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdByName: getUserName(currentUser.uid),
+        activity: [{
+            action: "aangemaakt",
+            by: currentUser.uid,
+            byName: getUserName(currentUser.uid),
+            at: firebase.firestore.FieldValue.serverTimestamp()
+        }]
+    };
+
+    db.collection("tasks").add(taskData).then(() => {
+        notify("Taak toegevoegd!");
+        document.getElementById('taskTitle').value = "";
+        document.getElementById('taskDesc').value = "";
+    });
+}
+
+function loadTasks() {
+    db.collection("tasks").orderBy("createdAt", "desc").onSnapshot(snap => {
+        window.tasksData = [];
+        snap.forEach(doc => {
+            window.tasksData.push({ id: doc.id, ...doc.data() });
+        });
+        renderTasks();
+    });
+}
+
+function renderTasks() {
+    const list = document.getElementById('tasksList');
+    const filter = document.getElementById('taskFilter').value;
+    const tasks = window.tasksData || [];
+    
+    const filtered = tasks.filter(t => {
+        if (filter === "all") return true;
+        if (filter === "open") return !t.completed;
+        if (filter === "done") return t.completed;
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<p style="color:#64748b; text-align:center; padding:20px;">Nog geen ideeën of taken.</p>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(task => {
+        const checked = task.completed ? 'checked' : '';
+        const completedClass = task.completed ? 'opacity:0.6;' : '';
+        const createdDate = task.createdAt ? task.createdAt.toDate().toLocaleDateString() : '';
+        
+        const activityHtml = (task.activity || []).slice(0, 3).map(a => {
+            const date = a.at ? a.at.toDate().toLocaleString() : '';
+            return `<div style="font-size:11px; color:#64748b; padding:2px 0;">
+                • ${a.byName} ${a.action} op ${date}
+            </div>`;
+        }).join('');
+
+        return `
+            <div class="task-item" style="background:#1e293b; padding:15px; border-radius:10px; margin-bottom:10px; ${completedClass}">
+                <div style="display:flex; align-items:flex-start; gap:10px;">
+                    <input type="checkbox" ${checked} 
+                        style="width:20px; height:20px; margin:0; margin-top:2px; cursor:pointer;"
+                        onchange="toggleTask('${task.id}', this.checked)">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:15px; ${task.completed ? 'text-decoration:line-through; color:#64748b;' : ''}">
+                            ${escapeHtml(task.title)}
+                        </div>
+                        ${task.description ? `<div style="color:#94a3b8; font-size:13px; margin-top:5px;">${escapeHtml(task.description)}</div>` : ''}
+                        <div style="margin-top:10px; font-size:12px; color:#60a5fa;">
+                            Aangemaakt door ${task.createdByName} op ${createdDate}
+                        </div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #334155;">
+                            ${activityHtml}
+                        </div>
+                    </div>
+                    <button class="btn danger" style="padding:5px 10px; font-size:12px;" 
+                        onclick="deleteTask('${task.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleTask(taskId, completed) {
+    const taskRef = db.collection("tasks").doc(taskId);
+    
+    taskRef.get().then(doc => {
+        if (!doc.exists) return;
+        
+        const task = doc.data();
+        const action = completed ? "afgerond" : "heropend";
+        
+        const activityEntry = {
+            action: action,
+            by: currentUser.uid,
+            byName: getUserName(currentUser.uid),
+            at: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        const currentActivity = task.activity || [];
+        
+        taskRef.update({
+            completed: completed,
+            activity: firebase.firestore.FieldValue.arrayUnion(activityEntry)
+        }).then(() => {
+            notify(completed ? "Taak afgerond!" : "Taak heropend!");
+        });
+    });
+}
+
+function deleteTask(taskId) {
+    if (!confirm("Taak verwijderen?")) return;
+    db.collection("tasks").doc(taskId).delete().then(() => {
+        notify("Taak verwijderd!");
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return "";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 </script>
 </body>
