@@ -198,37 +198,44 @@
 
     <div id="adminSection" class="section">
         <div class="card">
-            <h3>➕ Nieuw Veld Toevoegen</h3>
-            <div style="display:grid; grid-template-columns: 1fr 2fr auto; gap:10px; align-items:end;">
-                <div>
-                    <label style="font-size:13px; color:#94a3b8;">Veld Naam (key)</label>
-                    <input id="adminKey" placeholder="bijv: waarschuwingen">
-                </div>
-                <div>
-                    <label style="font-size:13px; color:#94a3b8;">Waarde</label>
-                    <input id="adminValue" placeholder="Waarde van het veld...">
-                </div>
-                <button class="btn success" onclick="addAdminField()">Toevoegen</button>
-            </div>
-            <p style="font-size:12px; color:#64748b; margin-top:5px;">
-                💡 Tip: Velden kunnen later worden bewerkt of verwijderd. Voeg nieuwe velden toe als dat nodig is.
-            </p>
-        </div>
-        
-        <div class="card">
-            <h3>📋 Waarschuwingen Beheren</h3>
+            <h3>⚠️ Gebruikers met Waarschuwing</h3>
             <div style="margin-bottom:15px;">
-                <input id="warnUserUid" placeholder="Gebruiker UID..." style="width:200px; display:inline-block; margin-right:10px;">
-                <input id="warnChatName" placeholder="Chatnaam..." style="width:200px; display:inline-block; margin-right:10px;">
-                <input id="warnCount" type="number" placeholder="Aantal (max 3)" min="1" max="3" style="width:100px; display:inline-block;">
-                <button class="btn warning" onclick="addWarning()">⚠️ Toevoegen</button>
+                <input id="warnUserUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="warnChatName" placeholder="Chatnaam..." style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="warnCount" type="number" placeholder="1-3" min="1" max="3" style="width:70px; display:inline-block;">
+                <button class="btn warning" onclick="addWarning()">Toevoegen</button>
             </div>
             <div id="warningsList"></div>
         </div>
 
         <div class="card">
-            <h3>📂 Alle Admin Velden</h3>
-            <div id="adminFieldsList"></div>
+            <h3>🚫 Uitgeschakelde Gebruikers</h3>
+            <div style="margin-bottom:15px;">
+                <input id="disabledUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="disabledReason" placeholder="Reden..." style="width:200px; display:inline-block; margin-right:10px;">
+                <button class="btn danger" onclick="addDisabled()">Toevoegen</button>
+            </div>
+            <div id="disabledList"></div>
+        </div>
+
+        <div class="card">
+            <h3>🗑️ Verwijderde Gebruikers</h3>
+            <div style="margin-bottom:15px;">
+                <input id="deletedUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="deletedName" placeholder="Naam..." style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="deletedReason" placeholder="Reden..." style="width:150px; display:inline-block; margin-right:10px;">
+                <button class="btn danger" onclick="addDeleted()">Toevoegen</button>
+            </div>
+            <div id="deletedList"></div>
+        </div>
+
+        <div class="card">
+            <h3>📅 Accounts 30 Dagen Niet Ingelogd</h3>
+            <button class="btn primary" onclick="loadInactiveUsers()">🔄 Ververs lijst</button>
+            <div style="margin-top:15px; font-size:12px; color:#64748b; margin-bottom:10px;">
+                Deze lijst toont automatisch gebruikers die langer dan 30 dagen niet hebben ingelogd.
+            </div>
+            <div id="inactiveList"></div>
         </div>
     </div>
 </div>
@@ -729,75 +736,20 @@ function loadAdminData() {
     db.collection("admin").doc("settings").get().then(doc => {
         if (doc.exists) {
             adminData = doc.data();
-            renderAdminFields();
+            if (!adminData.warnings) adminData.warnings = [];
+            if (!adminData.disabled) adminData.disabled = [];
+            if (!adminData.deleted) adminData.deleted = [];
             renderWarnings();
+            renderDisabled();
+            renderDeleted();
         } else {
-            db.collection("admin").doc("settings").set({ warnings: [] });
-            adminData = { warnings: [] };
-            renderAdminFields();
-            renderWarnings();
+            adminData = { warnings: [], disabled: [], deleted: [] };
+            db.collection("admin").doc("settings").set(adminData).then(() => {
+                renderWarnings();
+                renderDisabled();
+                renderDeleted();
+            });
         }
-    });
-}
-
-function renderAdminFields() {
-    const list = document.getElementById('adminFieldsList');
-    const entries = Object.entries(adminData).filter(([k]) => k !== 'warnings');
-    
-    if (entries.length === 0) {
-        list.innerHTML = '<p style="color:#64748b;">Nog geen velden toegevoegd.</p>';
-        return;
-    }
-    
-    list.innerHTML = entries.map(([key, value]) => `
-        <div class="user-item" style="margin-bottom:5px;">
-            <div class="user-info">
-                <strong>${escapeHtml(key)}</strong>
-                <small>${escapeHtml(String(value))}</small>
-            </div>
-            <div>
-                <button class="btn" style="padding:5px 10px;" onclick="editAdminField('${escapeHtml(key)}')">✏️</button>
-                <button class="btn danger" style="padding:5px 10px;" onclick="deleteAdminField('${escapeHtml(key)}')">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function addAdminField() {
-    const key = document.getElementById('adminKey').value.trim();
-    const value = document.getElementById('adminValue').value.trim();
-    
-    if (!key) return notify("Veld naam is verplicht!");
-    
-    const updates = {};
-    updates[key] = value;
-    
-    db.collection("admin").doc("settings").update(updates).then(() => {
-        notify("Veld opgeslagen!");
-        document.getElementById('adminKey').value = "";
-        document.getElementById('adminValue').value = "";
-    });
-}
-
-function editAdminField(key) {
-    const newValue = prompt(`Bewerk "${key}":`, adminData[key]);
-    if (newValue === null) return;
-    
-    const updates = {};
-    updates[key] = newValue;
-    
-    db.collection("admin").doc("settings").update(updates).then(() => {
-        notify("Veld bijgewerkt!");
-    });
-}
-
-function deleteAdminField(key) {
-    if (!confirm(`Veld "${key}" verwijderen?`)) return;
-    
-    db.collection("admin").doc("settings").update({
-        [key]: firebase.firestore.FieldValue.delete()
-    }).then(() => {
-        notify("Veld verwijderd!");
     });
 }
 
@@ -814,11 +766,10 @@ function renderWarnings() {
     list.innerHTML = warnings.map((w, idx) => `
         <div class="user-item" style="margin-bottom:5px; border-left:3px solid var(--warning);">
             <div class="user-info">
-                <strong>${escapeHtml(w.chatName)}</strong>
+                <strong>${escapeHtml(w.chatName)} (${w.count}/3)</strong>
                 <small>UID: ${escapeHtml(w.uid)}</small>
             </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:var(--warning); font-weight:bold;">${w.count}/3</span>
+            <div>
                 <button class="btn" style="padding:5px 10px;" onclick="editWarning(${idx})">✏️</button>
                 <button class="btn danger" style="padding:5px 10px;" onclick="deleteWarning(${idx})">🗑️</button>
             </div>
@@ -843,11 +794,13 @@ function addWarning() {
         warnings.push({ uid, chatName, count });
     }
     
+    adminData.warnings = warnings;
     db.collection("admin").doc("settings").update({ warnings }).then(() => {
         notify("Waarschuwing toegevoegd/bijgewerkt!");
         document.getElementById('warnUserUid').value = "";
         document.getElementById('warnChatName').value = "";
         document.getElementById('warnCount').value = "";
+        renderWarnings();
     });
 }
 
@@ -861,9 +814,11 @@ function editWarning(idx) {
     if (count < 1 || count > 3) return notify("Aantal moet tussen 1 en 3 zijn!");
     
     warnings[idx].count = count;
+    adminData.warnings = warnings;
     
     db.collection("admin").doc("settings").update({ warnings }).then(() => {
         notify("Waarschuwing bijgewerkt!");
+        renderWarnings();
     });
 }
 
@@ -872,9 +827,170 @@ function deleteWarning(idx) {
     
     const warnings = adminData.warnings || [];
     warnings.splice(idx, 1);
+    adminData.warnings = warnings;
     
     db.collection("admin").doc("settings").update({ warnings }).then(() => {
         notify("Waarschuwing verwijderd!");
+        renderWarnings();
+    });
+}
+
+/* ==================== UITGESCHAKELDE GEBRUIKERS ==================== */
+function renderDisabled() {
+    const list = document.getElementById('disabledList');
+    const disabled = adminData.disabled || [];
+    
+    if (disabled.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen uitgeschakelde gebruikers.</p>';
+        return;
+    }
+    
+    list.innerHTML = disabled.map((d, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid var(--danger);">
+            <div class="user-info">
+                <strong>UID: ${escapeHtml(d.uid)}</strong>
+                <small>Reden: ${escapeHtml(d.reason || 'Geen reden')}</small>
+            </div>
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteDisabled(${idx})">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function addDisabled() {
+    const uid = document.getElementById('disabledUid').value.trim();
+    const reason = document.getElementById('disabledReason').value.trim();
+    
+    if (!uid) return notify("UID is verplicht!");
+    
+    const disabled = adminData.disabled || [];
+    const existing = disabled.findIndex(d => d.uid === uid);
+    
+    if (existing >= 0) {
+        disabled[existing] = { uid, reason };
+    } else {
+        disabled.push({ uid, reason });
+    }
+    
+    adminData.disabled = disabled;
+    db.collection("admin").doc("settings").update({ disabled }).then(() => {
+        notify("Uitgeschakelde gebruiker toegevoegd/bijgewerkt!");
+        document.getElementById('disabledUid').value = "";
+        document.getElementById('disabledReason').value = "";
+        renderDisabled();
+    });
+}
+
+function deleteDisabled(idx) {
+    if (!confirm("Uitgeschakelde gebruiker verwijderen?")) return;
+    
+    const disabled = adminData.disabled || [];
+    disabled.splice(idx, 1);
+    adminData.disabled = disabled;
+    
+    db.collection("admin").doc("settings").update({ disabled }).then(() => {
+        notify("Verwijderd!");
+        renderDisabled();
+    });
+}
+
+/* ==================== VERWIJDERDE GEBRUIKERS ==================== */
+function renderDeleted() {
+    const list = document.getElementById('deletedList');
+    const deleted = adminData.deleted || [];
+    
+    if (deleted.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen verwijderde gebruikers.</p>';
+        return;
+    }
+    
+    list.innerHTML = deleted.map((d, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid #94a3b8;">
+            <div class="user-info">
+                <strong>${escapeHtml(d.name || 'Onbekend')}</strong>
+                <small>UID: ${escapeHtml(d.uid)} | Reden: ${escapeHtml(d.reason || 'Geen reden')}</small>
+            </div>
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteDeleted(${idx})">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function addDeleted() {
+    const uid = document.getElementById('deletedUid').value.trim();
+    const name = document.getElementById('deletedName').value.trim();
+    const reason = document.getElementById('deletedReason').value.trim();
+    
+    if (!uid) return notify("UID is verplicht!");
+    
+    const deleted = adminData.deleted || [];
+    const existing = deleted.findIndex(d => d.uid === uid);
+    
+    if (existing >= 0) {
+        deleted[existing] = { uid, name, reason };
+    } else {
+        deleted.push({ uid, name, reason });
+    }
+    
+    adminData.deleted = deleted;
+    db.collection("admin").doc("settings").update({ deleted }).then(() => {
+        notify("Verwijderde gebruiker toegevoegd!");
+        document.getElementById('deletedUid').value = "";
+        document.getElementById('deletedName').value = "";
+        document.getElementById('deletedReason').value = "";
+        renderDeleted();
+    });
+}
+
+function deleteDeleted(idx) {
+    if (!confirm("Verwijderen uit lijst?")) return;
+    
+    const deleted = adminData.deleted || [];
+    deleted.splice(idx, 1);
+    adminData.deleted = deleted;
+    
+    db.collection("admin").doc("settings").update({ deleted }).then(() => {
+        notify("Verwijderd!");
+        renderDeleted();
+    });
+}
+
+/* ==================== INACTIEVE GEBRUIKERS ==================== */
+function loadInactiveUsers() {
+    const list = document.getElementById('inactiveList');
+    list.innerHTML = '<p style="color:#64748b;">Laden...</p>';
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    db.collection("users").get().then(snap => {
+        const inactive = [];
+        snap.forEach(doc => {
+            const data = doc.data();
+            const lastLogin = data.lastLogin ? data.lastLogin.toDate() : (data.createdAt ? data.createdAt.toDate() : null);
+            
+            if (lastLogin && lastLogin < thirtyDaysAgo) {
+                inactive.push({
+                    uid: doc.id,
+                    name: data.name || data.username || data.displayName || 'Onbekend',
+                    lastLogin: lastLogin.toLocaleDateString()
+                });
+            }
+        });
+        
+        inactive.sort((a, b) => new Date(a.lastLogin) - new Date(b.lastLogin));
+        
+        if (inactive.length === 0) {
+            list.innerHTML = '<p style="color:#64748b;">Geen gebruikers gevonden die 30+ dagen niet hebben ingelogd.</p>';
+            return;
+        }
+        
+        list.innerHTML = inactive.map(u => `
+            <div class="user-item" style="margin-bottom:5px;">
+                <div class="user-info">
+                    <strong>${escapeHtml(u.name)}</strong>
+                    <small>UID: ${escapeHtml(u.uid)} | Laatste login: ${u.lastLogin}</small>
+                </div>
+            </div>
+        `).join('');
     });
 }
 </script>
