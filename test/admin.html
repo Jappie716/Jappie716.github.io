@@ -246,9 +246,10 @@
         <div class="card">
             <h3>📅 Accounts Een Maand Niet Ingelogd</h3>
             <div style="margin-bottom:15px;">
-                <input id="inactiveUid" placeholder="Gebruiker UID..." style="width:200px; display:inline-block; margin-right:10px;">
-                <input id="inactiveName" placeholder="Naam..." style="width:150px; display:inline-block; margin-right:10px;">
-                <input id="inactiveLastLogin" type="date" style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="inactiveUid" placeholder="Gebruiker UID..." style="width:180px; display:inline-block; margin-right:10px;">
+                <input id="inactiveName" placeholder="Naam..." style="width:130px; display:inline-block; margin-right:10px;">
+                <input id="inactiveLastLogin" type="date" style="width:130px; display:inline-block; margin-right:10px;">
+                <input id="inactiveEndDate" type="date" style="width:130px; display:inline-block; margin-right:10px;">
                 <button class="btn primary" onclick="addInactive()">Toevoegen</button>
             </div>
             <div id="inactiveList"></div>
@@ -998,9 +999,11 @@ function addInactive() {
     const uid = document.getElementById('inactiveUid').value.trim();
     const name = document.getElementById('inactiveName').value.trim();
     const lastLoginDate = document.getElementById('inactiveLastLogin').value;
+    const endDate = document.getElementById('inactiveEndDate').value;
     
     if (!uid) return notify("UID is verplicht!");
-    if (!lastLoginDate) return notify("Voer een datum in!");
+    if (!lastLoginDate) return notify("Voer laatste login datum in!");
+    if (!endDate) return notify("Voer einddatum in!");
     
     const inactive = adminData.inactive || [];
     const existing = inactive.findIndex(i => i.uid === uid);
@@ -1009,6 +1012,7 @@ function addInactive() {
         uid, 
         name, 
         lastLogin: lastLoginDate,
+        endDate: endDate,
         addedAt: new Date().toISOString() 
     };
     
@@ -1024,6 +1028,7 @@ function addInactive() {
         document.getElementById('inactiveUid').value = "";
         document.getElementById('inactiveName').value = "";
         document.getElementById('inactiveLastLogin').value = "";
+        document.getElementById('inactiveEndDate').value = "";
         renderInactive();
     });
 }
@@ -1038,36 +1043,44 @@ function renderInactive() {
     }
     
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     list.innerHTML = inactive.map((u, idx) => {
         const lastLogin = u.lastLogin ? new Date(u.lastLogin) : null;
-        const addedAt = u.addedAt ? new Date(u.addedAt) : null;
+        const endDate = u.endDate ? new Date(u.endDate) : null;
         
         let statusText = '';
         let statusColor = 'var(--primary)';
         
-        if (addedAt) {
-            const addedDate = new Date(addedAt);
-            const diffTime = today - addedDate;
+        if (endDate) {
+            endDate.setHours(0, 0, 0, 0);
+            const diffTime = endDate - today;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
-            if (diffDays < 7) {
-                const daysLeft = 7 - diffDays;
-                statusText = `nog ${daysLeft} dag${daysLeft !== 1 ? 'en' : ''} te gaan`;
-                statusColor = '#22c55e';
-            } else {
-                const overdueDays = diffDays - 7;
+            if (diffDays < 0) {
+                const overdueDays = Math.abs(diffDays);
                 const weeks = Math.floor(overdueDays / 7);
                 if (weeks < 1) {
-                    statusText = `${overdueDays} dag${overdueDays !== 1 ? 'en' : ''} voorbij`;
-                    statusColor = '#f59e0b';
+                    statusText = `${overdueDays} dag${overdueDays !== 1 ? 'en' : ''} te laat`;
                 } else if (weeks === 1) {
-                    statusText = `1 week voorbij`;
-                    statusColor = '#ef4444';
+                    statusText = `1 week te laat`;
                 } else {
-                    statusText = `${weeks} weken voorbij`;
-                    statusColor = '#ef4444';
+                    statusText = `${weeks} weken te laat`;
                 }
+                statusColor = '#ef4444';
+            } else if (diffDays === 0) {
+                statusText = `vandaag deadline!`;
+                statusColor = '#f59e0b';
+            } else {
+                const weeks = Math.floor(diffDays / 7);
+                if (weeks < 1) {
+                    statusText = `nog ${diffDays} dag${diffDays !== 1 ? 'en' : ''}`;
+                } else if (weeks === 1) {
+                    statusText = `nog 1 week`;
+                } else {
+                    statusText = `nog ${weeks} weken`;
+                }
+                statusColor = '#22c55e';
             }
         }
         
@@ -1076,7 +1089,7 @@ function renderInactive() {
             <div class="user-info">
                 <strong>${escapeHtml(u.name || 'Onbekend')}</strong>
                 <small>UID: ${escapeHtml(u.uid)} | Laatste login: ${lastLogin ? lastLogin.toLocaleDateString() : 'onbekend'}</small>
-                <small style="color:${statusColor};">${statusText}</small>
+                <small style="color:${statusColor};">${statusText} (tot ${endDate ? endDate.toLocaleDateString() : '-'})</small>
             </div>
             <button class="btn danger" style="padding:5px 10px;" onclick="deleteInactive(${idx})">🗑️</button>
         </div>
