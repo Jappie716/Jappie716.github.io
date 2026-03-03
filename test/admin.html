@@ -180,14 +180,20 @@
             <h3>➕ Nieuw Idee / Taak</h3>
             <input id="taskTitle" placeholder="Titel van idee of taak...">
             <textarea id="taskDesc" placeholder="Beschrijving (optioneel)..." rows="2"></textarea>
+            <select id="taskCategorySelect" style="margin-bottom:15px;">
+                <option value="">Selecteer categorie...</option>
+            </select>
             <button class="btn success" onclick="addTask()">Toevoegen</button>
         </div>
         <div class="card">
             <h3>📋 Ideeën & Taken</h3>
-            <div style="margin-bottom:15px;">
+            <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
                 <label style="color:#94a3b8; font-size:13px;">Filter:</label>
-                <select id="taskFilter" onchange="renderTasks()" style="width:auto; margin-left:10px; padding:5px;">
+                <select id="taskFilter" onchange="renderTasks()" style="width:auto; margin:0; padding:5px;">
                     <option value="all">Alle</option>
+                </select>
+                <select id="taskStatusFilter" onchange="renderTasks()" style="width:auto; margin:0; padding:5px; margin-left:10px;">
+                    <option value="all">Alle status</option>
                     <option value="open">Open</option>
                     <option value="done">Afgerond</option>
                 </select>
@@ -230,15 +236,27 @@
         </div>
 
         <div class="card">
-            <h3>📅 Accounts 30 Dagen Niet Ingelogd</h3>
-            <button class="btn primary" onclick="loadInactiveUsers()">🔄 Ververs lijst</button>
-            <div style="margin-top:15px; font-size:12px; color:#64748b; margin-bottom:10px;">
-                Deze lijst toont automatisch gebruikers die langer dan 30 dagen niet hebben ingelogd.
+            <h3>📅 Accounts 30+ Dagen Niet Ingelogd</h3>
+            <div style="margin-bottom:15px;">
+                <input id="inactiveUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="inactiveName" placeholder="Naam..." style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="inactiveDays" type="number" placeholder="Dagen" min="1" style="width:70px; display:inline-block; margin-right:10px;">
+                <button class="btn primary" onclick="addInactive()">Toevoegen</button>
             </div>
             <div id="inactiveList"></div>
         </div>
+
+        <div class="card">
+            <h3>➕ Nieuwe Taakcategorie</h3>
+            <div style="display:flex; gap:10px; align-items:end;">
+                <input id="taskCategory" placeholder="Categorie naam..." style="flex:1;">
+                <button class="btn success" onclick="addTaskCategory()">Toevoegen</button>
+            </div>
+            <div id="taskCategoriesList" style="margin-top:10px;"></div>
+        </div>
     </div>
-</div>
+
+    <div id="tasksSection" class="section">
 
 <script>
 const firebaseConfig = {
@@ -298,6 +316,9 @@ function updatePreview(url) {
 }
 
 function init() {
+    // Load task categories
+    loadTaskCategories();
+
     // Games
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
@@ -599,11 +620,14 @@ function getUserName(uid) {
 function addTask() {
     const title = document.getElementById('taskTitle').value.trim();
     const desc = document.getElementById('taskDesc').value.trim();
+    const category = document.getElementById('taskCategorySelect').value;
     if (!title) return notify("Titel is verplicht!");
+    if (!category) return notify("Selecteer een categorie!");
 
     const taskData = {
         title: title,
         description: desc,
+        category: category,
         completed: false,
         createdBy: currentUser.uid,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -635,13 +659,14 @@ function loadTasks() {
 
 function renderTasks() {
     const list = document.getElementById('tasksList');
-    const filter = document.getElementById('taskFilter').value;
+    const categoryFilter = document.getElementById('taskFilter').value;
+    const statusFilter = document.getElementById('taskStatusFilter').value;
     const tasks = window.tasksData || [];
     
     const filtered = tasks.filter(t => {
-        if (filter === "all") return true;
-        if (filter === "open") return !t.completed;
-        if (filter === "done") return t.completed;
+        if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+        if (statusFilter === "open") return !t.completed;
+        if (statusFilter === "done") return t.completed;
         return true;
     });
 
@@ -654,6 +679,7 @@ function renderTasks() {
         const checked = task.completed ? 'checked' : '';
         const completedClass = task.completed ? 'opacity:0.6;' : '';
         const createdDate = task.createdAt ? task.createdAt.toDate().toLocaleDateString() : '';
+        const category = task.category || 'onbekend';
         
         const activityHtml = (task.activity || []).slice(0, 3).map(a => {
             const date = a.at ? a.at.toDate().toLocaleString() : '';
@@ -673,8 +699,11 @@ function renderTasks() {
                             ${escapeHtml(task.title)}
                         </div>
                         ${task.description ? `<div style="color:#94a3b8; font-size:13px; margin-top:5px;">${escapeHtml(task.description)}</div>` : ''}
-                        <div style="margin-top:10px; font-size:12px; color:#60a5fa;">
-                            Aangemaakt door ${task.createdByName} op ${createdDate}
+                        <div style="margin-top:8px;">
+                            <span style="background:var(--primary); color:white; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:10px;">${escapeHtml(category)}</span>
+                            <span style="font-size:12px; color:#60a5fa;">
+                                door ${task.createdByName} op ${createdDate}
+                            </span>
                         </div>
                         <div style="margin-top:8px; padding-top:8px; border-top:1px solid #334155;">
                             ${activityHtml}
@@ -739,15 +768,18 @@ function loadAdminData() {
             if (!adminData.warnings) adminData.warnings = [];
             if (!adminData.disabled) adminData.disabled = [];
             if (!adminData.deleted) adminData.deleted = [];
+            if (!adminData.inactive) adminData.inactive = [];
             renderWarnings();
             renderDisabled();
             renderDeleted();
+            renderInactive();
         } else {
-            adminData = { warnings: [], disabled: [], deleted: [] };
+            adminData = { warnings: [], disabled: [], deleted: [], inactive: [], taskCategories: ['chat', 'homepage', 'admin', 'games'] };
             db.collection("admin").doc("settings").set(adminData).then(() => {
                 renderWarnings();
                 renderDisabled();
                 renderDeleted();
+                renderInactive();
             });
         }
     });
@@ -954,43 +986,125 @@ function deleteDeleted(idx) {
 }
 
 /* ==================== INACTIEVE GEBRUIKERS ==================== */
-function loadInactiveUsers() {
+/* ==================== INACTIEVE GEBRUIKERS ==================== */
+function addInactive() {
+    const uid = document.getElementById('inactiveUid').value.trim();
+    const name = document.getElementById('inactiveName').value.trim();
+    const days = parseInt(document.getElementById('inactiveDays').value) || 30;
+    
+    if (!uid) return notify("UID is verplicht!");
+    
+    const inactive = adminData.inactive || [];
+    const existing = inactive.findIndex(i => i.uid === uid);
+    
+    const entry = { uid, name, days, addedAt: new Date().toISOString() };
+    
+    if (existing >= 0) {
+        inactive[existing] = entry;
+    } else {
+        inactive.push(entry);
+    }
+    
+    adminData.inactive = inactive;
+    db.collection("admin").doc("settings").update({ inactive }).then(() => {
+        notify("Toegevoegd!");
+        document.getElementById('inactiveUid').value = "";
+        document.getElementById('inactiveName').value = "";
+        document.getElementById('inactiveDays').value = "";
+        renderInactive();
+    });
+}
+
+function renderInactive() {
     const list = document.getElementById('inactiveList');
-    list.innerHTML = '<p style="color:#64748b;">Laden...</p>';
+    const inactive = adminData.inactive || [];
     
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    if (inactive.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen gebruikers toegevoegd.</p>';
+        return;
+    }
     
-    db.collection("users").get().then(snap => {
-        const inactive = [];
-        snap.forEach(doc => {
-            const data = doc.data();
-            const lastLogin = data.lastLogin ? data.lastLogin.toDate() : (data.createdAt ? data.createdAt.toDate() : null);
-            
-            if (lastLogin && lastLogin < thirtyDaysAgo) {
-                inactive.push({
-                    uid: doc.id,
-                    name: data.name || data.username || data.displayName || 'Onbekend',
-                    lastLogin: lastLogin.toLocaleDateString()
-                });
-            }
-        });
-        
-        inactive.sort((a, b) => new Date(a.lastLogin) - new Date(b.lastLogin));
-        
-        if (inactive.length === 0) {
-            list.innerHTML = '<p style="color:#64748b;">Geen gebruikers gevonden die 30+ dagen niet hebben ingelogd.</p>';
-            return;
-        }
-        
-        list.innerHTML = inactive.map(u => `
-            <div class="user-item" style="margin-bottom:5px;">
-                <div class="user-info">
-                    <strong>${escapeHtml(u.name)}</strong>
-                    <small>UID: ${escapeHtml(u.uid)} | Laatste login: ${u.lastLogin}</small>
-                </div>
+    list.innerHTML = inactive.map((u, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid var(--primary);">
+            <div class="user-info">
+                <strong>${escapeHtml(u.name || 'Onbekend')}</strong>
+                <small>UID: ${escapeHtml(u.uid)} | ${u.days}+ dagen niet ingelogd</small>
             </div>
-        `).join('');
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteInactive(${idx})">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function deleteInactive(idx) {
+    if (!confirm("Verwijderen?")) return;
+    
+    const inactive = adminData.inactive || [];
+    inactive.splice(idx, 1);
+    adminData.inactive = inactive;
+    
+    db.collection("admin").doc("settings").update({ inactive }).then(() => {
+        notify("Verwijderd!");
+        renderInactive();
+    });
+}
+
+/* ==================== TAKEN CATEGORIEËN ==================== */
+let taskCategories = ['chat', 'homepage', 'admin', 'games'];
+
+function loadTaskCategories() {
+    const stored = adminData.taskCategories;
+    if (stored && stored.length > 0) {
+        taskCategories = stored;
+    }
+    renderTaskCategorySelect();
+    renderTaskCategoriesList();
+}
+
+function renderTaskCategorySelect() {
+    const select = document.getElementById('taskCategorySelect');
+    const filter = document.getElementById('taskFilter');
+    
+    const options = taskCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.innerHTML = `<option value="">Selecteer categorie...</option>${options}`;
+    filter.innerHTML = `<option value="all">Alle categorieën</option>${taskCategories.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+}
+
+function renderTaskCategoriesList() {
+    const list = document.getElementById('taskCategoriesList');
+    list.innerHTML = taskCategories.map((c, idx) => `
+        <span style="display:inline-block; background:#1e293b; padding:5px 10px; border-radius:5px; margin:3px; font-size:13px;">
+            ${escapeHtml(c)}
+            <span style="color:#ef4444; cursor:pointer; margin-left:5px;" onclick="deleteTaskCategory(${idx})">×</span>
+        </span>
+    `).join('');
+}
+
+function addTaskCategory() {
+    const name = document.getElementById('taskCategory').value.trim().toLowerCase();
+    if (!name) return notify("Naam is verplicht!");
+    if (taskCategories.includes(name)) return notify("Categorie bestaat al!");
+    
+    taskCategories.push(name);
+    adminData.taskCategories = taskCategories;
+    
+    db.collection("admin").doc("settings").update({ taskCategories }).then(() => {
+        notify("Categorie toegevoegd!");
+        document.getElementById('taskCategory').value = "";
+        renderTaskCategorySelect();
+        renderTaskCategoriesList();
+    });
+}
+
+function deleteTaskCategory(idx) {
+    if (!confirm("Categorie verwijderen?")) return;
+    
+    taskCategories.splice(idx, 1);
+    adminData.taskCategories = taskCategories;
+    
+    db.collection("admin").doc("settings").update({ taskCategories }).then(() => {
+        notify("Categorie verwijderd!");
+        renderTaskCategorySelect();
+        renderTaskCategoriesList();
     });
 }
 </script>
