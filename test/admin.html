@@ -200,6 +200,14 @@
             </div>
             <div id="tasksList"></div>
         </div>
+        <div class="card">
+            <h3>➕ Nieuwe Ideeën Categorie</h3>
+            <div style="display:flex; gap:10px; align-items:end;">
+                <input id="taskCategory" placeholder="Categorie naam..." style="flex:1;">
+                <button class="btn success" onclick="addTaskCategory()">Toevoegen</button>
+            </div>
+            <div id="taskCategoriesList" style="margin-top:10px;"></div>
+        </div>
     </div>
 
     <div id="adminSection" class="section">
@@ -243,6 +251,9 @@
                 <input id="inactiveLastLogin" type="date" style="width:150px; display:inline-block; margin-right:10px;">
                 <button class="btn primary" onclick="addInactive()">Toevoegen</button>
             </div>
+            <div id="inactiveList"></div>
+        </div>
+    </div>
             <div id="inactiveList"></div>
         </div>
 
@@ -1026,37 +1037,35 @@ function renderInactive() {
         return;
     }
     
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const today = new Date();
     
     list.innerHTML = inactive.map((u, idx) => {
         const lastLogin = u.lastLogin ? new Date(u.lastLogin) : null;
-        const today = new Date();
+        const addedAt = u.addedAt ? new Date(u.addedAt) : null;
         
         let statusText = '';
         let statusColor = 'var(--primary)';
         
-        if (lastLogin) {
-            const diffTime = today - lastLogin;
+        if (addedAt) {
+            const addedDate = new Date(addedAt);
+            const diffTime = today - addedDate;
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             
-            if (diffDays < 30) {
-                const weeks = Math.floor(diffDays / 7);
-                if (weeks < 1) {
-                    statusText = `nog ${diffDays} dag${diffDays !== 1 ? 'en' : ''} te gaan`;
-                    statusColor = '#22c55e';
-                } else {
-                    statusText = `nog ${weeks} week${weeks !== 1 ? 'en' : ''} te gaan`;
-                    statusColor = '#22c55e';
-                }
+            if (diffDays < 7) {
+                const daysLeft = 7 - diffDays;
+                statusText = `nog ${daysLeft} dag${daysLeft !== 1 ? 'en' : ''} te gaan`;
+                statusColor = '#22c55e';
             } else {
-                const overdueDays = diffDays - 30;
+                const overdueDays = diffDays - 7;
                 const weeks = Math.floor(overdueDays / 7);
                 if (weeks < 1) {
-                    statusText = `${overdueDays} dag${overdueDays !== 1 ? 'en' : ''} te laat met inloggen`;
+                    statusText = `${overdueDays} dag${overdueDays !== 1 ? 'en' : ''} voorbij`;
+                    statusColor = '#f59e0b';
+                } else if (weeks === 1) {
+                    statusText = `1 week voorbij`;
                     statusColor = '#ef4444';
                 } else {
-                    statusText = `${weeks} week${weeks !== 1 ? 'en' : ''} te laat met inloggen`;
+                    statusText = `${weeks} weken voorbij`;
                     statusColor = '#ef4444';
                 }
             }
