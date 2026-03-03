@@ -325,9 +325,6 @@ function updatePreview(url) {
 }
 
 function init() {
-    // Load task categories
-    loadTaskCategories();
-
     // Games
     db.collection("games").onSnapshot(s => {
         const list = document.getElementById('gamesList');
@@ -782,6 +779,7 @@ function loadAdminData() {
             renderDisabled();
             renderDeleted();
             renderInactive();
+            loadTaskCategories();
         } else {
             adminData = { warnings: [], disabled: [], deleted: [], inactive: [], taskCategories: ['chat', 'homepage', 'admin', 'games'] };
             db.collection("admin").doc("settings").set(adminData).then(() => {
@@ -789,6 +787,7 @@ function loadAdminData() {
                 renderDisabled();
                 renderDeleted();
                 renderInactive();
+                loadTaskCategories();
             });
         }
     });
