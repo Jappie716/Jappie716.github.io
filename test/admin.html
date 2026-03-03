@@ -636,7 +636,7 @@ function addTask() {
             action: "aangemaakt",
             by: currentUser.uid,
             byName: getUserName(currentUser.uid),
-            at: firebase.firestore.FieldValue.serverTimestamp()
+            at: new Date().toISOString()
         }]
     };
 
@@ -682,7 +682,7 @@ function renderTasks() {
         const category = task.category || 'onbekend';
         
         const activityHtml = (task.activity || []).slice(0, 3).map(a => {
-            const date = a.at ? a.at.toDate().toLocaleString() : '';
+            const date = a.at ? new Date(a.at).toLocaleString() : '';
             return `<div style="font-size:11px; color:#64748b; padding:2px 0;">
                 • ${a.byName} ${a.action} op ${date}
             </div>`;
@@ -730,7 +730,7 @@ function toggleTask(taskId, completed) {
             action: action,
             by: currentUser.uid,
             byName: getUserName(currentUser.uid),
-            at: firebase.firestore.FieldValue.serverTimestamp()
+            at: new Date().toISOString()
         };
         
         const currentActivity = task.activity || [];
