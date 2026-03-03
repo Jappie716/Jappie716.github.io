@@ -57,6 +57,10 @@
         /* User List Specific */
         .user-item { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 8px; }
         .user-info small { color: #94a3b8; display: block; }
+        
+        /* Task Specific */
+        .task-item { transition: all 0.2s ease; }
+        .task-item:hover { background: #273449 !important; }
     </style>
 </head>
 <body>
@@ -72,6 +76,8 @@
     <button class="nav-btn" id="btn-categories" onclick="showTab('categories')">📂 Categorieën</button>
     <button class="nav-btn" id="btn-updates" onclick="showTab('updates')">🔔 Updates</button>
     <button class="nav-btn" id="btn-chat" onclick="showTab('chat')">💬 Chat Beheer</button>
+    <button class="nav-btn" id="btn-tasks" onclick="showTab('tasks')">✅ Ideeën & Taken</button>
+    <button class="nav-btn" id="btn-admin" onclick="showTab('admin')">⚙️ Administratie</button>
     
     <div style="margin-top: auto;">
         <button class="btn" style="width:100%; background:#1e293b; color:white; margin-bottom:10px" onclick="location.href='index.html'">🌐 Bekijk Site</button>
@@ -168,6 +174,91 @@
         <div class="card"><button class="btn danger" onclick="clearAllChat()">🚨 Wis Hele Chat</button></div>
         <div id="adminChatList"></div>
     </div>
+
+    <div id="tasksSection" class="section">
+        <div class="card">
+            <h3>➕ Nieuw Idee / Taak</h3>
+            <input id="taskTitle" placeholder="Titel van idee of taak...">
+            <textarea id="taskDesc" placeholder="Beschrijving (optioneel)..." rows="2"></textarea>
+            <select id="taskCategorySelect" style="margin-bottom:15px;">
+                <option value="">Selecteer categorie...</option>
+            </select>
+            <button class="btn success" onclick="addTask()">Toevoegen</button>
+        </div>
+        <div class="card">
+            <h3>📋 Ideeën & Taken</h3>
+            <div style="margin-bottom:15px; display:flex; gap:10px; align-items:center;">
+                <label style="color:#94a3b8; font-size:13px;">Filter:</label>
+                <select id="taskFilter" onchange="renderTasks()" style="width:auto; margin:0; padding:5px;">
+                    <option value="all">Alle</option>
+                </select>
+                <select id="taskStatusFilter" onchange="renderTasks()" style="width:auto; margin:0; padding:5px; margin-left:10px;">
+                    <option value="all">Alle status</option>
+                    <option value="open">Open</option>
+                    <option value="done">Afgerond</option>
+                </select>
+            </div>
+            <div id="tasksList"></div>
+        </div>
+        <div class="card">
+            <h3>➕ Nieuwe Ideeën Categorie</h3>
+            <div style="display:flex; gap:10px; align-items:end;">
+                <input id="newCategoryName" placeholder="Categorie naam..." style="flex:1;">
+                <button class="btn success" onclick="addTaskCategory()">Toevoegen</button>
+            </div>
+            <div id="taskCategoriesList" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <div id="adminSection" class="section">
+        <div class="card">
+            <h3>⚠️ Gebruikers met Waarschuwing</h3>
+            <div style="margin-bottom:15px;">
+                <input id="warnUserUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="warnChatName" placeholder="Chatnaam..." style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="warnCount" type="number" placeholder="1-3" min="1" max="3" style="width:70px; display:inline-block;">
+                <button class="btn warning" onclick="addWarning()">Toevoegen</button>
+            </div>
+            <div id="warningsList"></div>
+        </div>
+
+        <div class="card">
+            <h3>🚫 Uitgeschakelde Gebruikers</h3>
+            <div style="margin-bottom:15px;">
+                <input id="disabledUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="disabledReason" placeholder="Reden..." style="width:200px; display:inline-block; margin-right:10px;">
+                <button class="btn danger" onclick="addDisabled()">Toevoegen</button>
+            </div>
+            <div id="disabledList"></div>
+        </div>
+
+        <div class="card">
+            <h3>🗑️ Verwijderde Gebruikers</h3>
+            <div style="margin-bottom:15px;">
+                <input id="deletedUid" placeholder="Gebruiker UID..." style="width:250px; display:inline-block; margin-right:10px;">
+                <input id="deletedName" placeholder="Naam..." style="width:150px; display:inline-block; margin-right:10px;">
+                <input id="deletedReason" placeholder="Reden..." style="width:150px; display:inline-block; margin-right:10px;">
+                <button class="btn danger" onclick="addDeleted()">Toevoegen</button>
+            </div>
+            <div id="deletedList"></div>
+        </div>
+
+        <div class="card">
+            <h3>📅 Accounts Een Maand Niet Ingelogd</h3>
+            <div style="margin-bottom:15px;">
+                <input id="inactiveUid" placeholder="Gebruiker UID..." style="width:180px; display:inline-block; margin-right:10px;">
+                <input id="inactiveName" placeholder="Naam..." style="width:130px; display:inline-block; margin-right:10px;">
+                <input id="inactiveLastLogin" type="date" style="width:130px; display:inline-block; margin-right:10px;">
+                <input id="inactiveEndDate" type="date" style="width:130px; display:inline-block; margin-right:10px;">
+                <button class="btn primary" onclick="addInactive()">Toevoegen</button>
+            </div>
+            <div id="inactiveList"></div>
+        </div>
+    </div>
+                           </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -186,11 +277,18 @@ const ADMINS = ["someoeneheilig@gmail.com", "melle1337k@gmail.com"];
 
 // Global user list cache
 let allUsers = [];
+let currentUser = null;
+let userNamesCache = {};
 
 auth.onAuthStateChanged(user => {
     if (user && ADMINS.includes(user.email.toLowerCase())) {
-        init();
-        loadUsers(); // Users inladen bij start
+        currentUser = { uid: user.uid, email: user.email };
+        loadUserNames().then(() => {
+            init();
+            loadUsers();
+            loadTasks();
+            loadAdminData();
+        });
     } else {
         alert("Geen toegang! Log in met een admin account.");
         location.href = "index.html";
@@ -504,6 +602,564 @@ async function clearAllChat() {
         snap.forEach(doc => doc.ref.delete());
         notify("Chat leeggemaakt.");
     }
+}
+
+/* ---------------- TAKEN / IDEEËN ---------------- */
+async function loadUserNames() {
+    const snap = await db.collection("users").get();
+    snap.forEach(doc => {
+        const data = doc.data();
+        userNamesCache[doc.id] = data.name || data.username || data.displayName || "Onbekend";
+    });
+}
+
+function getUserName(uid) {
+    return userNamesCache[uid] || "Laden...";
+}
+
+function addTask() {
+    const title = document.getElementById('taskTitle').value.trim();
+    const desc = document.getElementById('taskDesc').value.trim();
+    const category = document.getElementById('taskCategorySelect').value;
+    if (!title) return notify("Titel is verplicht!");
+    if (!category) return notify("Selecteer een categorie!");
+
+    const taskData = {
+        title: title,
+        description: desc,
+        category: category,
+        completed: false,
+        createdBy: currentUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdByName: getUserName(currentUser.uid),
+        activity: [{
+            action: "aangemaakt",
+            by: currentUser.uid,
+            byName: getUserName(currentUser.uid),
+            at: new Date().toISOString()
+        }]
+    };
+
+    db.collection("tasks").add(taskData).then(() => {
+        notify("Taak toegevoegd!");
+        document.getElementById('taskTitle').value = "";
+        document.getElementById('taskDesc').value = "";
+    });
+}
+
+function loadTasks() {
+    db.collection("tasks").orderBy("createdAt", "desc").onSnapshot(snap => {
+        window.tasksData = [];
+        snap.forEach(doc => {
+            window.tasksData.push({ id: doc.id, ...doc.data() });
+        });
+        renderTasks();
+    });
+}
+
+function renderTasks() {
+    const list = document.getElementById('tasksList');
+    const categoryFilter = document.getElementById('taskFilter').value;
+    const statusFilter = document.getElementById('taskStatusFilter').value;
+    const tasks = window.tasksData || [];
+    
+    const filtered = tasks.filter(t => {
+        if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+        if (statusFilter === "open") return !t.completed;
+        if (statusFilter === "done") return t.completed;
+        return true;
+    });
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<p style="color:#64748b; text-align:center; padding:20px;">Nog geen ideeën of taken.</p>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(task => {
+        const checked = task.completed ? 'checked' : '';
+        const completedClass = task.completed ? 'opacity:0.6;' : '';
+        const createdDate = task.createdAt ? task.createdAt.toDate().toLocaleDateString() : '';
+        const category = task.category || 'onbekend';
+        
+        const activityHtml = (task.activity || []).slice(0, 3).map(a => {
+            const date = a.at ? new Date(a.at).toLocaleString() : '';
+            return `<div style="font-size:11px; color:#64748b; padding:2px 0;">
+                • ${a.byName} ${a.action} op ${date}
+            </div>`;
+        }).join('');
+
+        return `
+            <div class="task-item" style="background:#1e293b; padding:15px; border-radius:10px; margin-bottom:10px; ${completedClass}">
+                <div style="display:flex; align-items:flex-start; gap:10px;">
+                    <input type="checkbox" ${checked} 
+                        style="width:20px; height:20px; margin:0; margin-top:2px; cursor:pointer;"
+                        onchange="toggleTask('${task.id}', this.checked)">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:15px; ${task.completed ? 'text-decoration:line-through; color:#64748b;' : ''}">
+                            ${escapeHtml(task.title)}
+                        </div>
+                        ${task.description ? `<div style="color:#94a3b8; font-size:13px; margin-top:5px;">${escapeHtml(task.description)}</div>` : ''}
+                        <div style="margin-top:8px;">
+                            <span style="background:var(--primary); color:white; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:10px;">${escapeHtml(category)}</span>
+                            <span style="font-size:12px; color:#60a5fa;">
+                                door ${task.createdByName} op ${createdDate}
+                            </span>
+                        </div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #334155;">
+                            ${activityHtml}
+                        </div>
+                    </div>
+                    <button class="btn danger" style="padding:5px 10px; font-size:12px;" 
+                        onclick="deleteTask('${task.id}')">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function toggleTask(taskId, completed) {
+    const taskRef = db.collection("tasks").doc(taskId);
+    
+    taskRef.get().then(doc => {
+        if (!doc.exists) return;
+        
+        const task = doc.data();
+        const action = completed ? "afgerond" : "heropend";
+        
+        const activityEntry = {
+            action: action,
+            by: currentUser.uid,
+            byName: getUserName(currentUser.uid),
+            at: new Date().toISOString()
+        };
+        
+        const currentActivity = task.activity || [];
+        
+        taskRef.update({
+            completed: completed,
+            activity: firebase.firestore.FieldValue.arrayUnion(activityEntry)
+        }).then(() => {
+            notify(completed ? "Taak afgerond!" : "Taak heropend!");
+        });
+    });
+}
+
+function deleteTask(taskId) {
+    if (!confirm("Taak verwijderen?")) return;
+    db.collection("tasks").doc(taskId).delete().then(() => {
+        notify("Taak verwijderd!");
+    });
+}
+
+function escapeHtml(text) {
+    if (!text) return "";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/* ==================== ADMINISTRATIE ==================== */
+let adminData = {};
+
+function loadAdminData() {
+    db.collection("admin").doc("settings").get().then(doc => {
+        if (doc.exists) {
+            adminData = doc.data();
+            if (!adminData.warnings) adminData.warnings = [];
+            if (!adminData.disabled) adminData.disabled = [];
+            if (!adminData.deleted) adminData.deleted = [];
+            if (!adminData.inactive) adminData.inactive = [];
+            renderWarnings();
+            renderDisabled();
+            renderDeleted();
+            renderInactive();
+            loadTaskCategories();
+        } else {
+            adminData = { warnings: [], disabled: [], deleted: [], inactive: [], taskCategories: ['chat', 'homepage', 'admin', 'games'] };
+            db.collection("admin").doc("settings").set(adminData).then(() => {
+                renderWarnings();
+                renderDisabled();
+                renderDeleted();
+                renderInactive();
+                loadTaskCategories();
+            });
+        }
+    });
+}
+
+/* ==================== WAARSCHUWINGEN ==================== */
+function renderWarnings() {
+    const list = document.getElementById('warningsList');
+    const warnings = adminData.warnings || [];
+    
+    if (warnings.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen waarschuwingen.</p>';
+        return;
+    }
+    
+    list.innerHTML = warnings.map((w, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid var(--warning);">
+            <div class="user-info">
+                <strong>${escapeHtml(w.chatName)} (${w.count}/3)</strong>
+                <small>UID: ${escapeHtml(w.uid)}</small>
+            </div>
+            <div>
+                <button class="btn" style="padding:5px 10px;" onclick="editWarning(${idx})">✏️</button>
+                <button class="btn danger" style="padding:5px 10px;" onclick="deleteWarning(${idx})">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addWarning() {
+    const uid = document.getElementById('warnUserUid').value.trim();
+    const chatName = document.getElementById('warnChatName').value.trim();
+    const count = parseInt(document.getElementById('warnCount').value) || 1;
+    
+    if (!uid || !chatName) return notify("UID en Chatnaam zijn verplicht!");
+    if (count < 1 || count > 3) return notify("Aantal moet tussen 1 en 3 zijn!");
+    
+    const warnings = adminData.warnings || [];
+    const existing = warnings.findIndex(w => w.uid === uid);
+    
+    if (existing >= 0) {
+        warnings[existing] = { uid, chatName, count };
+    } else {
+        warnings.push({ uid, chatName, count });
+    }
+    
+    adminData.warnings = warnings;
+    db.collection("admin").doc("settings").update({ warnings }).then(() => {
+        notify("Waarschuwing toegevoegd/bijgewerkt!");
+        document.getElementById('warnUserUid').value = "";
+        document.getElementById('warnChatName').value = "";
+        document.getElementById('warnCount').value = "";
+        renderWarnings();
+    });
+}
+
+function editWarning(idx) {
+    const warnings = adminData.warnings || [];
+    const w = warnings[idx];
+    const newCount = prompt(`Waarschuwingen voor ${w.chatName} (1-3):`, w.count);
+    if (newCount === null) return;
+    
+    const count = parseInt(newCount);
+    if (count < 1 || count > 3) return notify("Aantal moet tussen 1 en 3 zijn!");
+    
+    warnings[idx].count = count;
+    adminData.warnings = warnings;
+    
+    db.collection("admin").doc("settings").update({ warnings }).then(() => {
+        notify("Waarschuwing bijgewerkt!");
+        renderWarnings();
+    });
+}
+
+function deleteWarning(idx) {
+    if (!confirm("Waarschuwing verwijderen?")) return;
+    
+    const warnings = adminData.warnings || [];
+    warnings.splice(idx, 1);
+    adminData.warnings = warnings;
+    
+    db.collection("admin").doc("settings").update({ warnings }).then(() => {
+        notify("Waarschuwing verwijderd!");
+        renderWarnings();
+    });
+}
+
+/* ==================== UITGESCHAKELDE GEBRUIKERS ==================== */
+function renderDisabled() {
+    const list = document.getElementById('disabledList');
+    const disabled = adminData.disabled || [];
+    
+    if (disabled.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen uitgeschakelde gebruikers.</p>';
+        return;
+    }
+    
+    list.innerHTML = disabled.map((d, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid var(--danger);">
+            <div class="user-info">
+                <strong>UID: ${escapeHtml(d.uid)}</strong>
+                <small>Reden: ${escapeHtml(d.reason || 'Geen reden')}</small>
+            </div>
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteDisabled(${idx})">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function addDisabled() {
+    const uid = document.getElementById('disabledUid').value.trim();
+    const reason = document.getElementById('disabledReason').value.trim();
+    
+    if (!uid) return notify("UID is verplicht!");
+    
+    const disabled = adminData.disabled || [];
+    const existing = disabled.findIndex(d => d.uid === uid);
+    
+    if (existing >= 0) {
+        disabled[existing] = { uid, reason };
+    } else {
+        disabled.push({ uid, reason });
+    }
+    
+    adminData.disabled = disabled;
+    db.collection("admin").doc("settings").update({ disabled }).then(() => {
+        notify("Uitgeschakelde gebruiker toegevoegd/bijgewerkt!");
+        document.getElementById('disabledUid').value = "";
+        document.getElementById('disabledReason').value = "";
+        renderDisabled();
+    });
+}
+
+function deleteDisabled(idx) {
+    if (!confirm("Uitgeschakelde gebruiker verwijderen?")) return;
+    
+    const disabled = adminData.disabled || [];
+    disabled.splice(idx, 1);
+    adminData.disabled = disabled;
+    
+    db.collection("admin").doc("settings").update({ disabled }).then(() => {
+        notify("Verwijderd!");
+        renderDisabled();
+    });
+}
+
+/* ==================== VERWIJDERDE GEBRUIKERS ==================== */
+function renderDeleted() {
+    const list = document.getElementById('deletedList');
+    const deleted = adminData.deleted || [];
+    
+    if (deleted.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen verwijderde gebruikers.</p>';
+        return;
+    }
+    
+    list.innerHTML = deleted.map((d, idx) => `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid #94a3b8;">
+            <div class="user-info">
+                <strong>${escapeHtml(d.name || 'Onbekend')}</strong>
+                <small>UID: ${escapeHtml(d.uid)} | Reden: ${escapeHtml(d.reason || 'Geen reden')}</small>
+            </div>
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteDeleted(${idx})">🗑️</button>
+        </div>
+    `).join('');
+}
+
+function addDeleted() {
+    const uid = document.getElementById('deletedUid').value.trim();
+    const name = document.getElementById('deletedName').value.trim();
+    const reason = document.getElementById('deletedReason').value.trim();
+    
+    if (!uid) return notify("UID is verplicht!");
+    
+    const deleted = adminData.deleted || [];
+    const existing = deleted.findIndex(d => d.uid === uid);
+    
+    if (existing >= 0) {
+        deleted[existing] = { uid, name, reason };
+    } else {
+        deleted.push({ uid, name, reason });
+    }
+    
+    adminData.deleted = deleted;
+    db.collection("admin").doc("settings").update({ deleted }).then(() => {
+        notify("Verwijderde gebruiker toegevoegd!");
+        document.getElementById('deletedUid').value = "";
+        document.getElementById('deletedName').value = "";
+        document.getElementById('deletedReason').value = "";
+        renderDeleted();
+    });
+}
+
+function deleteDeleted(idx) {
+    if (!confirm("Verwijderen uit lijst?")) return;
+    
+    const deleted = adminData.deleted || [];
+    deleted.splice(idx, 1);
+    adminData.deleted = deleted;
+    
+    db.collection("admin").doc("settings").update({ deleted }).then(() => {
+        notify("Verwijderd!");
+        renderDeleted();
+    });
+}
+
+/* ==================== INACTIEVE GEBRUIKERS ==================== */
+function addInactive() {
+    const uid = document.getElementById('inactiveUid').value.trim();
+    const name = document.getElementById('inactiveName').value.trim();
+    const lastLoginDate = document.getElementById('inactiveLastLogin').value;
+    const endDate = document.getElementById('inactiveEndDate').value;
+    
+    if (!uid) return notify("UID is verplicht!");
+    if (!lastLoginDate) return notify("Voer laatste login datum in!");
+    if (!endDate) return notify("Voer einddatum in!");
+    
+    const inactive = adminData.inactive || [];
+    const existing = inactive.findIndex(i => i.uid === uid);
+    
+    const entry = { 
+        uid, 
+        name, 
+        lastLogin: lastLoginDate,
+        endDate: endDate,
+        addedAt: new Date().toISOString() 
+    };
+    
+    if (existing >= 0) {
+        inactive[existing] = entry;
+    } else {
+        inactive.push(entry);
+    }
+    
+    adminData.inactive = inactive;
+    db.collection("admin").doc("settings").update({ inactive }).then(() => {
+        notify("Toegevoegd!");
+        document.getElementById('inactiveUid').value = "";
+        document.getElementById('inactiveName').value = "";
+        document.getElementById('inactiveLastLogin').value = "";
+        document.getElementById('inactiveEndDate').value = "";
+        renderInactive();
+    });
+}
+
+function renderInactive() {
+    const list = document.getElementById('inactiveList');
+    const inactive = adminData.inactive || [];
+    
+    if (inactive.length === 0) {
+        list.innerHTML = '<p style="color:#64748b;">Nog geen gebruikers toegevoegd.</p>';
+        return;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    list.innerHTML = inactive.map((u, idx) => {
+        const lastLogin = u.lastLogin ? new Date(u.lastLogin) : null;
+        const endDate = u.endDate ? new Date(u.endDate) : null;
+        
+        let statusText = '';
+        let statusColor = 'var(--primary)';
+        
+        if (endDate) {
+            endDate.setHours(0, 0, 0, 0);
+            const diffTime = endDate - today;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+                const overdueDays = Math.abs(diffDays);
+                const weeks = Math.floor(overdueDays / 7);
+                if (weeks < 1) {
+                    statusText = `${overdueDays} dag${overdueDays !== 1 ? 'en' : ''} te laat`;
+                } else if (weeks === 1) {
+                    statusText = `1 week te laat`;
+                } else {
+                    statusText = `${weeks} weken te laat`;
+                }
+                statusColor = '#ef4444';
+            } else if (diffDays === 0) {
+                statusText = `vandaag deadline!`;
+                statusColor = '#f59e0b';
+            } else {
+                const weeks = Math.floor(diffDays / 7);
+                if (weeks < 1) {
+                    statusText = `nog ${diffDays} dag${diffDays !== 1 ? 'en' : ''}`;
+                } else if (weeks === 1) {
+                    statusText = `nog 1 week`;
+                } else {
+                    statusText = `nog ${weeks} weken`;
+                }
+                statusColor = '#22c55e';
+            }
+        }
+        
+        return `
+        <div class="user-item" style="margin-bottom:5px; border-left:3px solid ${statusColor};">
+            <div class="user-info">
+                <strong>${escapeHtml(u.name || 'Onbekend')}</strong>
+                <small>UID: ${escapeHtml(u.uid)} | Laatste login: ${lastLogin ? lastLogin.toLocaleDateString() : 'onbekend'}</small>
+                <small style="color:${statusColor};">${statusText} (tot ${endDate ? endDate.toLocaleDateString() : '-'})</small>
+            </div>
+            <button class="btn danger" style="padding:5px 10px;" onclick="deleteInactive(${idx})">🗑️</button>
+        </div>
+    `}).join('');
+}
+
+function deleteInactive(idx) {
+    if (!confirm("Verwijderen?")) return;
+    
+    const inactive = adminData.inactive || [];
+    inactive.splice(idx, 1);
+    adminData.inactive = inactive;
+    
+    db.collection("admin").doc("settings").update({ inactive }).then(() => {
+        notify("Verwijderd!");
+        renderInactive();
+    });
+}
+
+/* ==================== TAKEN CATEGORIEËN ==================== */
+let taskCategories = ['chat', 'homepage', 'admin', 'games'];
+
+function loadTaskCategories() {
+    const stored = adminData.taskCategories;
+    if (stored && stored.length > 0) {
+        taskCategories = stored;
+    }
+    renderTaskCategorySelect();
+    renderTaskCategoriesList();
+}
+
+function renderTaskCategorySelect() {
+    const select = document.getElementById('taskCategorySelect');
+    const filter = document.getElementById('taskFilter');
+    
+    const options = taskCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.innerHTML = `<option value="">Selecteer categorie...</option>${options}`;
+    filter.innerHTML = `<option value="all">Alle categorieën</option>${taskCategories.map(c => `<option value="${c}">${c}</option>`).join('')}`;
+}
+
+function renderTaskCategoriesList() {
+    const list = document.getElementById('taskCategoriesList');
+    list.innerHTML = taskCategories.map((c, idx) => `
+        <span style="display:inline-block; background:#1e293b; padding:5px 10px; border-radius:5px; margin:3px; font-size:13px;">
+            ${escapeHtml(c)}
+            <span style="color:#ef4444; cursor:pointer; margin-left:5px;" onclick="deleteTaskCategory(${idx})">×</span>
+        </span>
+    `).join('');
+}
+
+function addTaskCategory() {
+    const name = document.getElementById('newCategoryName').value.trim().toLowerCase();
+    if (!name) return notify("Naam is verplicht!");
+    if (taskCategories.includes(name)) return notify("Categorie bestaat al!");
+    
+    taskCategories.push(name);
+    adminData.taskCategories = taskCategories;
+    
+    db.collection("admin").doc("settings").update({ taskCategories }).then(() => {
+        notify("Categorie toegevoegd!");
+        document.getElementById('newCategoryName').value = "";
+        renderTaskCategorySelect();
+        renderTaskCategoriesList();
+    });
+}
+
+function deleteTaskCategory(idx) {
+    if (!confirm("Categorie verwijderen?")) return;
+    
+    taskCategories.splice(idx, 1);
+    adminData.taskCategories = taskCategories;
+    
+    db.collection("admin").doc("settings").update({ taskCategories }).then(() => {
+        notify("Categorie verwijderd!");
+        renderTaskCategorySelect();
+        renderTaskCategoriesList();
+    });
 }
 </script>
 </body>
