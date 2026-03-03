@@ -200,14 +200,6 @@
             </div>
             <div id="tasksList"></div>
         </div>
-        <div class="card">
-            <h3>➕ Nieuwe Ideeën Categorie</h3>
-            <div style="display:flex; gap:10px; align-items:end;">
-                <input id="taskCategory" placeholder="Categorie naam..." style="flex:1;">
-                <button class="btn success" onclick="addTaskCategory()">Toevoegen</button>
-            </div>
-            <div id="taskCategoriesList" style="margin-top:10px;"></div>
-        </div>
     </div>
 
     <div id="adminSection" class="section">
@@ -259,11 +251,13 @@
         </div>
 
         <div class="card">
-            <h3>➕ Nieuwe Taakcategorie</h3>
+            <h3>➕ Nieuwe Ideeën Categorie</h3>
             <div style="display:flex; gap:10px; align-items:end;">
-                <input id="taskCategory" placeholder="Categorie naam..." style="flex:1;">
+                <input id="newCategoryName" placeholder="Categorie naam..." style="flex:1;">
                 <button class="btn success" onclick="addTaskCategory()">Toevoegen</button>
             </div>
+            <div id="taskCategoriesList" style="margin-top:10px;"></div>
+        </div>
             <div id="taskCategoriesList" style="margin-top:10px;"></div>
         </div>
 
@@ -1140,7 +1134,7 @@ function renderTaskCategoriesList() {
 }
 
 function addTaskCategory() {
-    const name = document.getElementById('taskCategory').value.trim().toLowerCase();
+    const name = document.getElementById('newCategoryName').value.trim().toLowerCase();
     if (!name) return notify("Naam is verplicht!");
     if (taskCategories.includes(name)) return notify("Categorie bestaat al!");
     
@@ -1149,7 +1143,7 @@ function addTaskCategory() {
     
     db.collection("admin").doc("settings").update({ taskCategories }).then(() => {
         notify("Categorie toegevoegd!");
-        document.getElementById('taskCategory').value = "";
+        document.getElementById('newCategoryName').value = "";
         renderTaskCategorySelect();
         renderTaskCategoriesList();
     });
