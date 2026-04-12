@@ -13,11 +13,10 @@
         <div class="nav-links">
             <a href="#" onclick="showPage('home')">Home</a>
             <a href="#" onclick="showPage('metro')">Metro</a>
-            <a href="#" onclick="showPage('airport')">Luchthaven</a>
+            <a href="#" onclick="showPage('airport')">Airport</a>
             <a href="#" onclick="showPage('makelaar')">Makelaar</a>
             <a href="#" onclick="showPage('map')">Kaart</a>
-            <a href="#" id="admin-link" style="display: none; color: var(--success);" onclick="showPage('admin')">Makelaar Paneel</a>
-            <a href="#" id="superadmin-link" style="display: none; color: var(--danger);" onclick="showPage('superadmin')">👑 SuperAdmin</a>
+            <a href="#" id="admin-link" style="display: none; color: var(--danger); font-weight: bold;" onclick="showPage('admin')">🛠 Beheerpaneel</a>
         </div>
         <div class="nav-actions">
             <button id="theme-toggle" class="btn-icon">🌙</button>
@@ -26,9 +25,9 @@
         <div class="hamburger" onclick="toggleMenu()">☰</div>
     </nav>
 
-    <main id="app-content">
+    <main id="app-content" style="padding: 0; max-width: 100%;">
         
-        <section id="home" class="page active">
+        <section id="home" class="page active" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <div style="text-align: center; padding: 3rem 0;">
                 <h1>Welkom in Mestlo</h1>
                 <p>De meest bruisende Minecraft stad. Ontdek onze moderne infrastructuur, prachtige huizen en levendige economie.</p>
@@ -36,28 +35,24 @@
             </div>
         </section>
 
-        <section id="metro" class="page">
+        <section id="metro" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <h2>Mestlo Metro Systeem</h2>
-            <div class="grid">
-                <div class="card"><h3>Lijn A</h3><p>Centraal Station ↔ Luchthaven</p></div>
-                <div class="card"><h3>Lijn B</h3><p>Zakendistrict ↔ Haven</p></div>
-            </div>
+            <div class="grid" id="metro-display">
+                </div>
         </section>
 
-        <section id="airport" class="page">
+        <section id="airport" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <h2>Mestlo International Airport (MIA)</h2>
             <div class="card">
                 <table class="data-table">
                     <thead><tr><th>Airline</th><th>Bestemming</th><th>Tijd</th></tr></thead>
-                    <tbody>
-                        <tr><td>Elytra Air</td><td>Spawn City</td><td>14:30</td></tr>
-                        <tr><td>Creeper Express</td><td>Nether Hub</td><td>15:00</td></tr>
-                    </tbody>
+                    <tbody id="flight-display">
+                        </tbody>
                 </table>
             </div>
         </section>
 
-        <section id="makelaar" class="page">
+        <section id="makelaar" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <h2>Mestlo Real Estate</h2>
             <p>Vind jouw droomhuis in de stad.</p>
             <div class="grid" id="house-display">
@@ -65,33 +60,51 @@
         </section>
 
         <section id="map" class="page">
-            <h2>Stadskaart</h2>
-            <div style="position: relative; height: 70vh; border-radius: 12px; overflow: hidden; border: 2px solid var(--border);">
-                <div id="map-warning" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; padding: 10px 20px; border-radius: 8px; z-index: 10; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                    <span style="font-size: 0.9rem;">Ngrok error of grijs scherm? Dan is de server momenteel uit. DM <strong>@japsurrr</strong> op Discord.</span>
-                    <button onclick="document.getElementById('map-warning').style.display='none'" style="background: white; color: var(--danger); border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold;">Begrepen</button>
+            <div style="position: relative; width: 100%; height: calc(100vh - 75px); background: #111;">
+                
+                <div id="map-warning" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.95); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; padding: 2rem;">
+                    <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">Let op: Map Status</h1>
+                    <p style="font-size: 1.5rem; max-width: 800px; margin-bottom: 2rem;">Als je hierna een grijs scherm of een foutmelding ziet, staat de server momenteel uit of blokkeert Ngrok de verbinding. <br><br>Hulp nodig? DM <strong>@japsurrr</strong> op Discord.</p>
+                    <button onclick="document.getElementById('map-warning').style.display='none'" style="padding: 1rem 2.5rem; font-size: 1.5rem; border-radius: 12px; border: none; background: white; color: var(--danger); font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">Ik heb het begrepen, laat de map zien</button>
                 </div>
-                <iframe src="https://sprint-frighten-straining.ngrok-free.dev/" width="100%" height="100%" style="border:none;"></iframe>
+
+                <iframe src="https://sprint-frighten-straining.ngrok-free.dev/" style="width: 100%; height: 100%; border:none;"></iframe>
             </div>
         </section>
 
-        <section id="admin" class="page">
-            <h2>Makelaar Beheerpaneel</h2>
-            <div class="card" style="max-width: 500px; margin: 0 auto;">
-                <input type="text" id="h-title" placeholder="Titel van het huis" style="width:100%; padding:10px; margin-bottom:10px;">
-                <input type="number" id="h-price" placeholder="Prijs (€)" style="width:100%; padding:10px; margin-bottom:10px;">
-                <input type="text" id="h-img" placeholder="Afbeelding URL (bijv. Imgur link)" style="width:100%; padding:10px; margin-bottom:10px;">
-                <button class="btn-success" id="add-house-btn" style="width:100%;">Zet Huis Te Koop</button>
-            </div>
-        </section>
+        <section id="admin" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
+            <h2 style="color: var(--primary);">Centraal Beheerpaneel</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>🚇 Metro Toevoegen</h3>
+                    <input type="text" id="m-lijn" placeholder="Lijn (bijv. Lijn A)" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <input type="text" id="m-route" placeholder="Route (bijv. Centrum - Airport)" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <button class="btn-primary" id="btn-add-metro" style="width:100%;">Opslaan</button>
+                </div>
 
-        <section id="superadmin" class="page">
-            <h2>👑 SuperAdmin Beheer</h2>
-            <div class="card" style="max-width: 500px; margin: 0 auto;">
-                <h3>Maak iemand Makelaar</h3>
-                <p>Vul het Google e-mailadres in van de speler die huizen mag toevoegen op de website.</p>
-                <input type="email" id="new-makelaar-email" placeholder="E-mailadres speler" style="width:100%; padding:10px; margin-bottom:10px;">
-                <button class="btn-primary" id="add-makelaar-btn" style="width:100%;">Geef Makelaar Rechten</button>
+                <div class="card">
+                    <h3>✈️ Vlucht Toevoegen</h3>
+                    <input type="text" id="a-airline" placeholder="Airline (bijv. Elytra Air)" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <input type="text" id="a-dest" placeholder="Bestemming" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <input type="time" id="a-time" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <button class="btn-primary" id="btn-add-flight" style="width:100%;">Opslaan</button>
+                </div>
+
+                <div class="card">
+                    <h3>🏡 Huis Te Koop Zetten</h3>
+                    <input type="text" id="h-title" placeholder="Titel van het huis" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <input type="number" id="h-price" placeholder="Prijs (€)" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <input type="text" id="h-img" placeholder="Afbeelding URL (optioneel)" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <button class="btn-success" id="btn-add-house" style="width:100%;">Opslaan</button>
+                </div>
+
+                <div class="card" id="superadmin-sectie" style="display:none; border: 2px solid var(--danger);">
+                    <h3>👑 Rechten Uitdelen</h3>
+                    <p style="font-size: 0.9rem;">Geef een speler toegang tot dit beheerpaneel.</p>
+                    <input type="email" id="new-admin-email" placeholder="Google E-mailadres" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <button class="btn-danger" id="btn-add-admin" style="width:100%;">Maak Beheerder</button>
+                </div>
             </div>
         </section>
 
