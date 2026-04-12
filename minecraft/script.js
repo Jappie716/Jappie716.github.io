@@ -53,34 +53,26 @@ authBtn.addEventListener('click', () => {
 });
 
 onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
     const adminLink = document.getElementById('admin-link');
-    const superAdminSectie = document.getElementById('superadmin-sectie');
+    const superAdminBox = document.getElementById('superadmin-box');
 
     if (user) {
-        authBtn.innerText = "Uitloggen";
+        document.getElementById('auth-btn').innerText = "Uitloggen";
         
-        // Ben jij de opperbaas?
-        if (user.email === SUPER_ADMIN) {
-            adminLink.style.display = "inline-block";
-            superAdminSectie.style.display = "block";
-        } else {
-            // Zo niet, kijk in de database of je admin rechten hebt gekregen
-            try {
-                const roleDoc = await getDoc(doc(db, "roles", user.email));
-                if (roleDoc.exists() && roleDoc.data().isAdmin) {
-                    adminLink.style.display = "inline-block";
-                } else {
-                    adminLink.style.display = "none";
-                }
-            } catch (e) {
-                adminLink.style.display = "none";
+        // Check of jij het bent of een gemachtigde
+        const adminDoc = await getDoc(doc(db, "roles", user.email));
+        const isAdmin = user.email === "someoneheilig@gmail.com" || (adminDoc.exists() && adminDoc.data().isAdmin);
+
+        if (isAdmin) {
+            // WE DWINGEN DE KNOP ZICHTBAAR TE WORDEN
+            adminLink.style.setProperty('display', 'inline-block', 'important');
+            if (user.email === "someoneheilig@gmail.com" && superAdminBox) {
+                superAdminBox.style.display = 'block';
             }
         }
     } else {
-        authBtn.innerText = "Inloggen met Google";
-        adminLink.style.display = "none";
-        superAdminSectie.style.display = "none";
+        document.getElementById('auth-btn').innerText = "Inloggen";
+        adminLink.style.setProperty('display', 'none', 'important');
         showPage('home');
     }
 });
