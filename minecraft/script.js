@@ -16,7 +16,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const SUPER_ADMIN = "someoneheilig@gmail.com";
+const MY_EMAIL = "someoneheilig@gmail.com";
 let currentUser = null;
 
 // --- Navigatie ---
@@ -26,77 +26,77 @@ window.showPage = (id) => {
     if(target) target.classList.add('active');
 };
 
-// --- Inloggen & Rechten Fix ---
+// --- AUTH LOGICA (GECORRIGEERD) ---
 onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
+    currentUser = user; // CRUCIAAL: Nu weet de uitlogknop dat je er bent!
+    
     const adminLink = document.getElementById('admin-link');
-    const superAdminSectie = document.getElementById('superadmin-sectie'); // Gefixte ID
+    const superAdminSectie = document.getElementById('superadmin-sectie');
 
     if (user) {
         document.getElementById('auth-btn').innerText = "Uitloggen";
+        
         const adminDoc = await getDoc(doc(db, "roles", user.email));
-        const isAdmin = user.email === SUPER_ADMIN || (adminDoc.exists() && adminDoc.data().isAdmin);
+        const isAdmin = user.email === MY_EMAIL || (adminDoc.exists() && adminDoc.data().isAdmin);
 
-        if (isAdmin && adminLink) {
-            adminLink.style.display = "inline-block";
-            if (user.email === SUPER_ADMIN && superAdminSectie) {
-                superAdminSectie.style.display = "block";
-            }
+        if (isAdmin) {
+            if(adminLink) adminLink.style.display = "inline-block";
+            if(user.email === MY_EMAIL && superAdminSectie) superAdminSectie.style.display = "block";
         }
     } else {
-        document.getElementById('auth-btn').innerText = "Inloggen met Google";
+        document.getElementById('auth-btn').innerText = "Inloggen";
         if(adminLink) adminLink.style.display = "none";
+        if(superAdminSectie) superAdminSectie.style.display = "none";
         showPage('home');
     }
 });
 
-// Login button
 document.getElementById('auth-btn').addEventListener('click', () => {
-    if (currentUser) signOut(auth);
-    else signInWithPopup(auth, provider);
+    if (currentUser) {
+        signOut(auth).then(() => {
+            alert("Uitgelogd!");
+        });
+    } else {
+        signInWithPopup(auth, provider);
+    }
 });
 
-// --- Beheer Functies (Met veiligheidscheck) ---
-const handleAdd = async (id, collectionName, data) => {
+// --- DATA TOEVOEGEN ---
+const setupBtn = (id, col, dataFn) => {
     const btn = document.getElementById(id);
-    if(btn) {
-        btn.addEventListener('click', async () => {
-            try {
-                await addDoc(collection(db, collectionName), data());
-                alert("Toegevoegd!");
-            } catch(e) { alert("Fout: " + e.message); }
-        });
-    }
+    if(btn) btn.addEventListener('click', async () => {
+        try {
+            await addDoc(collection(db, col), dataFn());
+            alert("Succesvol toegevoegd!");
+        } catch(e) { alert("Fout: Geen rechten of database error."); }
+    });
 };
 
-handleAdd('btn-add-metro', 'metro', () => ({
+setupBtn('btn-add-metro', 'metro', () => ({
     lijn: document.getElementById('m-lijn').value,
     route: document.getElementById('m-route').value
 }));
 
-handleAdd('btn-add-flight', 'flights', () => ({
+setupBtn('btn-add-flight', 'flights', () => ({
     airline: document.getElementById('a-airline').value,
     dest: document.getElementById('a-dest').value,
     time: document.getElementById('a-time').value
 }));
 
-handleAdd('btn-add-house', 'houses', () => ({
+setupBtn('btn-add-house', 'houses', () => ({
     title: document.getElementById('h-title').value,
-    price: parseInt(document.getElementById('h-price').value),
-    img: "https://via.placeholder.com/400x200?text=Mestlo+Huis"
+    price: parseInt(document.getElementById('h-price').value)
 }));
 
-// Rechten geven
+// Rechten uitdelen
 const adminBtn = document.getElementById('btn-add-admin');
-if(adminBtn) {
-    adminBtn.addEventListener('click', async () => {
-        const email = document.getElementById('new-admin-email').value;
-        await setDoc(doc(db, "roles", email), { isAdmin: true });
-        alert("Beheerder toegevoegd!");
-    });
-}
+if(adminBtn) adminBtn.addEventListener('click', async () => {
+    const email = document.getElementById('new-admin-email').value;
+    await setDoc(doc(db, "roles", email), { isAdmin: true });
+    alert(email + " is nu admin!");
+});
 
-// --- Data Live Laden ---
+// --- LIVE DATA ---
 onSnapshot(collection(db, "metro"), (s) => {
     const d = document.getElementById('metro-display');
     if(d) d.innerHTML = s.docs.map(doc => `<div class="card"><h3>🚇 ${doc.data().lijn}</h3><p>${doc.data().route}</p></div>`).join('');
