@@ -30,15 +30,14 @@
         <section id="home" class="page active" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <div style="text-align: center; padding: 3rem 0;">
                 <h1>Welkom in Mestlo</h1>
-                <p>De meest bruisende Minecraft stad. Ontdek onze moderne infrastructuur, prachtige huizen en levendige economie.</p>
+                <p>De meest bruisende Minecraft stad.</p>
                 <button class="btn-primary" onclick="showPage('map')">Verken de stad</button>
             </div>
         </section>
 
         <section id="metro" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <h2>Mestlo Metro Systeem</h2>
-            <div class="grid" id="metro-display">
-                </div>
+            <div class="grid" id="metro-display"></div>
         </section>
 
         <section id="airport" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
@@ -46,68 +45,56 @@
             <div class="card">
                 <table class="data-table">
                     <thead><tr><th>Airline</th><th>Bestemming</th><th>Tijd</th></tr></thead>
-                    <tbody id="flight-display">
-                        </tbody>
+                    <tbody id="flight-display"></tbody>
                 </table>
             </div>
         </section>
 
         <section id="makelaar" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
             <h2>Mestlo Real Estate</h2>
-            <p>Vind jouw droomhuis in de stad.</p>
-            <div class="grid" id="house-display">
-                </div>
+            <div class="grid" id="house-display"></div>
         </section>
 
         <section id="map" class="page">
             <div style="position: relative; width: 100%; height: calc(100vh - 75px); background: #111;">
-                
-                <div id="map-warning" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.95); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; padding: 2rem;">
-                    <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">Let op: Map Status</h1>
-                    <p style="font-size: 1.5rem; max-width: 800px; margin-bottom: 2rem;">Als je hierna een grijs scherm of een foutmelding ziet, staat de server momenteel uit of blokkeert Ngrok de verbinding. <br><br>Hulp nodig? DM <strong>@japsurrr</strong> op Discord.</p>
-                    <button onclick="document.getElementById('map-warning').style.display='none'" style="padding: 1rem 2.5rem; font-size: 1.5rem; border-radius: 12px; border: none; background: white; color: var(--danger); font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">Ik heb het begrepen, laat de map zien</button>
+                <div id="map-warning" style="position: absolute; inset: 0; background: #ef4444; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; padding: 2rem;">
+                    <h1 style="font-size: 3.5rem;">LET OP!</h1>
+                    <p style="font-size: 1.5rem; max-width: 800px;">Als de kaart niet laadt, staat de server uit.</p>
+                    <button onclick="document.getElementById('map-warning').style.display='none'" style="padding: 1.5rem 3rem; font-size: 1.5rem; border-radius: 12px; border: none; background: white; color: #ef4444; font-weight: bold; cursor: pointer;">BEGREPEN</button>
                 </div>
-
                 <iframe src="https://sprint-frighten-straining.ngrok-free.dev/" style="width: 100%; height: 100%; border:none;"></iframe>
             </div>
         </section>
 
         <section id="admin" class="page" style="padding: 2rem; max-width: 1200px; margin: 0 auto;">
-            <h2 style="color: var(--primary);">Centraal Beheerpaneel</h2>
-            
+            <h2>Stad Beheer</h2>
             <div class="grid">
                 <div class="card">
                     <h3>🚇 Metro Toevoegen</h3>
-                    <input type="text" id="m-lijn" placeholder="Lijn (bijv. Lijn A)" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <input type="text" id="m-route" placeholder="Route (bijv. Centrum - Airport)" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <button class="btn-primary" id="btn-add-metro" style="width:100%;">Opslaan</button>
+                    <input type="text" id="m-lijn" placeholder="Lijn">
+                    <input type="text" id="m-route" placeholder="Route">
+                    <button class="btn-primary" id="btn-add-metro">Opslaan</button>
                 </div>
-
                 <div class="card">
                     <h3>✈️ Vlucht Toevoegen</h3>
-                    <input type="text" id="a-airline" placeholder="Airline (bijv. Elytra Air)" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <input type="text" id="a-dest" placeholder="Bestemming" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <input type="time" id="a-time" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <button class="btn-primary" id="btn-add-flight" style="width:100%;">Opslaan</button>
+                    <input type="text" id="a-airline" placeholder="Airline">
+                    <input type="text" id="a-dest" placeholder="Bestemming">
+                    <input type="time" id="a-time">
+                    <button class="btn-primary" id="btn-add-flight">Opslaan</button>
                 </div>
-
                 <div class="card">
-                    <h3>🏡 Huis Te Koop Zetten</h3>
-                    <input type="text" id="h-title" placeholder="Titel van het huis" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <input type="number" id="h-price" placeholder="Prijs (€)" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <input type="text" id="h-img" placeholder="Afbeelding URL (optioneel)" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <button class="btn-success" id="btn-add-house" style="width:100%;">Opslaan</button>
+                    <h3>🏡 Huis Toevoegen</h3>
+                    <input type="text" id="h-title" placeholder="Titel">
+                    <input type="number" id="h-price" placeholder="Prijs">
+                    <button class="btn-success" id="btn-add-house">Opslaan</button>
                 </div>
-
                 <div class="card" id="superadmin-sectie" style="display:none; border: 2px solid var(--danger);">
-                    <h3>👑 Rechten Uitdelen</h3>
-                    <p style="font-size: 0.9rem;">Geef een speler toegang tot dit beheerpaneel.</p>
-                    <input type="email" id="new-admin-email" placeholder="Google E-mailadres" style="width:100%; padding:10px; margin-bottom:10px;">
-                    <button class="btn-danger" id="btn-add-admin" style="width:100%;">Maak Beheerder</button>
+                    <h3>👑 Rechten</h3>
+                    <input type="email" id="new-admin-email" placeholder="E-mail">
+                    <button class="btn-danger" id="btn-add-admin">Maak Beheerder</button>
                 </div>
             </div>
         </section>
-
     </main>
 
     <script type="module" src="script.js"></script>
