@@ -74,3 +74,65 @@ input { background-color: var(--bg-color); color: var(--text-color); border: 1px
     .nav-links a { margin: 0.5rem 0; }
     .hamburger { display: block; }
 }
+
+/* --- Behoud je eigen mooie variabelen --- */
+:root {
+    --bg-color: #f4f4f9;
+    --surface-color: #ffffff;
+    --text-color: #333333;
+    --primary: #2563eb;
+    --danger: #ef4444;
+    --border: #e5e7eb;
+}
+
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --border: #333333;
+}
+
+/* --- Basis --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+body { background-color: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+
+/* --- Navigatie --- */
+.navbar {
+    display: flex; justify-content: space-between; align-items: center;
+    background-color: var(--surface-color); padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000;
+}
+
+/* --- Admin Elementen (Standaard VERBORGEN) --- */
+.admin-only {
+    display: none !important; /* Wordt door JS op 'block' of 'inline-block' gezet */
+}
+
+/* --- Kaart Overlay (100% ondoorzichtig) --- */
+#map-warning {
+    position: absolute;
+    inset: 0;
+    background-color: #ef4444; /* Fel rood, geen transparantie */
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    padding: 2rem;
+}
+
+/* --- Grid & Cards --- */
+.container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+.card { background: var(--surface-color); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); }
+
+/* --- Knoppen --- */
+button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+.btn-primary { background: var(--primary); color: white; padding: 0.75rem 1.5rem; }
+.btn-danger { background: var(--danger); color: white; padding: 0.75rem 1.5rem; }
+
+/* --- Tabel --- */
+.data-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.data-table th, .data-table td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; }
