@@ -1,210 +1,143 @@
-// --- Data ---
-const metroLines = [
-    { line: "Lijn A", stop: "Centraal Station", time: "Elke 5 min" },
-    { line: "Lijn A", stop: "Luchthaven MIA", time: "Elke 5 min" },
-    { line: "Lijn B", stop: "Zakendistrict", time: "Elke 8 min" },
-    { line: "Lijn C", stop: "Zuidwijk", time: "Elke 12 min" }
-];
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const flights = [
-    { airline: "Elytra Air", dest: "Spawn City", time: "14:30", status: "Op tijd" },
-    { airline: "Creeper Express", dest: "Nether Hub", time: "15:00", status: "Vertraagd" },
-    { airline: "Villager Airlines", dest: "End Gateway", time: "16:15", status: "Instappen" }
-];
+const firebaseConfig = {
+    apiKey: "AIzaSyA3Oth0nObDbK8fbDnG9nIVXrae7uimD_k",
+    authDomain: "minecraft-b2a3e.firebaseapp.com",
+    projectId: "minecraft-b2a3e",
+    storageBucket: "minecraft-b2a3e.firebasestorage.app",
+    messagingSenderId: "60597439184",
+    appId: "1:60597439184:web:be05605f8b8dc4b270acd5"
+};
 
-const houses = [
-    { id: 1, title: "Modern Appartement", desc: "Uitzicht op het centrum.", price: 150000, img: "https://via.placeholder.com/400x200?text=Appartement" },
-    { id: 2, title: "Luxe Villa", desc: "Inclusief zwembad en tuin.", price: 850000, img: "https://via.placeholder.com/400x200?text=Villa" },
-    { id: 3, title: "Gezellige Starterswoning", desc: "Dichtbij metrostation.", price: 95000, img: "https://via.placeholder.com/400x200?text=Starterswoning" }
-];
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-// --- App State ---
-let currentUser = JSON.parse(localStorage.getItem('mestlo_user')) || null;
-let usersDb = JSON.parse(localStorage.getItem('mestlo_db')) || {};
-let isLoginMode = true;
+let user = null;
 
-// --- Initialisatie ---
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    renderData();
-    updateUI();
-});
+// --- Pagina Navigatie ---
+window.showPage = (id) => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if(id === 'map') checkMapStatus();
+};
 
-// --- Navigatie ---
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-    document.getElementById(pageId).classList.add('active');
-    if(window.innerWidth <= 768) { document.querySelector('.nav-links').classList.remove('show'); }
-}
-
-function toggleMenu() {
-    document.querySelector('.nav-links').classList.toggle('show');
-}
-
-// --- Dark Mode ---
-const themeToggleBtn = document.getElementById('theme-toggle');
-function initTheme() {
-    if(localStorage.getItem('theme') === 'dark') {
-        document.body.setAttribute('data-theme', 'dark');
-        themeToggleBtn.innerText = '☀️';
-    }
-}
-themeToggleBtn.addEventListener('click', () => {
-    const isDark = document.body.getAttribute('data-theme') === 'dark';
-    if(isDark) {
-        document.body.removeAttribute('data-theme');
-        localStorage.setItem('theme', 'light');
-        themeToggleBtn.innerText = '🌙';
-    } else {
-        document.body.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-        themeToggleBtn.innerText = '☀️';
-    }
-});
-
-// --- Data Renderen ---
-function renderData() {
-    // Metro
-    const metroContainer = document.getElementById('metro-data');
-    metroLines.forEach(m => {
-        metroContainer.innerHTML += `
-            <div class="card">
-                <h3>${m.line}</h3>
-                <p><strong>Halte:</strong> ${m.stop}</p>
-                <p><strong>Vertrek:</strong> ${m.time}</p>
-            </div>`;
-    });
-
-    // Luchthaven
-    const flightContainer = document.getElementById('flight-data');
-    flights.forEach(f => {
-        flightContainer.innerHTML += `
-            <tr>
-                <td>${f.airline}</td><td>${f.dest}</td><td>${f.time}</td>
-                <td style="color: ${f.status === 'Vertraagd' ? 'var(--danger)' : 'var(--success)'}">${f.status}</td>
-            </tr>`;
-    });
-
-    // Makelaar
-    const estateContainer = document.getElementById('real-estate-data');
-    houses.forEach(h => {
-        estateContainer.innerHTML += `
-            <div class="card">
-                <img src="${h.img}" alt="${h.title}">
-                <h3>${h.title}</h3>
-                <p>${h.desc}</p>
-                <h3 style="color: var(--primary)">€ ${h.price.toLocaleString()}</h3>
-                <button class="btn-primary" onclick="buyHouse(${h.id}, ${h.price}, '${h.title}')">Kopen</button>
-            </div>`;
-    });
-}
-
-// --- Authenticatie Systeem ---
-function showAuthPage() {
-    if(currentUser) { showPage('dashboard'); } 
-    else { showPage('auth'); }
-}
-
-function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    document.getElementById('auth-title').innerText = isLoginMode ? 'Inloggen' : 'Registreren';
-    document.getElementById('auth-submit-btn').innerText = isLoginMode ? 'Inloggen' : 'Registreren';
-    document.querySelector('.toggle-text').innerHTML = isLoginMode ? 
-        'Geen account? <a href="#" onclick="toggleAuthMode()">Registreer hier</a>' : 
-        'Al een account? <a href="#" onclick="toggleAuthMode()">Log in</a>';
-    document.getElementById('auth-error').innerText = '';
-}
-
-function handleAuth() {
-    const userVal = document.getElementById('username').value.trim();
-    const passVal = document.getElementById('password').value.trim();
-    const errorEl = document.getElementById('auth-error');
-
-    if(!userVal || !passVal) { errorEl.innerText = "Vul alle velden in."; return; }
-
-    if(isLoginMode) {
-        if(usersDb[userVal] && usersDb[userVal].password === passVal) {
-            login(userVal);
-        } else {
-            errorEl.innerText = "Ongeldige inloggegevens.";
-        }
-    } else {
-        if(usersDb[userVal]) {
-            errorEl.innerText = "Gebruikersnaam bestaat al.";
-        } else {
-            usersDb[userVal] = { password: passVal, balance: 500000, properties: [], tickets: 0 };
-            saveDb();
-            login(userVal);
-        }
-    }
-}
-
-function login(username) {
-    currentUser = username;
-    localStorage.setItem('mestlo_user', JSON.stringify(currentUser));
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
-    updateUI();
-    showPage('dashboard');
-}
-
-function logout() {
-    currentUser = null;
-    localStorage.removeItem('mestlo_user');
-    updateUI();
-    showPage('home');
-}
-
-function saveDb() { localStorage.setItem('mestlo_db', JSON.stringify(usersDb)); }
-
-// --- Gebruikers Acties ---
-function buyMetroTicket() {
-    if(!currentUser) { alert("Je moet ingelogd zijn om een ticket te kopen!"); showPage('auth'); return; }
-    let user = usersDb[currentUser];
-    if(user.balance >= 2.50) {
-        user.balance -= 2.50;
-        user.tickets += 1;
-        saveDb();
-        alert("Metro ticket gekocht!");
-        updateUI();
-    } else { alert("Niet genoeg geld."); }
-}
-
-function buyHouse(id, price, title) {
-    if(!currentUser) { alert("Je moet ingelogd zijn om een huis te kopen!"); showPage('auth'); return; }
-    let user = usersDb[currentUser];
+// --- Kaart Status Check ---
+async function checkMapStatus() {
+    const frame = document.getElementById('map-frame');
+    const errorOverlay = document.getElementById('map-error');
     
-    if(user.properties.includes(title)) {
-        alert("Je bezit dit huis al!"); return;
-    }
-
-    if(user.balance >= price) {
-        user.balance -= price;
-        user.properties.push(title);
-        saveDb();
-        alert("Gefeliciteerd! Je hebt '" + title + "' gekocht!");
-        updateUI();
-        showPage('dashboard');
-    } else {
-        alert("Je hebt niet genoeg geld op je rekening. Saldo: €" + user.balance.toLocaleString());
+    // Omdat we de titel niet kunnen lezen van een ander domein, 
+    // gebruiken we een 'ping' techniek of een timeout.
+    try {
+        const response = await fetch(frame.src, { mode: 'no-cors' });
+        errorOverlay.style.display = "none"; 
+    } catch (e) {
+        errorOverlay.style.display = "flex";
     }
 }
 
-// --- UI Updates ---
-function updateUI() {
+// --- Authenticatie ---
+window.handleAuthAction = () => {
+    if (user) {
+        signOut(auth);
+    } else {
+        signInWithPopup(auth, provider);
+    }
+};
+
+onAuthStateChanged(auth, (u) => {
+    user = u;
     const authBtn = document.getElementById('auth-btn');
-    if(currentUser) {
-        authBtn.innerText = "Dashboard";
-        const user = usersDb[currentUser];
-        document.getElementById('dash-username').innerText = currentUser;
-        document.getElementById('dash-balance').innerText = '€ ' + user.balance.toLocaleString();
-        document.getElementById('dash-tickets').innerText = user.tickets;
+    const adminLink = document.getElementById('admin-link');
+    const userInfo = document.getElementById('user-info');
+
+    if (user) {
+        authBtn.innerText = "Uitloggen";
+        userInfo.innerText = `Ingelogd als ${user.displayName}`;
         
-        const propsEl = document.getElementById('dash-properties');
-        propsEl.innerHTML = user.properties.length > 0 
-            ? user.properties.map(p => `<li>${p}</li>`).join('')
-            : "<li>Je bezit nog geen huizen.</li>";
+        // Simuleer rechten: Iedereen die inlogt krijgt hier 'makelaar' rechten
+        // In een echte app zou je dit in Firestore checken: db.collection('users').doc(user.uid)
+        adminLink.style.display = "inline-block";
+        loadMyHouses();
     } else {
-        authBtn.innerText = "Inloggen";
+        authBtn.innerText = "Inloggen met Google";
+        userInfo.innerText = "";
+        adminLink.style.display = "none";
+        showPage('home');
     }
+});
+
+// --- Makelaar Logica (Firestore) ---
+window.addNewHouse = async () => {
+    const title = document.getElementById('h-title').value;
+    const price = document.getElementById('h-price').value;
+    const desc = document.getElementById('h-desc').value;
+    const img = document.getElementById('h-img').value;
+
+    if(!title || !price) return alert("Vul minstens een titel en prijs in!");
+
+    try {
+        await addDoc(collection(db, "houses"), {
+            title,
+            price: parseInt(price),
+            description: desc,
+            image: img || "https://via.placeholder.com/300",
+            ownerId: user.uid,
+            ownerName: user.displayName,
+            createdAt: new Date()
+        });
+        alert("Huis staat te koop!");
+        // Reset velden
+        document.getElementById('h-title').value = "";
+        document.getElementById('h-price').value = "";
+    } catch (e) {
+        console.error("Error adding house: ", e);
+    }
+};
+
+// Luister naar alle huizen voor de makelaar pagina
+onSnapshot(collection(db, "houses"), (snapshot) => {
+    const list = document.getElementById('house-list');
+    list.innerHTML = "";
+    snapshot.forEach((doc) => {
+        const h = doc.data();
+        list.innerHTML += `
+            <div class="card">
+                <img src="${h.image}" style="width:100%; border-radius:8px;">
+                <h3>${h.title}</h3>
+                <p>${h.description}</p>
+                <h2 style="color:var(--primary)">€ ${h.price.toLocaleString()}</h2>
+                <small>Verkoper: ${h.ownerName}</small>
+            </div>
+        `;
+    });
+});
+
+// Laad alleen jouw huizen in het beheerpaneel
+function loadMyHouses() {
+    if(!user) return;
+    const q = query(collection(db, "houses"), where("ownerId", "==", user.uid));
+    onSnapshot(q, (snapshot) => {
+        const list = document.getElementById('my-houses');
+        list.innerHTML = "";
+        snapshot.forEach((d) => {
+            const h = d.data();
+            list.innerHTML += `
+                <div style="border-bottom:1px solid var(--border); padding:10px; display:flex; justify-content:space-between;">
+                    <span>${h.title} - €${h.price}</span>
+                    <button onclick="deleteHouse('${d.id}')" style="color:red; background:none; border:none; cursor:pointer;">Verwijderen</button>
+                </div>
+            `;
+        });
+    });
 }
+
+window.deleteHouse = async (id) => {
+    if(confirm("Zeker weten?")) {
+        await deleteDoc(doc(db, "houses", id));
+    }
+};
