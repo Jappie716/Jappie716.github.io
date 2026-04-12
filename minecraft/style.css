@@ -1,0 +1,84 @@
+/* --- Variabelen (Lichte & Donkere modus) --- */
+:root {
+    --bg-color: #f4f4f9;
+    --surface-color: #ffffff;
+    --text-color: #333333;
+    --text-muted: #666666;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success: #10b981;
+    --danger: #ef4444;
+    --border: #e5e7eb;
+}
+
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #e0e0e0;
+    --text-muted: #a0a0a0;
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --border: #333333;
+}
+
+/* --- Basis Styling --- */
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
+h1, h2, h3 { margin-bottom: 1rem; }
+p { margin-bottom: 1rem; color: var(--text-muted); }
+
+/* --- Navigatie --- */
+.navbar {
+    display: flex; justify-content: space-between; align-items: center;
+    background-color: var(--surface-color); padding: 1rem 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100;
+}
+.logo { font-size: 1.5rem; font-weight: bold; cursor: pointer; color: var(--primary); }
+.nav-links a { text-decoration: none; color: var(--text-color); margin: 0 1rem; font-weight: 500; transition: color 0.2s; }
+.nav-links a:hover { color: var(--primary); }
+.hamburger { display: none; font-size: 1.5rem; cursor: pointer; }
+
+/* --- Knoppen --- */
+button { border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+.btn-primary { background-color: var(--primary); color: white; }
+.btn-primary:hover { background-color: var(--primary-hover); }
+.btn-success { background-color: var(--success); color: white; margin-bottom: 1rem; }
+.btn-danger { background-color: var(--danger); color: white; margin-bottom: 1rem;}
+.btn-icon { background: none; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; }
+
+/* --- Layout & Pagina's --- */
+#app-content { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+.page { display: none; animation: fadeIn 0.4s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- Cards & Grids --- */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+.card { background-color: var(--surface-color); border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border); transition: transform 0.2s; }
+.card:hover { transform: translateY(-5px); }
+.card img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem; background-color: #ddd; }
+
+/* --- Tabellen --- */
+.data-table { width: 100%; border-collapse: collapse; text-align: left; }
+.data-table th, .data-table td { padding: 0.75rem; border-bottom: 1px solid var(--border); }
+
+/* --- Kaart --- */
+.map-container { width: 100%; height: 400px; background-color: var(--surface-color); border-radius: 12px; border: 2px dashed var(--border); position: relative; overflow: hidden; }
+.fake-map { width: 100%; height: 100%; background: repeating-linear-gradient(45deg, var(--bg-color), var(--bg-color) 10px, var(--surface-color) 10px, var(--surface-color) 20px); position: relative;}
+.map-marker { position: absolute; background-color: var(--primary); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+/* --- Auth --- */
+.auth-card { max-width: 400px; margin: 2rem auto; background-color: var(--surface-color); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.auth-card input { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 8px; background-color: var(--bg-color); color: var(--text-color); }
+.error-text { color: var(--danger); font-size: 0.9rem; margin-bottom: 1rem; }
+.toggle-text { margin-top: 1rem; text-align: center; font-size: 0.9rem; }
+.toggle-text a { color: var(--primary); cursor: pointer; }
+
+/* --- Responsiviteit --- */
+@media (max-width: 768px) {
+    .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background-color: var(--surface-color); padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .nav-links.show { display: flex; }
+    .nav-links a { margin: 0.5rem 0; }
+    .hamburger { display: block; }
+}
