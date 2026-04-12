@@ -3,79 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mestlo | Minecraft Stad</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Mestlo City | Official Website</title>
+    <style>
+        /* --- MODERN STYLING (The "Mestlo Look") --- */
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+
+        /* Automatische Dark Mode detectie */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card-bg: #1e293b;
+                --text: #f1f5f9;
+                --text-light: #94a3b8;
+                --border: #334155;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); transition: 0.3s; line-height: 1.6; }
+
+        /* Navbar */
+        .navbar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1rem 5%; background: var(--card-bg);
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000;
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); cursor: pointer; }
+        .nav-links a { text-decoration: none; color: var(--text); margin: 0 1rem; font-weight: 500; transition: 0.2s; cursor: pointer; }
+        .nav-links a:hover { color: var(--primary); }
+
+        /* Knoppen */
+        .btn { padding: 0.6rem 1.2rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+
+        /* Main Content */
+        main { padding: 2rem 5%; max-width: 1200px; margin: 0 auto; }
+        .page { display: none; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Grid & Cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .card { 
+            background: var(--card-bg); padding: 1.5rem; border-radius: 16px; 
+            border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .card img { width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 1rem; }
+
+        /* Map Section */
+        #map-container { width: 100%; height: 80vh; border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--border); }
+        .map-error { 
+            position: absolute; inset: 0; background: var(--card-bg); 
+            display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;
+        }
+
+        /* Forms */
+        .input-group { margin-bottom: 1rem; }
+        input, textarea { 
+            width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--bg); color: var(--text); margin-top: 0.5rem;
+        }
+
+        /* Airport Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+
+        .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
+        .status-on-time { background: #dcfce7; color: #166534; }
+    </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="logo" onclick="showPage('home')">Mestlo City</div>
+        <div class="logo" onclick="showPage('home')">MESTLO</div>
         <div class="nav-links">
-            <a href="#" onclick="showPage('home')">Home</a>
-            <a href="#" onclick="showPage('metro')">Metro</a>
-            <a href="#" onclick="showPage('airport')">Luchthaven</a>
-            <a href="#" onclick="showPage('makelaar')">Makelaar</a>
-            <a href="#" onclick="showPage('map')">Kaart</a>
-            <a href="#" id="admin-link" style="display: none;" onclick="showPage('admin')">🛠 Beheer</a>
+            <a onclick="showPage('home')">Home</a>
+            <a onclick="showPage('metro')">Metro</a>
+            <a onclick="showPage('airport')">Airport</a>
+            <a onclick="showPage('makelaar')">Makelaar</a>
+            <a onclick="showPage('map')">Kaart</a>
+            <a id="admin-link" style="display:none; color: var(--success);" onclick="showPage('admin')">🛠 Beheer</a>
         </div>
-        <div class="nav-actions">
-            <div id="user-info"></div>
-            <button id="auth-btn" class="btn-primary" onclick="handleAuthAction()">Inloggen met Google</button>
+        <div id="auth-section">
+            <button class="btn btn-primary" id="login-btn">Inloggen met Google</button>
         </div>
-        <div class="hamburger" onclick="toggleMenu()">☰</div>
     </nav>
 
-    <main id="app-content">
-        
+    <main>
         <section id="home" class="page active">
-            <div class="hero">
-                <h1>Welkom in Mestlo</h1>
-                <p>De stad van de toekomst, aangedreven door de community.</p>
-                <button class="btn-primary" onclick="showPage('map')">Bekijk de Live Kaart</button>
+            <div style="text-align: center; padding: 4rem 0;">
+                <h1 style="font-size: 3rem; margin-bottom: 1rem;">Welkom in Mestlo</h1>
+                <p style="color: var(--text-light); font-size: 1.2rem; max-width: 600px; margin: 0 auto;">
+                    De modernste stad in Minecraft. Ontdek onze infrastructuur en vind jouw ideale woning.
+                </p>
             </div>
         </section>
 
         <section id="metro" class="page">
-            <h2>Mestlo Metro</h2>
-            <div class="grid" id="metro-list"></div>
+            <h2>Metro Systeem</h2>
+            <div class="grid">
+                <div class="card"><h3>Lijn Blauw</h3><p>Centrum ↔ Airport</p><small>Elke 5 minuten</small></div>
+                <div class="card"><h3>Lijn Rood</h3><p>Noord ↔ Zuidwijk</p><small>Elke 10 minuten</small></div>
+            </div>
+        </section>
+
+        <section id="airport" class="page">
+            <h2>Live Vluchttijden</h2>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Airline</th><th>Bestemming</th><th>Tijd</th><th>Status</th></tr></thead>
+                    <tbody>
+                        <tr><td>Elytra Air</td><td>Spawn City</td><td>14:05</td><td><span class="status-badge status-on-time">On Time</span></td></tr>
+                        <tr><td>Mestlo Jet</td><td>Villager Island</td><td>15:30</td><td><span class="status-badge status-on-time">On Time</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section id="makelaar" class="page">
-            <h2>Mestlo Real Estate</h2>
-            <div class="grid" id="house-list">
+            <h2>Beschikbare Woningen</h2>
+            <div class="grid" id="house-display">
                 </div>
         </section>
 
-        <section id="map" class="page" style="padding: 0; height: calc(100vh - 70px);">
-            <div id="map-error" class="map-overlay" style="display: none;">
-                <div class="error-box">
-                    <h3>Map momenteel offline</h3>
-                    <p>De server staat momenteel uit. Hulp nodig? Stuur een DM naar <strong>@japsurrr</strong> op Discord.</p>
+        <section id="map" class="page">
+            <div id="map-container">
+                <div id="map-error" class="map-error">
+                    <h2 style="color: var(--danger);">Kaart niet beschikbaar</h2>
+                    <p>De server staat momenteel uit of de kaart is niet bereikbaar.</p>
+                    <p style="margin-top: 1rem;">Hulp nodig? DM <strong>@japsurrr</strong> op Discord.</p>
                 </div>
+                <iframe id="journey-map" src="https://sprint-frighten-straining.ngrok-free.dev/" 
+                        style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
-            <iframe id="map-frame" src="https://sprint-frighten-straining.ngrok-free.dev/" width="100%" height="100%" frameborder="0"></iframe>
         </section>
 
         <section id="admin" class="page">
-            <h2>Beheerpaneel: <span id="admin-role-name">Makelaar</span></h2>
+            <h2>Makelaar Beheerpaneel</h2>
             <div class="card">
                 <h3>Nieuw Huis Toevoegen</h3>
-                <div class="form-group">
-                    <input type="text" id="h-title" placeholder="Titel van het huis">
-                    <input type="number" id="h-price" placeholder="Prijs (€)">
-                    <textarea id="h-desc" placeholder="Beschrijving"></textarea>
+                <div class="input-group">
+                    <input type="text" id="h-title" placeholder="Titel van de woning">
+                    <input type="number" id="h-price" placeholder="Prijs in €">
+                    <textarea id="h-desc" placeholder="Korte beschrijving van de woning..."></textarea>
                     <input type="text" id="h-img" placeholder="Afbeelding URL (bijv. Imgur link)">
-                    <button class="btn-success" onclick="addNewHouse()">Huis Publiceren</button>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="add-house-btn">Huis Online Zetten</button>
                 </div>
             </div>
-            <div class="card" style="margin-top: 20px;">
-                <h3>Jouw Advertenties</h3>
-                <div id="my-houses"></div>
-            </div>
         </section>
-
     </main>
 
-    <script type="module" src="script.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3Oth0nObDbK8fbDnG9nIVXrae7uimD_k",
+            authDomain: "minecraft-b2a3e.firebaseapp.com",
+            projectId: "minecraft-b2a3e",
+            storageBucket: "minecraft-b2a3e.firebasestorage.app",
+            messagingSenderId: "60597439184",
+            appId: "1:60597439184:web:be05605f8b8dc4b270acd5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentUser = null;
+
+        // --- NAVIGATIE ---
+        window.showPage = (id) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if (id === 'map') checkMapStatus();
+        };
+
+        // --- MAP LOGIC (JourneyMap Check) ---
+        function checkMapStatus() {
+            const iframe = document.getElementById('journey-map');
+            const errorOverlay = document.getElementById('map-error');
+            
+            // We proberen te checken of de ngrok link reageert
+            fetch("https://sprint-frighten-straining.ngrok-free.dev/", { mode: 'no-cors' })
+            .then(() => {
+                // In een perfecte wereld zouden we hier de titel checken.
+                // Omdat CORS dit blokkeert, gaan we ervan uit dat als de fetch slaagt, de map er is.
+                errorOverlay.style.display = "none";
+            })
+            .catch(() => {
+                errorOverlay.style.display = "flex";
+            });
+        }
+
+        // --- AUTH LOGIC ---
+        const loginBtn = document.getElementById('login-btn');
+        loginBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                signInWithPopup(auth, provider);
+            } else {
+                signOut(auth);
+            }
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const adminLink = document.getElementById('admin-link');
+            if (user) {
+                loginBtn.innerText = "Uitloggen";
+                adminLink.style.display = "inline-block";
+            } else {
+                loginBtn.innerText = "Inloggen met Google";
+                adminLink.style.display = "none";
+                showPage('home');
+            }
+        });
+
+        // --- MARELAAR LOGIC (FIRESTORE) ---
+        const addHouseBtn = document.getElementById('add-house-btn');
+        addHouseBtn.addEventListener('click', async () => {
+            const title = document.getElementById('h-title').value;
+            const price = document.getElementById('h-price').value;
+            const desc = document.getElementById('h-desc').value;
+            const img = document.getElementById('h-img').value;
+
+            if (!title || !price) return alert("Vul titel en prijs in!");
+
+            try {
+                await addDoc(collection(db, "houses"), {
+                    title, price, desc, 
+                    img: img || "https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=400",
+                    createdAt: new Date()
+                });
+                alert("Huis toegevoegd!");
+                showPage('makelaar');
+            } catch (e) {
+                alert("Error: " + e.message);
+            }
+        });
+
+        // Live huizen ophalen
+        const houseDisplay = document.getElementById('house-display');
+        const q = query(collection(db, "houses"), orderBy("createdAt", "desc"));
+        onSnapshot(q, (snapshot) => {
+            houseDisplay.innerHTML = "";
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                houseDisplay.innerHTML += `
+                    <div class="card">
+                        <img src="${data.img}">
+                        <h3>${data.title}</h3>
+                        <p style="color: var(--text-light); font-size: 0.9rem;">${data.desc}</p>
+                        <h2 style="color: var(--primary); margin-top: 1rem;">€ ${Number(data.price).toLocaleString()}</h2>
+                    </div>
+                `;
+            });
+        });
+
+    </script>
 </body>
 </html>
