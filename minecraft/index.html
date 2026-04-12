@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mestlo | Minecraft Stad</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo" onclick="showPage('home')">Mestlo City</div>
+        <div class="nav-links">
+            <a href="#" onclick="showPage('home')">Home</a>
+            <a href="#" onclick="showPage('metro')">Metro</a>
+            <a href="#" onclick="showPage('airport')">Luchthaven</a>
+            <a href="#" onclick="showPage('makelaar')">Makelaar</a>
+            <a href="#" onclick="showPage('map')">Kaart</a>
+        </div>
+        <div class="nav-actions">
+            <button id="theme-toggle" class="btn-icon">🌙</button>
+            <button id="auth-btn" class="btn-primary" onclick="showAuthPage()">Inloggen</button>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">☰</div>
+    </nav>
+
+    <main id="app-content">
+        
+        <section id="home" class="page active">
+            <div class="hero">
+                <h1>Welkom in Mestlo</h1>
+                <p>De meest bruisende Minecraft stad. Ontdek onze moderne infrastructuur, prachtige huizen en levendige economie.</p>
+                <button class="btn-primary" onclick="showPage('map')">Verken de stad</button>
+            </div>
+        </section>
+
+        <section id="metro" class="page">
+            <h2>Mestlo Metro Systeem</h2>
+            <p>Snel en betrouwbaar reizen door de hele stad.</p>
+            <button class="btn-success" onclick="buyMetroTicket()">Koop Metro Ticket (€2,50)</button>
+            <div class="grid" id="metro-data"></div>
+        </section>
+
+        <section id="airport" class="page">
+            <h2>Mestlo International Airport (MIA)</h2>
+            <div class="card">
+                <h3>Vluchtinformatie</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Airline</th><th>Bestemming</th><th>Tijd</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="flight-data"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="makelaar" class="page">
+            <h2>Mestlo Real Estate</h2>
+            <p>Vind jouw droomhuis in de stad.</p>
+            <div class="grid" id="real-estate-data"></div>
+        </section>
+
+        <section id="map" class="page">
+            <h2>Stadskaart</h2>
+            <div class="map-container">
+                <div class="fake-map">
+                    <span class="map-marker" style="top: 20%; left: 30%;">Airport</span>
+                    <span class="map-marker" style="top: 50%; left: 50%;">Centrum</span>
+                    <span class="map-marker" style="top: 70%; left: 80%;">Woonwijk</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="auth" class="page">
+            <div class="auth-card">
+                <h2 id="auth-title">Inloggen</h2>
+                <input type="text" id="username" placeholder="Gebruikersnaam" required>
+                <input type="password" id="password" placeholder="Wachtwoord" required>
+                <p id="auth-error" class="error-text"></p>
+                <button class="btn-primary" id="auth-submit-btn" onclick="handleAuth()">Inloggen</button>
+                <p class="toggle-text">Geen account? <a href="#" onclick="toggleAuthMode()">Registreer hier</a></p>
+            </div>
+        </section>
+
+        <section id="dashboard" class="page">
+            <h2>Welkom, <span id="dash-username"></span>!</h2>
+            <button class="btn-danger" onclick="logout()">Uitloggen</button>
+            
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>Mijn Portemonnee</h3>
+                    <p>Saldo: <strong id="dash-balance">€ 500,000</strong></p>
+                </div>
+                <div class="card">
+                    <h3>Mijn Eigendommen</h3>
+                    <ul id="dash-properties"></ul>
+                </div>
+                <div class="card">
+                    <h3>Mijn Tickets</h3>
+                    <p>Metro tickets: <strong id="dash-tickets">0</strong></p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
