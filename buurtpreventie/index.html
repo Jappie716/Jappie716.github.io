@@ -2,59 +2,89 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BuurtWacht Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buurtpreventie</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="light-mode">
 
     <div id="auth-screen" class="screen">
-        <div class="auth-card">
-            <h1>🛡️ BuurtWacht</h1>
-            <p>Veilig en verbonden in de wijk</p>
-            <input type="email" id="email" placeholder="E-mailadres">
-            <input type="password" id="password" placeholder="Wachtwoord">
-            <button id="login-btn">Inloggen</button>
-            <button id="register-btn" class="btn-secondary">Registreren</button>
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo-circle">🛡️</div>
+                <h1>BuurtWacht</h1>
+                <p>Samen houden we de wijk veilig</p>
+            </div>
+            <div class="auth-form">
+                <div class="input-field">
+                    <input type="email" id="email" placeholder="E-mailadres" required>
+                </div>
+                <div class="input-field">
+                    <input type="password" id="password" placeholder="Wachtwoord" required>
+                </div>
+                <button id="login-btn" class="main-btn">Inloggen</button>
+                <div class="divider"><span>of</span></div>
+                <button id="register-btn" class="sec-btn">Nieuw account maken</button>
+            </div>
         </div>
     </div>
 
     <div id="main-app" class="screen hidden">
-        <header>
+        <header class="top-bar">
             <h2 id="page-title">Buurt Feed</h2>
-            <button id="theme-toggle">🌙</button>
+            <div class="status-dot"></div>
         </header>
 
-        <main id="content-area">
-            <section id="feed-section" class="tab-content">
-                <div class="input-group">
-                    <input type="text" id="alert-input" placeholder="Wat is er aan de hand?">
-                    <button id="send-alert">Meld</button>
+        <main class="app-content">
+            <section id="feed-tab" class="tab-content">
+                <div class="quick-alert">
+                    <input type="text" id="alert-input" placeholder="Verdachte situatie melden...">
+                    <button id="send-alert"><i data-lucide="send"></i></button>
                 </div>
-                <div id="alerts-list"></div>
+                <div id="alerts-list" class="scroll-area"></div>
             </section>
 
-            <section id="huis-section" class="tab-content hidden">
-                <h3>Mijn Virtuele Huis</h3>
-                <div class="furniture-bank">
-                    <div class="item" draggable="true" data-type="🛋️">🛋️</div>
-                    <div class="item" draggable="true" data-type="🪴">🪴</div>
-                    <div class="item" draggable="true" data-type="🪑">🪑</div>
+            <section id="huis-tab" class="tab-content hidden">
+                <div class="section-header">
+                    <h3>Mijn Virtuele Huis</h3>
+                    <p>Sleep meubels om je huis in te richten</p>
                 </div>
-                <div id="house-grid" class="dropzone"></div>
-                <button id="save-house">Inrichting Opslaan</button>
+                <div class="furniture-bar">
+                    <span class="drag-item" draggable="true" data-emoji="🛋️">🛋️</span>
+                    <span class="drag-item" draggable="true" data-emoji="🪴">🪴</span>
+                    <span class="drag-item" draggable="true" data-emoji="📺">📺</span>
+                    <span class="drag-item" draggable="true" data-emoji="🪑">🪑</span>
+                    <span class="drag-item" draggable="true" data-emoji="🛌">🛌</span>
+                </div>
+                <div id="house-canvas" class="dropzone"></div>
+            </section>
+
+            <section id="settings-tab" class="tab-content hidden">
+                <div class="profile-card">
+                    <div class="avatar">👤</div>
+                    <h4 id="user-display-email">Gebruiker</h4>
+                </div>
+                <div class="settings-list">
+                    <div class="setting-item">
+                        <span>Donkere Modus</span>
+                        <label class="switch">
+                            <input type="checkbox" id="dark-mode-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <button id="logout-btn" class="danger-btn">Uitloggen</button>
+                </div>
             </section>
         </main>
 
-        <nav class="bottom-nav">
-            <button onclick="showTab('feed')"><i data-lucide="shield"></i><span>Feed</span></button>
-            <button onclick="showTab('huis')"><i data-lucide="home"></i><span>Huis</span></button>
-            <button id="logout-btn"><i data-lucide="log-out"></i><span>Uitloggen</span></button>
+        <nav class="nav-bar">
+            <button class="nav-item active" onclick="showTab('feed')"><i data-lucide="shield"></i><span>Feed</span></button>
+            <button class="nav-item" onclick="showTab('huis')"><i data-lucide="home"></i><span>Huis</span></button>
+            <button class="nav-item" onclick="showTab('settings')"><i data-lucide="settings"></i><span>Opties</span></button>
         </nav>
     </div>
 
     <script type="module" src="script.js"></script>
-    <script>lucide.createIcons();</script>
 </body>
 </html>
