@@ -10,7 +10,7 @@ export function initWorld() {
 
 function loadMap() {
     return onSnapshot(collection(db, "users"), (snapshot) => {
-        const mapEl = document.getElementById('world-map');
+        const mapEl = document.querySelector('.world-map');
         if (!mapEl) return;
         
         mapEl.innerHTML = `
