@@ -105,6 +105,14 @@
                 </section>
             </main>
         </div>
+        <div id="doorbell-modal" class="hidden auth-box pulse" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; border: 4px solid var(--primary);">
+    <div class="logo-icon">🔔</div>
+    <h2 id="doorbell-msg">Iemand staat voor de deur!</h2>
+    <div class="row">
+        <button id="accept-door-btn" class="primary-btn">Opendoen</button>
+        <button id="decline-door-btn" class="secondary-btn">Negeren</button>
+    </div>
+</div>
 
         <nav class="mobile-nav">
             <button onclick="showTab('world')"><i data-lucide="map"></i></button>
