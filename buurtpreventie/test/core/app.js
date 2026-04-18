@@ -72,5 +72,9 @@ export function enterRoom(roomName) {
     alert(`Welkom in de ${roomName}!`);
 }
 
-window.showTab = (id) => navigateTo(id);
-window.enterRoom = (roomName) => alert(`Welkom in de ${roomName}!`);
+if (typeof window !== 'undefined') {
+    window.showTab = (id) => navigateTo(id);
+    window.enterRoom = (roomName) => alert(`Welkom in de ${roomName}!`);
+}
+
+export { navigateTo, updatePageTitle, showAuthScreen, showMainApp, state, logout, showTab, enterRoom };
