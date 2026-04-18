@@ -77,3 +77,7 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
 .secondary-btn { background: none; color: var(--primary); border: 2px solid var(--primary); width: 100%; padding: 12px; border-radius: 12px; font-weight: bold; margin-top: 10px; cursor: pointer; transition: 0.2s; }
 .secondary-btn:hover { background: var(--primary); color: white; }
 .row { display: flex; gap: 10px; }
+
+.neighbor-house { background: #f59e0b; } /* Oranje kleur voor buren */
+.neighbor-house:hover { filter: brightness(1.1); transform: scale(1.05); }
+.my-house { background: var(--primary); color: white; }
