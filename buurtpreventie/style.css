@@ -1,69 +1,45 @@
 :root {
-    --primary: #2563eb;
-    --primary-dark: #1e40af;
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: #e2e8f0;
+    --primary: #2563eb; --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --sidebar: #111827;
 }
 
 .dark-mode {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --text: #f8fafc;
-    --muted: #94a3b8;
-    --border: #334155;
+    --bg: #111827; --card: #1f2937; --text: #f9fafb; --sidebar: #000000;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); transition: 0.3s; }
-
-.screen { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 .hidden { display: none !important; }
 
-/* Inlog Scherm */
-.auth-container { padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; }
-.auth-header { text-align: center; margin-bottom: 30px; }
-.logo-circle { font-size: 50px; background: white; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
-.auth-form { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; color: var(--text); box-shadow: 0 20px 25px rgba(0,0,0,0.1); }
+/* Sidebar & Layout */
+.app-container { display: flex; height: 100vh; width: 100vw; }
+.sidebar { width: 260px; background: var(--sidebar); color: white; padding: 20px; display: flex; flex-direction: column; }
+.sidebar button { background: none; border: none; color: #9ca3af; padding: 15px; text-align: left; font-size: 16px; cursor: pointer; display: flex; gap: 10px; }
+.sidebar button:hover { color: white; background: #374151; border-radius: 8px; }
 
-.input-field input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); }
-.main-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; }
-.sec-btn { background: none; color: var(--primary); border: 2px solid var(--primary); padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; margin-top: 10px; cursor: pointer; }
+.content-wrapper { flex: 1; display: flex; flex-direction: column; }
+.top-nav { height: 60px; background: var(--card); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-bottom: 1px solid #ddd; }
 
-/* Main UI */
-.top-bar { padding: 20px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.app-content { flex: 1; overflow-y: auto; padding-bottom: 80px; }
+/* World Map */
+.world-map { height: 100%; background: #a3e635; display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 30px; }
+.building { background: #64748b; color: white; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; box-shadow: 0 8px 0 #334155; }
+.building span { font-size: 14px; margin-top: 10px; font-weight: bold; background: white; color: black; padding: 2px 8px; border-radius: 5px; }
 
-/* Feed */
-.quick-alert { display: flex; padding: 15px; gap: 10px; position: sticky; top: 0; background: var(--bg); }
-.quick-alert input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
-.quick-alert button { width: 45px; height: 45px; border-radius: 50%; border: none; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; }
+/* Game Area */
+.game-area { height: 400px; background: #e5e7eb; margin: 20px; border-radius: 20px; position: relative; border: 4px solid #9ca3af; }
+.player-token { position: absolute; font-size: 30px; text-align: center; transition: 0.5s; }
+.player-token span { display: block; font-size: 10px; background: black; color: white; padding: 2px; border-radius: 3px; }
 
-.card { background: var(--card); margin: 10px 15px; padding: 15px; border-radius: 15px; border: 1px solid var(--border); }
-.card strong { display: block; font-size: 0.8em; color: var(--primary); margin-bottom: 5px; }
+/* Huis Editor */
+#house-canvas { height: 400px; background: white; margin: 20px; border: 2px dashed #9ca3af; position: relative; }
+.toolbar { padding: 15px; display: flex; gap: 20px; font-size: 30px; background: var(--card); }
+.placed-obj { position: absolute; font-size: 30px; cursor: move; }
 
-/* Huis Drag & Drop */
-#house-canvas { height: 350px; background: var(--card); margin: 15px; border-radius: 20px; border: 2px dashed var(--border); position: relative; overflow: hidden; }
-.furniture-bar { display: flex; gap: 15px; padding: 15px; overflow-x: auto; background: var(--card); margin-bottom: 10px; }
-.drag-item { font-size: 30px; cursor: grab; }
-.placed-item { position: absolute; font-size: 35px; cursor: move; touch-action: none; }
+/* Mobile optimization */
+@media (max-width: 768px) {
+    .sidebar { display: none; }
+    .mobile-nav { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; background: var(--card); padding: 15px; border-top: 1px solid #ddd; }
+}
 
-/* Bottom Nav */
-.nav-bar { position: fixed; bottom: 0; width: 100%; display: flex; justify-content: space-around; background: var(--card); padding: 10px; border-top: 1px solid var(--border); }
-.nav-item { background: none; border: none; color: var(--muted); display: flex; flex-direction: column; align-items: center; font-size: 11px; gap: 4px; }
-.nav-item.active { color: var(--primary); }
-
-/* Settings */
-.settings-list { padding: 20px; }
-.setting-item { display: flex; justify-content: space-between; padding: 15px; background: var(--card); border-radius: 12px; margin-bottom: 10px; }
-.danger-btn { background: #fee2e2; color: #ef4444; border: none; padding: 15px; border-radius: 12px; width: 100%; margin-top: 20px; font-weight: bold; }
-
-/* Switch Toggle */
-.switch { position: relative; display: inline-block; width: 50px; height: 24px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .slider { background-color: var(--primary); }
-input:checked + .slider:before { transform: translateX(24px); }
+/* Auth boxes */
+.auth-box { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; }
+.primary-btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; }
