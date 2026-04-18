@@ -1,15 +1,22 @@
 import { auth, db } from '../../core/firebase-config.js';
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { ringDoorbell } from '../../components/doorbell-modal.js';
-import { showTab } from '../../core/app.js';
-import { state } from '../../core/app.js';
 
 export function initWorld() {
     loadMap();
 }
 
 function loadMap() {
+    console.log('Loading map...');
+    const mapEl = document.querySelector('.world-map');
+    console.log('mapEl:', mapEl);
+    
     return onSnapshot(collection(db, "users"), (snapshot) => {
+        if (!mapEl) return;
+        mapEl.innerHTML = `
+            <div class="building bingo" onclick="window.enterRoom('Bingo Club')">🎰<span>Bingo Club</span></div>
+            <div class="building park" onclick="window.enterRoom('Buurtpark')">🌳<span>Buurtpark</span></div>
+        `;
         const mapEl = document.querySelector('.world-map');
         if (!mapEl) return;
         
@@ -29,7 +36,7 @@ function loadMap() {
             
             b.onclick = () => {
                 if (isMe) {
-                    showTab('huis');
+                    window.showTab('huis');
                 } else {
                     ringDoorbell(uid, data.username);
                 }
