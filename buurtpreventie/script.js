@@ -15,12 +15,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// AUTH & ONBOARDING
+let currentUserProfile = null;
+
+// AUTH CONTROLE
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const snap = await getDoc(doc(db, "users", user.uid));
         if (snap.exists()) {
-            startApp(snap.data());
+            currentUserProfile = snap.data();
+            startApp();
         } else {
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('onboarding-form').classList.remove('hidden');
@@ -31,80 +34,89 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value);
-document.getElementById('register-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value);
+// LOGIN / REGISTER
+document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
+document.getElementById('register-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
+// PROFIEL OPSLAAN
 document.getElementById('save-profile-btn').onclick = async () => {
-    const profiel = { 
-        username: username.value, 
-        straat: straat.value, 
-        leeftijd: leeftijd.value, 
-        geslacht: geslacht.value 
+    const profiel = {
+        username: document.getElementById('username').value,
+        straat: document.getElementById('straat').value,
+        leeftijd: document.getElementById('leeftijd').value,
+        geslacht: document.getElementById('geslacht').value
     };
+    if(!profiel.username) return alert("Kies een gebruikersnaam!");
     await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
-    startApp(profiel);
+    currentUserProfile = profiel;
+    startApp();
 };
 
-function startApp(data) {
+function startApp() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
-    document.getElementById('user-badge').innerText = `👤 ${data.username}`;
-    loadFeed();
+    document.getElementById('user-display-name').innerText = `👤 ${currentUserProfile.username}`;
+    initChat();
+    lucide.createIcons();
 }
 
-// MULTIPLAYER ROOMS
-window.enterRoom = (name) => {
-    showTab('room');
-    document.getElementById('room-name').innerText = name;
-    updatePresence(name);
+// LIVE CHAT LOGICA
+function initChat() {
+    const q = query(collection(db, "chats"), orderBy("time", "asc"));
+    onSnapshot(q, (snapshot) => {
+        const chatBox = document.getElementById('chat-messages');
+        chatBox.innerHTML = "";
+        snapshot.forEach(d => {
+            const data = d.data();
+            const isOwn = data.userId === auth.currentUser.uid;
+            chatBox.innerHTML += `
+                <div class="msg ${isOwn ? 'own' : 'others'}">
+                    <span class="msg-info">${data.username} • ${data.straat || ''}</span>
+                    ${data.text}
+                </div>`;
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
+document.getElementById('send-chat-btn').onclick = async () => {
+    const input = document.getElementById('chat-input');
+    if(!input.value.trim()) return;
+    await addDoc(collection(db, "chats"), {
+        text: input.value,
+        username: currentUserProfile.username,
+        straat: currentUserProfile.straat,
+        userId: auth.currentUser.uid,
+        time: serverTimestamp()
+    });
+    input.value = "";
 };
 
-async function updatePresence(room) {
-    await setDoc(doc(db, "presence", auth.currentUser.uid), {
-        name: auth.currentUser.email.split('@')[0],
-        room: room,
-        x: Math.random() * 80,
-        y: Math.random() * 80
-    });
-    
-    onSnapshot(query(collection(db, "presence")), (snap) => {
-        const canvas = document.getElementById('game-canvas');
-        canvas.innerHTML = "";
-        snap.forEach(d => {
-            if(d.data().room === room) {
-                const p = document.createElement('div');
-                p.className = 'player-token';
-                p.innerHTML = `👤<span>${d.data().name}</span>`;
-                p.style.left = d.data().x + "%";
-                p.style.top = d.data().y + "%";
-                canvas.appendChild(p);
-            }
-        });
-    });
-}
-
-// DRAG & DROP HOUSE
-let heldEmoji = "";
+// VIRTUEEL HUIS DRAG & DROP
+let draggedEmoji = "";
 document.querySelectorAll('.drag-obj').forEach(obj => {
-    obj.ondragstart = (e) => heldEmoji = e.target.dataset.type;
+    obj.ondragstart = (e) => draggedEmoji = e.target.dataset.type;
 });
 
-const house = document.getElementById('house-canvas');
-house.ondragover = (e) => e.preventDefault();
-house.ondrop = (e) => {
-    const rect = house.getBoundingClientRect();
-    const item = document.createElement('div');
-    item.className = 'placed-obj';
-    item.innerHTML = heldEmoji;
-    item.style.left = (e.clientX - rect.left) + "px";
-    item.style.top = (e.clientY - rect.top) + "px";
-    house.appendChild(item);
+const canvas = document.getElementById('house-canvas');
+canvas.ondragover = (e) => e.preventDefault();
+canvas.ondrop = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - 20;
+    const y = e.clientY - rect.top - 20;
+    const el = document.createElement('div');
+    el.className = 'placed-obj';
+    el.innerHTML = draggedEmoji;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    canvas.appendChild(el);
 };
 
-// TABS & THEME
+// NAVIGATIE
 window.showTab = (id) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`${id}-tab`).classList.remove('hidden');
     document.getElementById('page-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
     lucide.createIcons();
@@ -112,26 +124,6 @@ window.showTab = (id) => {
 
 document.getElementById('dark-toggle').onchange = (e) => {
     document.body.className = e.target.checked ? 'dark-mode' : 'light-mode';
-};
-
-// FEED LOGICA
-function loadFeed() {
-    onSnapshot(query(collection(db, "posts"), orderBy("time", "desc")), (snap) => {
-        const list = document.getElementById('feed-list');
-        list.innerHTML = "";
-        snap.forEach(d => {
-            list.innerHTML += `<div class="card"><strong>${d.data().user}</strong><p>${d.data().text}</p></div>`;
-        });
-    });
-}
-
-document.getElementById('post-btn').onclick = async () => {
-    await addDoc(collection(db, "posts"), {
-        text: document.getElementById('post-input').value,
-        user: auth.currentUser.email,
-        time: serverTimestamp()
-    });
-    document.getElementById('post-input').value = "";
 };
 
 lucide.createIcons();
