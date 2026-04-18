@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BuurtWacht World</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -10,17 +10,18 @@
 <body class="light-mode">
 
     <div id="auth-screen" class="screen">
-        <div class="auth-box" id="login-form">
-            <h1>🛡️ BuurtWacht</h1>
+        <div class="auth-box pulse" id="login-form">
+            <div class="logo-icon">🛡️</div>
+            <h1>BuurtWacht</h1>
             <input type="email" id="email" placeholder="E-mail">
             <input type="password" id="password" placeholder="Wachtwoord">
             <button id="login-btn" class="primary-btn">Inloggen</button>
-            <button id="register-btn" class="secondary-btn">Account maken</button>
+            <button id="register-btn" class="secondary-btn">Account aanmaken</button>
         </div>
 
         <div class="auth-box hidden" id="onboarding-form">
-            <h2>Welkom! 🏠</h2>
-            <p>Vul je profiel in om te beginnen</p>
+            <h2>Welkom in de buurt! 🏠</h2>
+            <p>Stel je profiel in</p>
             <input type="text" id="username" placeholder="Gebruikersnaam">
             <input type="text" id="straat" placeholder="Straatnaam">
             <div class="row">
@@ -31,7 +32,7 @@
                     <option value="Anders">Anders</option>
                 </select>
             </div>
-            <button id="save-profile-btn" class="primary-btn">De wijk in gaan</button>
+            <button id="save-profile-btn" class="primary-btn">Starten</button>
         </div>
     </div>
 
@@ -40,62 +41,65 @@
         <aside class="sidebar">
             <div class="sidebar-logo">🛡️ BuurtWacht</div>
             <nav>
-                <button onclick="showTab('world')"><i data-lucide="map"></i> De Wijk</button>
-                <button onclick="showTab('feed')"><i data-lucide="shield"></i> Buurt Feed</button>
-                <button onclick="showTab('huis')"><i data-lucide="home"></i> Mijn Huis</button>
-                <button onclick="showTab('settings')"><i data-lucide="settings"></i> Instellingen</button>
+                <button onclick="showTab('world')" class="nav-btn active"><i data-lucide="map"></i> De Wijk</button>
+                <button onclick="showTab('chat')" class="nav-btn"><i data-lucide="message-circle"></i> BuurtChat</button>
+                <button onclick="showTab('huis')" class="nav-btn"><i data-lucide="home"></i> Mijn Huis</button>
+                <button onclick="showTab('settings')" class="nav-btn"><i data-lucide="settings"></i> Instellingen</button>
             </nav>
+            <div class="sidebar-footer">
+                <div id="user-display-name">...</div>
+            </div>
         </aside>
 
         <div class="content-wrapper">
             <header class="top-nav">
                 <h2 id="page-title">De Wijk</h2>
-                <div id="user-badge" class="badge">Laden...</div>
+                <div class="header-icons">
+                    <i data-lucide="bell" size="20"></i>
+                </div>
             </header>
 
             <main class="viewport">
                 <section id="world-tab" class="tab-content">
                     <div class="world-map">
-                        <div class="building bingo" onclick="enterRoom('Bingo Club')">🎰 <span>Bingo Club</span></div>
-                        <div class="building my-house" onclick="showTab('huis')">🏡 <span>Mijn Huis</span></div>
-                        <div class="building park">🌳 <span>Buurtpark</span></div>
+                        <div class="building bingo" onclick="enterRoom('Bingo Club')">🎰<span>Bingo Club</span></div>
+                        <div class="building my-house" onclick="showTab('huis')">🏡<span>Mijn Huis</span></div>
+                        <div class="building park">🌳<span>Buurtpark</span></div>
                     </div>
                 </section>
 
-                <section id="feed-tab" class="tab-content hidden">
-                    <div class="post-box">
-                        <input type="text" id="post-input" placeholder="Meld een verdachte situatie...">
-                        <button id="post-btn">Meld</button>
+                <section id="chat-tab" class="tab-content hidden">
+                    <div class="chat-container">
+                        <div id="chat-messages" class="chat-scroll"></div>
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-input" placeholder="Typ een bericht...">
+                            <button id="send-chat-btn"><i data-lucide="send"></i></button>
+                        </div>
                     </div>
-                    <div id="feed-list"></div>
-                </section>
-
-                <section id="room-tab" class="tab-content hidden">
-                    <div class="room-header">
-                        <button onclick="showTab('world')">⬅ Terug</button>
-                        <h3 id="room-name">Bingo Club</h3>
-                    </div>
-                    <div id="game-canvas" class="game-area"></div>
                 </section>
 
                 <section id="huis-tab" class="tab-content hidden">
-                    <div class="toolbar">
+                    <div class="game-toolbar">
                         <span class="drag-obj" draggable="true" data-type="🛋️">🛋️</span>
                         <span class="drag-obj" draggable="true" data-type="🪴">🪴</span>
                         <span class="drag-obj" draggable="true" data-type="📺">📺</span>
                         <span class="drag-obj" draggable="true" data-type="🪑">🪑</span>
+                        <span class="drag-obj" draggable="true" data-type="🍕">🍕</span>
                     </div>
-                    <div id="house-canvas" class="dropzone"></div>
+                    <div id="house-canvas" class="game-room"></div>
                 </section>
 
                 <section id="settings-tab" class="tab-content hidden">
-                    <div class="card">
-                        <h3>Opties</h3>
-                        <div class="setting-row">
+                    <div class="settings-card">
+                        <h3>Voorkeuren</h3>
+                        <div class="setting-item">
                             <span>Donkere Modus</span>
-                            <input type="checkbox" id="dark-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="dark-toggle">
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                        <button id="logout-btn" class="danger-btn">Uitloggen</button>
+                        <button id="logout-btn" class="logout-btn">Log uit</button>
                     </div>
                 </section>
             </main>
@@ -103,8 +107,9 @@
 
         <nav class="mobile-nav">
             <button onclick="showTab('world')"><i data-lucide="map"></i></button>
-            <button onclick="showTab('feed')"><i data-lucide="shield"></i></button>
+            <button onclick="showTab('chat')"><i data-lucide="message-circle"></i></button>
             <button onclick="showTab('huis')"><i data-lucide="home"></i></button>
+            <button onclick="showTab('settings')"><i data-lucide="settings"></i></button>
         </nav>
     </div>
 
