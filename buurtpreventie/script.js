@@ -1,112 +1,137 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// JOUW CONFIG
 const firebaseConfig = {
-    apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
-    authDomain: "buurtpreventie-b74ad.firebaseapp.com",
-    projectId: "buurtpreventie-b74ad",
-    storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
-    messagingSenderId: "374517472678",
-    appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
+  apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
+  authDomain: "buurtpreventie-b74ad.firebaseapp.com",
+  projectId: "buurtpreventie-b74ad",
+  storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
+  messagingSenderId: "374517472678",
+  appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// AUTH LOGICA
-const loginBtn = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
-
-loginBtn.onclick = () => {
-    signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert("Fout: " + e.message));
-};
-
-registerBtn.onclick = () => {
-    createUserWithEmailAndPassword(auth, email.value, password.value).then(() => alert("Account aangemaakt!")).catch(e => alert(e.message));
-};
-
-document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-onAuthStateChanged(auth, (user) => {
+// AUTH & ONBOARDING
+onAuthStateChanged(auth, async (user) => {
     if (user) {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('main-app').classList.remove('hidden');
-        document.getElementById('user-display-email').innerText = user.email;
-        initFeed();
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if (snap.exists()) {
+            startApp(snap.data());
+        } else {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('onboarding-form').classList.remove('hidden');
+        }
     } else {
         document.getElementById('auth-screen').classList.remove('hidden');
         document.getElementById('main-app').classList.add('hidden');
     }
 });
 
-// TAB NAVIGATIE
-window.showTab = (tabId) => {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    
-    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
-    event.currentTarget.classList.add('active');
-    
-    const titles = { feed: "Buurt Feed", huis: "Mijn Huis", settings: "Instellingen" };
-    document.getElementById('page-title').innerText = titles[tabId];
+document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value);
+document.getElementById('register-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value);
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+
+document.getElementById('save-profile-btn').onclick = async () => {
+    const profiel = { 
+        username: username.value, 
+        straat: straat.value, 
+        leeftijd: leeftijd.value, 
+        geslacht: geslacht.value 
+    };
+    await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
+    startApp(profiel);
 };
 
-// FEED LOGICA
-function initFeed() {
-    const q = query(collection(db, "alerts"), orderBy("time", "desc"));
-    onSnapshot(q, (snapshot) => {
-        const list = document.getElementById('alerts-list');
-        list.innerHTML = "";
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            list.innerHTML += `
-                <div class="card pulse">
-                    <strong>📍 ${data.user.split('@')[0]}</strong>
-                    <p>${data.text}</p>
-                </div>`;
+function startApp(data) {
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('user-badge').innerText = `👤 ${data.username}`;
+    loadFeed();
+}
+
+// MULTIPLAYER ROOMS
+window.enterRoom = (name) => {
+    showTab('room');
+    document.getElementById('room-name').innerText = name;
+    updatePresence(name);
+};
+
+async function updatePresence(room) {
+    await setDoc(doc(db, "presence", auth.currentUser.uid), {
+        name: auth.currentUser.email.split('@')[0],
+        room: room,
+        x: Math.random() * 80,
+        y: Math.random() * 80
+    });
+    
+    onSnapshot(query(collection(db, "presence")), (snap) => {
+        const canvas = document.getElementById('game-canvas');
+        canvas.innerHTML = "";
+        snap.forEach(d => {
+            if(d.data().room === room) {
+                const p = document.createElement('div');
+                p.className = 'player-token';
+                p.innerHTML = `👤<span>${d.data().name}</span>`;
+                p.style.left = d.data().x + "%";
+                p.style.top = d.data().y + "%";
+                canvas.appendChild(p);
+            }
         });
     });
 }
 
-document.getElementById('send-alert').onclick = async () => {
-    const input = document.getElementById('alert-input');
-    if(!input.value) return;
-    await addDoc(collection(db, "alerts"), {
-        text: input.value,
-        user: auth.currentUser.email,
-        time: serverTimestamp()
-    });
-    input.value = "";
-};
-
-// VIRTUEEL HUIS (Drag & Drop)
-let currentEmoji = "";
-document.querySelectorAll('.drag-item').forEach(item => {
-    item.ondragstart = (e) => currentEmoji = e.target.dataset.emoji;
+// DRAG & DROP HOUSE
+let heldEmoji = "";
+document.querySelectorAll('.drag-obj').forEach(obj => {
+    obj.ondragstart = (e) => heldEmoji = e.target.dataset.type;
 });
 
-const canvas = document.getElementById('house-canvas');
-canvas.ondragover = (e) => e.preventDefault();
-canvas.ondrop = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - 15;
-    const y = e.clientY - rect.top - 15;
-    
-    const el = document.createElement('div');
-    el.className = 'placed-item';
-    el.innerHTML = currentEmoji;
-    el.style.left = x + "px";
-    el.style.top = y + "px";
-    canvas.appendChild(el);
+const house = document.getElementById('house-canvas');
+house.ondragover = (e) => e.preventDefault();
+house.ondrop = (e) => {
+    const rect = house.getBoundingClientRect();
+    const item = document.createElement('div');
+    item.className = 'placed-obj';
+    item.innerHTML = heldEmoji;
+    item.style.left = (e.clientX - rect.left) + "px";
+    item.style.top = (e.clientY - rect.top) + "px";
+    house.appendChild(item);
 };
 
-// SETTINGS (Dark Mode)
-document.getElementById('dark-mode-toggle').onchange = (e) => {
+// TABS & THEME
+window.showTab = (id) => {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    document.getElementById(`${id}-tab`).classList.remove('hidden');
+    document.getElementById('page-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
+    lucide.createIcons();
+};
+
+document.getElementById('dark-toggle').onchange = (e) => {
     document.body.className = e.target.checked ? 'dark-mode' : 'light-mode';
 };
 
-// Icons inladen
+// FEED LOGICA
+function loadFeed() {
+    onSnapshot(query(collection(db, "posts"), orderBy("time", "desc")), (snap) => {
+        const list = document.getElementById('feed-list');
+        list.innerHTML = "";
+        snap.forEach(d => {
+            list.innerHTML += `<div class="card"><strong>${d.data().user}</strong><p>${d.data().text}</p></div>`;
+        });
+    });
+}
+
+document.getElementById('post-btn').onclick = async () => {
+    await addDoc(collection(db, "posts"), {
+        text: document.getElementById('post-input').value,
+        user: auth.currentUser.email,
+        time: serverTimestamp()
+    });
+    document.getElementById('post-input').value = "";
+};
+
 lucide.createIcons();
