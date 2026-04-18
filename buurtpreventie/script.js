@@ -2,95 +2,111 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+// JOUW CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
-  authDomain: "buurtpreventie-b74ad.firebaseapp.com",
-  projectId: "buurtpreventie-b74ad",
-  storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
-  messagingSenderId: "374517472678",
-  appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
+    apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
+    authDomain: "buurtpreventie-b74ad.firebaseapp.com",
+    projectId: "buurtpreventie-b74ad",
+    storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
+    messagingSenderId: "374517472678",
+    appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// UI elementen
-const authScreen = document.getElementById('auth-screen');
-const mainApp = document.getElementById('main-app');
+// AUTH LOGICA
+const loginBtn = document.getElementById('login-btn');
+const registerBtn = document.getElementById('register-btn');
 
-// 1. Authenticatie logica
-document.getElementById('login-btn').onclick = () => {
-    signInWithEmailAndPassword(auth, email.value, password.value).catch(err => alert(err.message));
+loginBtn.onclick = () => {
+    signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert("Fout: " + e.message));
 };
 
-document.getElementById('register-btn').onclick = () => {
-    createUserWithEmailAndPassword(auth, email.value, password.value).catch(err => alert(err.message));
+registerBtn.onclick = () => {
+    createUserWithEmailAndPassword(auth, email.value, password.value).then(() => alert("Account aangemaakt!")).catch(e => alert(e.message));
 };
 
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        authScreen.classList.add('hidden');
-        mainApp.classList.remove('hidden');
-        loadAlerts();
+        document.getElementById('auth-screen').classList.add('hidden');
+        document.getElementById('main-app').classList.remove('hidden');
+        document.getElementById('user-display-email').innerText = user.email;
+        initFeed();
     } else {
-        authScreen.classList.remove('hidden');
-        mainApp.classList.add('hidden');
+        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('main-app').classList.add('hidden');
     }
 });
 
-// 2. Realtime Feed logica
-document.getElementById('send-alert').onclick = async () => {
-    const text = document.getElementById('alert-input').value;
-    if(!text) return;
-    await addDoc(collection(db, "alerts"), {
-        text: text,
-        user: auth.currentUser.email,
-        time: serverTimestamp()
-    });
-    document.getElementById('alert-input').value = "";
+// TAB NAVIGATIE
+window.showTab = (tabId) => {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    
+    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+    event.currentTarget.classList.add('active');
+    
+    const titles = { feed: "Buurt Feed", huis: "Mijn Huis", settings: "Instellingen" };
+    document.getElementById('page-title').innerText = titles[tabId];
 };
 
-function loadAlerts() {
+// FEED LOGICA
+function initFeed() {
     const q = query(collection(db, "alerts"), orderBy("time", "desc"));
     onSnapshot(q, (snapshot) => {
         const list = document.getElementById('alerts-list');
         list.innerHTML = "";
         snapshot.forEach(doc => {
             const data = doc.data();
-            list.innerHTML += `<div class="card"><strong>${data.user}</strong><p>${data.text}</p></div>`;
+            list.innerHTML += `
+                <div class="card pulse">
+                    <strong>📍 ${data.user.split('@')[0]}</strong>
+                    <p>${data.text}</p>
+                </div>`;
         });
     });
 }
 
-// 3. Virtueel Huis (Simpele Drag & Drop)
-let draggedItem = null;
+document.getElementById('send-alert').onclick = async () => {
+    const input = document.getElementById('alert-input');
+    if(!input.value) return;
+    await addDoc(collection(db, "alerts"), {
+        text: input.value,
+        user: auth.currentUser.email,
+        time: serverTimestamp()
+    });
+    input.value = "";
+};
 
-document.querySelectorAll('.item').forEach(item => {
-    item.ondragstart = (e) => draggedItem = e.target.getAttribute('data-type');
+// VIRTUEEL HUIS (Drag & Drop)
+let currentEmoji = "";
+document.querySelectorAll('.drag-item').forEach(item => {
+    item.ondragstart = (e) => currentEmoji = e.target.dataset.emoji;
 });
 
-const grid = document.getElementById('house-grid');
-grid.ondragover = (e) => e.preventDefault();
-grid.ondrop = (e) => {
-    const newItem = document.createElement('div');
-    newItem.className = 'placed-item';
-    newItem.innerHTML = draggedItem;
-    newItem.style.left = e.offsetX + 'px';
-    newItem.style.top = e.offsetY + 'px';
-    grid.appendChild(newItem);
+const canvas = document.getElementById('house-canvas');
+canvas.ondragover = (e) => e.preventDefault();
+canvas.ondrop = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - 15;
+    const y = e.clientY - rect.top - 15;
+    
+    const el = document.createElement('div');
+    el.className = 'placed-item';
+    el.innerHTML = currentEmoji;
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    canvas.appendChild(el);
 };
 
-// 4. Tab navigatie
-window.showTab = (tabName) => {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-    document.getElementById(`${tabName}-section`).classList.remove('hidden');
-    document.getElementById('page-title').innerText = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+// SETTINGS (Dark Mode)
+document.getElementById('dark-mode-toggle').onchange = (e) => {
+    document.body.className = e.target.checked ? 'dark-mode' : 'light-mode';
 };
 
-// Dark mode toggle
-document.getElementById('theme-toggle').onclick = () => {
-    document.body.classList.toggle('dark-mode');
-};
+// Icons inladen
+lucide.createIcons();
