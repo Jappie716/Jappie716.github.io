@@ -64,5 +64,13 @@ export async function logout() {
     await signOut(auth);
 }
 
+export function showTab(id) {
+    navigateTo(id);
+}
+
+export function enterRoom(roomName) {
+    alert(`Welkom in de ${roomName}!`);
+}
+
 window.showTab = (id) => navigateTo(id);
 window.enterRoom = (roomName) => alert(`Welkom in de ${roomName}!`);
