@@ -45,7 +45,7 @@ export async function ringDoorbell(targetUid, targetName) {
     
     await setDoc(doc(db, "doorbells", auth.currentUser.uid), {
         fromUid: auth.currentUser.uid,
-        fromName: state.currentProfile.username,
+        fromName: state.currentProfile?.username || 'Onbekend',
         toUid: targetUid,
         toName: targetName,
         status: 'ringing',
