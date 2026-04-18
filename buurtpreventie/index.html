@@ -2,86 +2,109 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buurtpreventie</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>BuurtWacht World</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="light-mode">
 
     <div id="auth-screen" class="screen">
-        <div class="auth-container">
-            <div class="auth-header">
-                <div class="logo-circle">🛡️</div>
-                <h1>BuurtWacht</h1>
-                <p>Samen houden we de wijk veilig</p>
+        <div class="auth-box" id="login-form">
+            <h1>🛡️ BuurtWacht</h1>
+            <input type="email" id="email" placeholder="E-mail">
+            <input type="password" id="password" placeholder="Wachtwoord">
+            <button id="login-btn" class="primary-btn">Inloggen</button>
+            <button id="register-btn" class="secondary-btn">Account maken</button>
+        </div>
+
+        <div class="auth-box hidden" id="onboarding-form">
+            <h2>Welkom! 🏠</h2>
+            <p>Vul je profiel in om te beginnen</p>
+            <input type="text" id="username" placeholder="Gebruikersnaam">
+            <input type="text" id="straat" placeholder="Straatnaam">
+            <div class="row">
+                <input type="number" id="leeftijd" placeholder="Leeftijd">
+                <select id="geslacht">
+                    <option value="Man">Man</option>
+                    <option value="Vrouw">Vrouw</option>
+                    <option value="Anders">Anders</option>
+                </select>
             </div>
-            <div class="auth-form">
-                <div class="input-field">
-                    <input type="email" id="email" placeholder="E-mailadres" required>
-                </div>
-                <div class="input-field">
-                    <input type="password" id="password" placeholder="Wachtwoord" required>
-                </div>
-                <button id="login-btn" class="main-btn">Inloggen</button>
-                <div class="divider"><span>of</span></div>
-                <button id="register-btn" class="sec-btn">Nieuw account maken</button>
-            </div>
+            <button id="save-profile-btn" class="primary-btn">De wijk in gaan</button>
         </div>
     </div>
 
-    <div id="main-app" class="screen hidden">
-        <header class="top-bar">
-            <h2 id="page-title">Buurt Feed</h2>
-            <div class="status-dot"></div>
-        </header>
+    <div id="main-app" class="app-container hidden">
+        
+        <aside class="sidebar">
+            <div class="sidebar-logo">🛡️ BuurtWacht</div>
+            <nav>
+                <button onclick="showTab('world')"><i data-lucide="map"></i> De Wijk</button>
+                <button onclick="showTab('feed')"><i data-lucide="shield"></i> Buurt Feed</button>
+                <button onclick="showTab('huis')"><i data-lucide="home"></i> Mijn Huis</button>
+                <button onclick="showTab('settings')"><i data-lucide="settings"></i> Instellingen</button>
+            </nav>
+        </aside>
 
-        <main class="app-content">
-            <section id="feed-tab" class="tab-content">
-                <div class="quick-alert">
-                    <input type="text" id="alert-input" placeholder="Verdachte situatie melden...">
-                    <button id="send-alert"><i data-lucide="send"></i></button>
-                </div>
-                <div id="alerts-list" class="scroll-area"></div>
-            </section>
+        <div class="content-wrapper">
+            <header class="top-nav">
+                <h2 id="page-title">De Wijk</h2>
+                <div id="user-badge" class="badge">Laden...</div>
+            </header>
 
-            <section id="huis-tab" class="tab-content hidden">
-                <div class="section-header">
-                    <h3>Mijn Virtuele Huis</h3>
-                    <p>Sleep meubels om je huis in te richten</p>
-                </div>
-                <div class="furniture-bar">
-                    <span class="drag-item" draggable="true" data-emoji="🛋️">🛋️</span>
-                    <span class="drag-item" draggable="true" data-emoji="🪴">🪴</span>
-                    <span class="drag-item" draggable="true" data-emoji="📺">📺</span>
-                    <span class="drag-item" draggable="true" data-emoji="🪑">🪑</span>
-                    <span class="drag-item" draggable="true" data-emoji="🛌">🛌</span>
-                </div>
-                <div id="house-canvas" class="dropzone"></div>
-            </section>
-
-            <section id="settings-tab" class="tab-content hidden">
-                <div class="profile-card">
-                    <div class="avatar">👤</div>
-                    <h4 id="user-display-email">Gebruiker</h4>
-                </div>
-                <div class="settings-list">
-                    <div class="setting-item">
-                        <span>Donkere Modus</span>
-                        <label class="switch">
-                            <input type="checkbox" id="dark-mode-toggle">
-                            <span class="slider"></span>
-                        </label>
+            <main class="viewport">
+                <section id="world-tab" class="tab-content">
+                    <div class="world-map">
+                        <div class="building bingo" onclick="enterRoom('Bingo Club')">🎰 <span>Bingo Club</span></div>
+                        <div class="building my-house" onclick="showTab('huis')">🏡 <span>Mijn Huis</span></div>
+                        <div class="building park">🌳 <span>Buurtpark</span></div>
                     </div>
-                    <button id="logout-btn" class="danger-btn">Uitloggen</button>
-                </div>
-            </section>
-        </main>
+                </section>
 
-        <nav class="nav-bar">
-            <button class="nav-item active" onclick="showTab('feed')"><i data-lucide="shield"></i><span>Feed</span></button>
-            <button class="nav-item" onclick="showTab('huis')"><i data-lucide="home"></i><span>Huis</span></button>
-            <button class="nav-item" onclick="showTab('settings')"><i data-lucide="settings"></i><span>Opties</span></button>
+                <section id="feed-tab" class="tab-content hidden">
+                    <div class="post-box">
+                        <input type="text" id="post-input" placeholder="Meld een verdachte situatie...">
+                        <button id="post-btn">Meld</button>
+                    </div>
+                    <div id="feed-list"></div>
+                </section>
+
+                <section id="room-tab" class="tab-content hidden">
+                    <div class="room-header">
+                        <button onclick="showTab('world')">⬅ Terug</button>
+                        <h3 id="room-name">Bingo Club</h3>
+                    </div>
+                    <div id="game-canvas" class="game-area"></div>
+                </section>
+
+                <section id="huis-tab" class="tab-content hidden">
+                    <div class="toolbar">
+                        <span class="drag-obj" draggable="true" data-type="🛋️">🛋️</span>
+                        <span class="drag-obj" draggable="true" data-type="🪴">🪴</span>
+                        <span class="drag-obj" draggable="true" data-type="📺">📺</span>
+                        <span class="drag-obj" draggable="true" data-type="🪑">🪑</span>
+                    </div>
+                    <div id="house-canvas" class="dropzone"></div>
+                </section>
+
+                <section id="settings-tab" class="tab-content hidden">
+                    <div class="card">
+                        <h3>Opties</h3>
+                        <div class="setting-row">
+                            <span>Donkere Modus</span>
+                            <input type="checkbox" id="dark-toggle">
+                        </div>
+                        <button id="logout-btn" class="danger-btn">Uitloggen</button>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <nav class="mobile-nav">
+            <button onclick="showTab('world')"><i data-lucide="map"></i></button>
+            <button onclick="showTab('feed')"><i data-lucide="shield"></i></button>
+            <button onclick="showTab('huis')"><i data-lucide="home"></i></button>
         </nav>
     </div>
 
