@@ -1,0 +1,44 @@
+:root {
+    --bg: #f0f2f5;
+    --card: #ffffff;
+    --text: #1c1e21;
+    --primary: #1877f2;
+    --danger: #fa3e3e;
+    --nav-bg: #ffffff;
+}
+
+.dark-mode {
+    --bg: #18191a;
+    --card: #242526;
+    --text: #e4e6eb;
+    --nav-bg: #242526;
+    --primary: #2d88ff;
+}
+
+body {
+    margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text);
+    display: flex; justify-content: center;
+}
+
+.screen { width: 100%; max-width: 500px; min-height: 100vh; position: relative; }
+.hidden { display: none !important; }
+
+/* Auth */
+.auth-card { padding: 40px 20px; text-align: center; }
+input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+.btn-secondary { background: #42b72a; margin-top: 10px; }
+
+/* Header & Nav */
+header { display: flex; justify-content: space-between; padding: 15px; background: var(--card); border-bottom: 1px solid #ddd; }
+.bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 500px; display: flex; justify-content: space-around; background: var(--nav-bg); padding: 10px 0; border-top: 1px solid #ddd; }
+.bottom-nav button { background: none; color: var(--text); font-size: 12px; display: flex; flex-direction: column; align-items: center; }
+
+/* Feed & Cards */
+.input-group { display: flex; gap: 10px; padding: 15px; }
+.card { background: var(--card); margin: 10px; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+/* Virtueel Huis */
+#house-grid { width: 100%; height: 300px; border: 2px dashed #ccc; margin-top: 20px; position: relative; background: #fff; }
+.furniture-bank { display: flex; gap: 20px; font-size: 30px; padding: 10px; background: var(--card); }
+.placed-item { position: absolute; font-size: 30px; cursor: move; }
