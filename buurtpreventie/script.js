@@ -34,20 +34,33 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// LOGIN / REGISTER
-document.getElementById('login-btn').onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
-document.getElementById('register-btn').onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(e => alert(e.message));
-document.getElementById('logout-btn').onclick = () => signOut(auth);
+// LOGIN / REGISTER (Bugs verholpen door document.getElementById te gebruiken)
+const getEmail = () => document.getElementById('email').value;
+const getPassword = () => document.getElementById('password').value;
+
+document.getElementById('login-btn').onclick = () => {
+    signInWithEmailAndPassword(auth, getEmail(), getPassword()).catch(e => alert("Inloggen mislukt: " + e.message));
+};
+
+document.getElementById('register-btn').onclick = () => {
+    createUserWithEmailAndPassword(auth, getEmail(), getPassword()).catch(e => alert("Registreren mislukt: " + e.message));
+};
+
+document.getElementById('logout-btn').onclick = () => {
+    signOut(auth);
+};
 
 // PROFIEL OPSLAAN
 document.getElementById('save-profile-btn').onclick = async () => {
     const profiel = {
-        username: document.getElementById('username').value,
-        straat: document.getElementById('straat').value,
+        username: document.getElementById('username').value.trim(),
+        straat: document.getElementById('straat').value.trim(),
         leeftijd: document.getElementById('leeftijd').value,
         geslacht: document.getElementById('geslacht').value
     };
+    
     if(!profiel.username) return alert("Kies een gebruikersnaam!");
+    
     await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
     currentUserProfile = profiel;
     startApp();
@@ -72,7 +85,7 @@ function initChat() {
             const isOwn = data.userId === auth.currentUser.uid;
             chatBox.innerHTML += `
                 <div class="msg ${isOwn ? 'own' : 'others'}">
-                    <span class="msg-info">${data.username} • ${data.straat || ''}</span>
+                    <span class="msg-info">${data.username} • ${data.straat || 'Onbekend'}</span>
                     ${data.text}
                 </div>`;
         });
@@ -83,6 +96,7 @@ function initChat() {
 document.getElementById('send-chat-btn').onclick = async () => {
     const input = document.getElementById('chat-input');
     if(!input.value.trim()) return;
+    
     await addDoc(collection(db, "chats"), {
         text: input.value,
         username: currentUserProfile.username,
@@ -102,24 +116,35 @@ document.querySelectorAll('.drag-obj').forEach(obj => {
 const canvas = document.getElementById('house-canvas');
 canvas.ondragover = (e) => e.preventDefault();
 canvas.ondrop = (e) => {
+    e.preventDefault(); // Voorkom standaard browsergedrag
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left - 20;
     const y = e.clientY - rect.top - 20;
+    
     const el = document.createElement('div');
     el.className = 'placed-obj';
-    el.innerHTML = draggedEmoji;
+    el.innerText = draggedEmoji;
     el.style.left = x + "px";
     el.style.top = y + "px";
+    
+    // Optioneel: Maak verwijderen mogelijk door te klikken
+    el.onclick = () => el.remove(); 
+    
     canvas.appendChild(el);
 };
 
-// NAVIGATIE
+// NAVIGATIE & GLOBALE FUNCTIES
 window.showTab = (id) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`${id}-tab`).classList.remove('hidden');
     document.getElementById('page-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
     lucide.createIcons();
+};
+
+// Missende functie toegevoegd voor de gebouwen
+window.enterRoom = (roomName) => {
+    alert(`Welkom in de ${roomName}! Deze functie is nog in ontwikkeling.`);
 };
 
 document.getElementById('dark-toggle').onchange = (e) => {
