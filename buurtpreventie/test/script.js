@@ -1,7 +1,6 @@
 import { app, auth, db } from './core/firebase-config.js';
-import { state, initApp, navigateTo, showMainApp, showAuthScreen, updatePageTitle } from './core/app.js';
-import { initDoorbellModal, listenForDoorbells } from './components/doorbell-modal.js';
-import { initAuth } from './pages/auth/auth.js';
+import { state, navigateTo, showMainApp, showAuthScreen, updatePageTitle } from './core/app.js';
+import { initDoorbellModal, listenForDoorbells, ringDoorbell } from './components/doorbell-modal.js';
 import { initWorld } from './pages/world/world.js';
 import { initChat, sendChatMessage } from './pages/chat/chat.js';
 import { initHuis } from './pages/huis/huis.js';
@@ -12,10 +11,7 @@ let chatUnsubscribe = null;
 
 window.showTab = (id) => navigateTo(id);
 window.enterRoom = (roomName) => alert(`Welkom in de ${roomName}!`);
-window.ringDoorbell = async (uid, name) => {
-    const { ringDoorbell: ring } = await import('./components/doorbell-modal.js');
-    ring(uid, name);
-};
+window.ringDoorbell = ringDoorbell;
 
 async function boot() {
     initAuth();
