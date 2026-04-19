@@ -46,9 +46,19 @@
                 <p class="lobby-subtitle">Wacht tot het spel begint...</p>
             </div>
             
+            <div id="bingo-announcements" class="bingo-announcements hidden">
+                <div class="announcement-text"></div>
+            </div>
+            
             <div class="lobby-players-section">
                 <h3>👥 Aanwezige Buren</h3>
                 <ul id="lobby-player-list"></ul>
+            </div>
+            
+            <div id="voting-section" class="voting-section hidden">
+                <h3>🗳️ Stem op je Draaier</h3>
+                <p class="voting-hint">Kies wie vandaag de ballen mag trekken!</p>
+                <ul id="voter-list"></ul>
             </div>
             
             <div class="lobby-options">
@@ -67,6 +77,10 @@
     </div>
 
     <div id="bingo-app" class="app-container hidden">
+        <div id="game-announcements" class="game-announcements hidden">
+            <div class="game-announcement-text"></div>
+        </div>
+
         <aside class="sidebar">
             <div class="sidebar-logo">🎰 Bingo Club</div>
             <div class="lobby-info">
@@ -102,6 +116,12 @@
                             <button id="draw-number-btn" class="draw-btn" onclick="drawNumber()">
                                 <i data-lucide="dices"></i> Trek een bal
                             </button>
+                        </div>
+
+                        <div id="waiting-for-draaier" class="waiting-for-draaier hidden">
+                            <div class="waiting-icon">⏳</div>
+                            <p>Wachten op de draaier...</p>
+                            <p class="waiting-hint">Iedereen kan de bingokaarten controleren!</p>
                         </div>
 
                         <div id="player-info" class="player-info">
