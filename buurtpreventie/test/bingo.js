@@ -391,11 +391,12 @@ function startVotingTimer() {
 }
 
 async function endVoting() {
-    let statusDoc = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID);
+    // VOEG DE EXTRA ) TOE BIJ ELKE getDoc HIERONDER:
+    let statusDoc = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID)); // <-- hier
     if (statusDoc.exists() && statusDoc.data().gameState !== 'voting') return;
     
-    let sessionDoc = await getDoc(doc(db, "bingo_votes", "session");
-    let playersDoc = await getDoc(doc(db, "bingo_votes", "players");
+    let sessionDoc = await getDoc(doc(db, "bingo_votes", "session")); // <-- hier
+    let playersDoc = await getDoc(doc(db, "bingo_votes", "players")); // <-- hier
     
     let votes = sessionDoc.data() ? sessionDoc.data().votes : [];
     if (!votes) votes = [];
@@ -431,7 +432,7 @@ async function endVoting() {
             winnerUid = winners[Math.floor(Math.random() * winners.length)];
         }
         
-        let winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
+        let winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid)); // <-- hier
         winnerName = winnerDoc.data() ? winnerDoc.data().username : 'Onbekend';
     } else if (players.length > 0) {
         let availablePlayers = players.filter(p => {
@@ -441,12 +442,13 @@ async function endVoting() {
         
         if (availablePlayers.length > 0) {
             winnerUid = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
-            let winnerDoc2 = await getDoc(doc(db, "bingo_players", winnerUid);
+            let winnerDoc2 = await getDoc(doc(db, "bingo_players", winnerUid)); // <-- hier
             winnerName = winnerDoc2.data() ? winnerDoc2.data().username : 'Onbekend';
         } else {
             winnerName = 'Niemand beschikbaar';
         }
     }
+    // ... rest van de functie blijft hetzelfde
     
     document.getElementById('voting-timer')?.classList.add('hidden');
     document.getElementById('lobby-options')?.classList.remove('hidden');
