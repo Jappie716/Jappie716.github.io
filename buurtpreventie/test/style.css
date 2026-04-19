@@ -327,14 +327,12 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
 .form-group input::placeholder { color: var(--text-muted); }
 
 /* Save Button - CTA */
-.save-btn { background: var(--primary); color: var(--white); border: none; padding: 14px 36px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow-primary); }
+.save-btn { background: var(--primary); color: var(--white); border: none; padding: 14px 36px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow-primary); display: inline-block; }
 .save-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
 
 /* Logout Button - Outline */
-.logout-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); width: auto; padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.logout-btn { background: transparent; color: var(--danger); border: 2px solid var(--danger); padding: 12px 32px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-block; }
 .logout-btn:hover { background: var(--danger); color: var(--white); }
-
-.settings-actions { display: flex; gap: 12px; justify-content: center; margin: 16px auto 40px; }
 
 /* Setting Item */
 .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 16px; border-bottom: 1px solid var(--border); }
@@ -344,6 +342,7 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
 @media (max-width: 480px) {
     .settings-wrapper { padding: 16px; }
     .settings-card { padding: 20px; }
+    .settings-actions { flex-direction: row; gap: 12px; }
 }
 
 /* Toggle Switch */
