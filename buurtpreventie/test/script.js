@@ -45,9 +45,10 @@ document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('save-profile-btn').onclick = async () => {
     const profiel = {
         username: document.getElementById('username').value.trim(),
-        straat: document.getElementById('straat').value.trim(),
+        huisnummer: document.getElementById('huisnummer').value.trim(),
         leeftijd: document.getElementById('leeftijd').value,
-        geslacht: document.getElementById('geslacht').value
+        geslacht: document.getElementById('geslacht').value,
+        status: ""
     };
     if(!profiel.username) return alert("Kies een gebruikersnaam!");
     await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
@@ -166,7 +167,7 @@ function initChat() {
             const isOwn = data.userId === auth.currentUser.uid;
             chatBox.innerHTML += `
                 <div class="msg ${isOwn ? 'own' : 'others'}">
-                    <span class="msg-info">${data.username} • ${data.straat || ''}</span>
+                    <span class="msg-info">${data.username} • ${data.huisnummer || ''} ${data.status ? '• ' + data.status : ''}</span>
                     ${data.text}
                 </div>`;
         });
@@ -180,7 +181,8 @@ document.getElementById('send-chat-btn').onclick = async () => {
     await addDoc(collection(db, "chats"), {
         text: input.value,
         username: currentUserProfile.username,
-        straat: currentUserProfile.straat,
+        huisnummer: currentUserProfile.huisnummer,
+        status: currentUserProfile.status || "",
         userId: auth.currentUser.uid,
         time: serverTimestamp()
     });
@@ -209,16 +211,36 @@ canvas.ondrop = (e) => {
     canvas.appendChild(el);
 };
 
-window.showTab = (id) => {
+window.showTab = async (id) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`${id}-tab`).classList.remove('hidden');
     document.getElementById('page-title').innerText = id.charAt(0).toUpperCase() + id.slice(1);
     lucide.createIcons();
+    
+    if (id === 'settings' && currentUserProfile) {
+        document.getElementById('settings-username').value = currentUserProfile.username || "";
+        document.getElementById('settings-huisnummer').value = currentUserProfile.huisnummer || "";
+        document.getElementById('settings-status').value = currentUserProfile.status || "";
+    }
 };
 
 window.enterRoom = (roomName) => alert(`Welkom in de ${roomName}!`);
 
 document.getElementById('dark-toggle').onchange = (e) => {
     document.body.className = e.target.checked ? 'dark-mode' : 'light-mode';
+};
+
+document.getElementById('save-settings-btn').onclick = async () => {
+    const newProfile = {
+        username: document.getElementById('settings-username').value.trim(),
+        huisnummer: document.getElementById('settings-huisnummer').value.trim(),
+        status: document.getElementById('settings-status').value.trim()
+    };
+    if(!newProfile.username) return alert("Vul een gebruikersnaam in!");
+    
+    await updateDoc(doc(db, "users", auth.currentUser.uid), newProfile);
+    currentUserProfile = { ...currentUserProfile, ...newProfile };
+    document.getElementById('user-display-name').innerText = `👤 ${currentUserProfile.username}`;
+    alert("Opgeslagen!");
 };
