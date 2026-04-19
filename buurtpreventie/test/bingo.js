@@ -79,7 +79,7 @@ if (document.getElementById('save-profile-btn')) {
             status: ""
         };
         
-        await setDoc(doc(db, "users", auth.currentUser.uid, profiel);
+       await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
         currentUserProfile = profiel;
         startBingoApp();
     };
@@ -150,7 +150,7 @@ window.voteForPlayer = async function(targetUid, targetUsername) {
     if (hasVoted) return;
     hasVoted = true;
     
-    await setDoc(doc(db, "bingo_players", auth.currentUser.uid), { votedFor: targetUid };
+    await setDoc(doc(db, "bingo_players", auth.currentUser.uid), { votedFor: targetUid });
     
     var me = allPlayers.find(function(p) { return p.uid === auth.currentUser.uid; });
     if (me) me.votedFor = targetUid;
@@ -159,14 +159,14 @@ window.voteForPlayer = async function(targetUid, targetUsername) {
 };
 
 async function leaveBingoClub() {
-    await deleteDoc(doc(db, "bingo_players", auth.currentUser.uid);
+    await deleteDoc(doc(db, "bingo_players", auth.currentUser.uid));
     window.location.href = "index.html";
 }
 
 function setupSpinnerCheckbox() {
     var checkbox = document.getElementById('dont-want-spinner');
     checkbox.addEventListener('change', async function() {
-        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid, { dontWantSpinner: checkbox.checked });
+        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), { dontWantSpinner: checkbox.checked });
     });
 }
 
@@ -185,7 +185,7 @@ function showAnnouncement(msg) {
 }
 
 function listenToLobby() {
-    unsubscribeStatus = onSnapshot(doc(db, "bingo_game", GAME_STATUS_ID, function(snap) {
+    unsubscribeStatus = onSnapshot(doc(db, "bingo_game", GAME_STATUS_ID), function(snap) {
         if (snap.exists()) {
             var d = snap.data();
             gameState = d.gameState || 'lobby';
@@ -228,7 +228,7 @@ function listenToLobby() {
         updateDrawerControls();
     });
     
-    unsubscribeGame = onSnapshot(doc(db, "bingo_game", BINGO_ROOM_ID, function(snap) {
+    unsubscribeGame = onSnapshot(doc(db, "bingo_game", BINGO_ROOM_ID), function(snap) {
         if (snap.exists()) {
             var d = snap.data();
             currentDraatje = d.spinner;
@@ -277,8 +277,8 @@ function updateVoterList() {
 
 window.startVoting = async function() {
     gameState = 'voting';
-    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID, { gameState: 'voting', votingStartedAt: serverTimestamp() });
-    await setDoc(doc(db, "bingo_votes", "session", { votes: [], startedAt: serverTimestamp() });
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), { gameState: 'voting', votingStartedAt: serverTimestamp() });
+    await setDoc(doc(db, "bingo_votes", "session"), { votes: [], startedAt: serverTimestamp() });
     await setDoc(doc(db, "bingo_votes", "players", { players: allPlayers.map(function(p) { return p.uid; }) });
     
     hasVoted = false;
@@ -307,7 +307,7 @@ async function endVoting() {
         canDraw = true;
     }
     
-    var st = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID);
+    var st = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID));
     if (st.exists() && st.data().gameState !== 'voting') return;
     
     var votes = [];
