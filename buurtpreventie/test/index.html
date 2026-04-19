@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -63,9 +64,16 @@
                 <section id="world-tab" class="tab-content">
                     <div id="map-container" class="map-container">
                         <div class="world-map">
-                            <div class="building bingo" onclick="window.location.href='bingo.html'">🎰<span>Bingo Club</span></div>
-                            <div class="building my-house" onclick="showTab('huis')">🏡<span>Mijn Huis</span></div>
-                            <div class="building park" onclick="enterRoom('Buurtpark')">🌳<span>Buurtpark</span></div>
+                            <!-- Speciale gebouwen - klikbare overlays -->
+                            <div class="special-building bingo-club" onclick="openBingo()" title="Bingo Club">
+                                <span class="building-label">🎰 Bingo Club</span>
+                            </div>
+                            <div class="special-building park" onclick="visitPark()" title="Buurtpark">
+                                <span class="building-label">🌳 Buurtpark</span>
+                            </div>
+                            
+                            <!-- Huisjes worden hier dynamisch toegevoegd door script.js -->
+                            <div id="houses-layer" class="houses-layer"></div>
                         </div>
                     </div>
                 </section>
