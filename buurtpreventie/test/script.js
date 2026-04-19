@@ -195,7 +195,6 @@ window.ringDoorbell = async (targetUid, targetName) => {
         status: 'ringing', // kan 'ringing', 'accepted', of 'declined' zijn
         time: serverTimestamp()
     });
-};
 
 function listenForDoorbells() {
     onSnapshot(collection(db, "doorbells"), (snapshot) => {
