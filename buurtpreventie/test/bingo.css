@@ -190,6 +190,40 @@
     display: none;
 }
 
+.voting-timer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    padding: 10px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.5);
+    z-index: 1000;
+    animation: pulse 1s infinite;
+}
+
+.voting-timer.hidden {
+    display: none;
+}
+
+.timer-icon {
+    font-size: 20px;
+}
+
+#timer-countdown {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+.voting-timer span:not(.timer-icon):not(#timer-countdown) {
+    color: white;
+    font-size: 16px;
+}
+
 .bingo-announcements {
     background: linear-gradient(135deg, #10b981, #059669);
     border-radius: 12px;
