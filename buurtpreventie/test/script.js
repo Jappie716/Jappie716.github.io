@@ -175,7 +175,12 @@ function initChat() {
     });
 }
 
-document.getElementById('send-chat-btn').onclick = async () => {
+document.getElementById('send-chat-btn').onclick = sendChatMessage;
+document.getElementById('chat-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatMessage();
+});
+
+async function sendChatMessage() {
     const input = document.getElementById('chat-input');
     if(!input.value.trim()) return;
     await addDoc(collection(db, "chats"), {
@@ -187,7 +192,7 @@ document.getElementById('send-chat-btn').onclick = async () => {
         time: serverTimestamp()
     });
     input.value = "";
-};
+}
 
 // VIRTUEEL HUIS DRAG & DROP (Blijft voor nu lokaal)
 let draggedEmoji = "";
