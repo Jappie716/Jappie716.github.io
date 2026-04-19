@@ -128,7 +128,7 @@ function checkForBingo() {
 }
 
 async function joinBingoClub() {
-    await setDoc(doc(db, "bingo_players", auth.currentUser.uid, {
+    await setDoc(doc(db, "bingo_players", auth.currentUser.uid), {
         username: currentUserProfile.username,
         huisnummer: currentUserProfile.huisnummer,
         joinedAt: serverTimestamp(),
@@ -158,7 +158,7 @@ async function leaveBingoClub() {
 function setupSpinnerCheckbox() {
     var checkbox = document.getElementById('dont-want-spinner');
     checkbox.addEventListener('change', async function() {
-        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid, { dontWantSpinner: checkbox.checked });
+        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), { dontWantSpinner: checkbox.checked });
     });
 }
 
@@ -256,7 +256,7 @@ function updateVoterList() {
         var btn = document.createElement('button');
         btn.className = 'vote-btn';
         btn.dataset.uid = p.uid;
-        btn.innerText = '👤 ' + p.username;
+        btn.innerHTML = '<i data-lucide="user"></i> ' + p.username;
         btn.onclick = (function(u, n) { return function() { window.voteForPlayer(u, n); }; })(p.uid, p.username);
         var li = document.createElement('li');
         li.appendChild(btn);
@@ -269,9 +269,9 @@ function updateVoterList() {
 
 window.startVoting = async function() {
     gameState = 'voting';
-    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID, { gameState: 'voting', votingStartedAt: serverTimestamp() });
-    await setDoc(doc(db, "bingo_votes", "session", { votes: [], startedAt: serverTimestamp() });
-    await setDoc(doc(db, "bingo_votes", "players", { players: allPlayers.map(function(p) { return p.uid; }) });
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), { gameState: 'voting', votingStartedAt: serverTimestamp() };
+    await setDoc(doc(db, "bingo_votes", "session"), { votes: [], startedAt: serverTimestamp() };
+    await setDoc(doc(db, "bingo_votes", "players"), { players: allPlayers.map(function(p) { return p.uid; }) });
     
     hasVoted = false;
     showAnnouncement("Stemmen is geopend! Klik op een buur.");
@@ -417,7 +417,7 @@ window.drawNumber = async function() {
     startDrawCooldown();
     
     var n = arr[Math.floor(Math.random() * arr.length)];
-    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID, { drawnNumbers: (d.drawnNumbers || []).concat([n]), lastDrawn: n });
+    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID), { drawnNumbers: (d.drawnNumbers || []).concat([n]), lastDrawn: n });
 };
 
 function startDrawCooldown() {
@@ -438,7 +438,7 @@ window.claimBingo = async function() {
     var gs = await getDoc(doc(db, "bingo_game", BINGO_ROOM_ID));
     var d = gs.data();
     var np = (d.prizes || []).concat([{ winner: currentUserProfile.username, prize: p, timestamp: Date.now() }]);
-    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID, { winner: currentUserProfile.username, prize: p, prizes: np });
+    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID), { winner: currentUserProfile.username, prize: p, prizes: np });
     showWinner(currentUserProfile.username, p);
 };
 
