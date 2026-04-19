@@ -164,7 +164,6 @@ window.voteForPlayer = async (targetUid, targetUsername) => {
     });
     
     updateVoteButtonState(targetUid);
-    checkAllVotesIn();
 };
 
 async function leaveBingoClub() {
@@ -195,12 +194,6 @@ function updateVoteButtonState(selectedUid) {
             btn.classList.remove('voted');
         }
     });
-}
-
-async function checkAllVotesIn() {
-}
-
-async function countVotesAndSelectWinner() {
 }
 
 function showAnnouncement(message) {
@@ -330,12 +323,14 @@ function updateVoterList() {
     allPlayers.forEach(player => {
         if (player.uid === auth.currentUser.uid) return;
         
+        const btn = document.createElement('button');
+        btn.className = 'vote-btn';
+        btn.dataset.uid = player.uid;
+        btn.innerHTML = `👤 ${player.username}`;
+        btn.onclick = () => window.voteForPlayer(player.uid, player.username);
+        
         const li = document.createElement('li');
-        li.innerHTML = `
-            <button class="vote-btn" data-uid="${player.uid}" onclick="voteForPlayer('${player.uid}', '${player.username}')">
-                👤 ${player.username}
-            </button>
-        `;
+        li.appendChild(btn);
         voterList.appendChild(li);
     });
     
@@ -381,13 +376,13 @@ function startVotingTimer() {
     timerEl?.classList.remove('hidden');
     countdownEl.innerText = timeLeft;
     
-    votingTimerInterval = setInterval(async () => {
+    votingTimerInterval = setInterval(() => {
         timeLeft--;
         countdownEl.innerText = timeLeft;
         
         if (timeLeft <= 0) {
             clearInterval(votingTimerInterval);
-            await endVoting();
+            endVoting();
         }
     }, 1000);
 }
@@ -431,7 +426,7 @@ async function endVoting() {
             winnerUid = winners[Math.floor(Math.random() * winners.length)];
         }
         
-        const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid));
+        const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
         winnerName = winnerDoc.data()?.username || 'Onbekend';
     } else if (players.length > 0) {
         const availablePlayers = players.filter(p => {
