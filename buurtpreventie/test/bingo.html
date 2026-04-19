@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Club - Buurtpreventie</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="bingo.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="light-mode">
+
+    <div id="auth-screen" class="screen">
+        <div class="auth-box pulse" id="login-form">
+            <div class="logo-icon"><i data-lucide="gamepad-2"></i></div>
+            <h1>Bingo Club</h1>
+            <p>Log in om te spelen!</p>
+            <input type="email" id="email" placeholder="E-mail">
+            <input type="password" id="password" placeholder="Wachtwoord">
+            <button id="login-btn" class="primary-btn">Inloggen</button>
+            <button id="register-btn" class="secondary-btn">Account aanmaken</button>
+            <button onclick="window.location.href='index.html'" class="secondary-btn" style="margin-top: 10px;">← Terug</button>
+        </div>
+
+        <div class="auth-box hidden" id="onboarding-form">
+            <h2>Welkom in de Bingo Club! <i data-lucide="gamepad-2"></i></h2>
+            <p>Stel je profiel in</p>
+            <input type="text" id="username" placeholder="Gebruikersnaam">
+            <input type="text" id="huisnummer" placeholder="Huisnummer">
+            <div class="row">
+                <input type="number" id="leeftijd" placeholder="Leeftijd">
+                <select id="geslacht">
+                    <option value="Man">Man</option>
+                    <option value="Vrouw">Vrouw</option>
+                    <option value="Anders">Anders</option>
+                </select>
+            </div>
+            <button id="save-profile-btn" class="primary-btn">Starten</button>
+        </div>
+    </div>
+
+    <div id="bingo-lobby" class="bingo-lobby hidden">
+        <div class="lobby-board">
+            <div class="lobby-header">
+                <h2><i data-lucide="house"></i> Buurthuis Bingo</h2>
+                <p class="lobby-subtitle">Wacht tot het spel begint...</p>
+            </div>
+            
+            <div id="bingo-announcements" class="bingo-announcements hidden">
+                <div class="announcement-text"></div>
+            </div>
+            
+            <div class="lobby-players-section">
+                <h3><i data-lucide="users"></i> Aanwezige Buren</h3>
+                <ul id="lobby-player-list"></ul>
+            </div>
+            
+            <div id="voting-section" class="voting-section hidden">
+                <h3><i data-lucide="vote"></i> Stem op je Draaier</h3>
+                <p class="voting-hint">Kies wie vandaag de ballen mag trekken!</p>
+                <ul id="voter-list"></ul>
+            </div>
+            
+            <div class="lobby-options" id="lobby-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="dont-want-spinner">
+                    <span>Ik wil vandaag niet de draaier zijn</span>
+                </label>
+            </div>
+            
+            <div id="voting-timer" class="voting-timer hidden">
+                <span class="timer-icon"><i data-lucide="timer"></i></span>
+                <span id="timer-countdown">30</span>
+                <span>sec</span>
+            </div>
+            
+            <div class="lobby-waiting">
+                <div class="waiting-animation"><i data-lucide="gamepad-2"></i></div>
+                <p>Er is nog geen spel gestart</p>
+                <button id="open-voting-btn" class="open-voting-btn" onclick="startVoting()">
+                    <i data-lucide="vote"></i> Stemmen openen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bingo-app" class="app-container hidden">
+        <div id="game-announcements" class="game-announcements hidden">
+            <div class="game-announcement-text"></div>
+        </div>
+
+        <aside class="sidebar">
+            <div class="sidebar-logo"><i data-lucide="gamepad-2"></i> Bingo Club</div>
+            <div class="lobby-info">
+                <h3><i data-lucide="users"></i> Spelers in de club</h3>
+                <ul id="player-list"></ul>
+            </div>
+            <div class="sidebar-footer">
+                <div id="user-display-name">...</div>
+                <button onclick="leaveBingoClub()" class="secondary-btn" style="margin-top: 10px;">Verlaat Club</button>
+            </div>
+        </aside>
+
+        <div class="content-wrapper">
+            <header class="top-nav">
+                <h2 id="page-title">Bingo Club</h2>
+                <div class="header-icons">
+                    <span id="drawn-number-display" class="drawn-number hidden">Laatste getal: <span id="last-drawn">-</span></span>
+                </div>
+            </header>
+
+            <main class="bingo-main">
+                <div class="bingo-content">
+                    <div class="bingo-card-container hidden" id="bingo-card-section">
+                        <h3><i data-lucide="target"></i> Jouw Bingokaart</h3>
+                        <div id="bingo-card" class="bingo-card"></div>
+                        <button id="bingo-btn" class="bingo-btn" onclick="claimBingo()"><i data-lucide="celebration"></i> BINGO!</button>
+                    </div>
+
+                    <div class="bingo-controls">
+                        <div id="spinner-controls" class="hidden">
+                            <h3><i data-lucide="gamepad-2"></i> Jij bent de Draaier!</h3>
+                            <p>Trek een nummer voor alle spelers</p>
+                            <button id="draw-number-btn" class="draw-btn" onclick="drawNumber()">
+                                <i data-lucide="dices"></i> Trek een bal
+                            </button>
+                        </div>
+
+                        <div id="waiting-for-draaier" class="waiting-for-draaier hidden">
+                            <div class="waiting-icon"><i data-lucide="hourglass"></i></div>
+                            <p>Wachten op de draaier...</p>
+                            <p class="waiting-hint">Iedereen kan de bingokaarten controleren!</p>
+                        </div>
+
+                        <div id="player-info" class="player-info">
+                            <h3><i data-lucide="bar-chart-3"></i> Spelstatus</h3>
+                            <p>Getrokken nummers: <span id="drawn-count">0</span>/75</p>
+                            <div id="drawn-numbers" class="drawn-numbers"></div>
+                        </div>
+
+                        <div class="prizes-section">
+                            <h3><i data-lucide="trophy"></i> Prijzen</h3>
+                            <div id="winner-announcement" class="winner-announcement hidden">
+                                <div class="winner-name"></div>
+                                <div class="winner-prize"></div>
+                            </div>
+                            <ul id="prize-list"></ul>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="bingo-modal" class="hidden bingo-modal">
+        <div class="bingo-modal-content">
+            <div class="modal-emoji" id="modal-emoji"><i data-lucide="gamepad-2"></i></div>
+            <h2 id="modal-title">BINGO!</h2>
+            <p id="modal-message">Gefeliciteerd!</p>
+            <button onclick="closeBingoModal()" class="primary-btn">OK</button>
+        </div>
+    </div>
+
+    <script type="module" src="bingo.js"></script>
+</body>
+</html>
