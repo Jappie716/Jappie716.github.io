@@ -37,50 +37,58 @@ onAuthStateChanged(auth, async function(user) {
         const snap = await getDoc(doc(db, "users", user.uid));
         if (snap.exists()) {
             currentUserProfile = snap.data();
-            startBingoApp();
+            if (document.getElementById('bingo-app')) {
+                startBingoApp();
+            }
         } else {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('onboarding-form').classList.remove('hidden');
+            if (document.getElementById('login-form')) document.getElementById('login-form').classList.add('hidden');
+            if (document.getElementById('onboarding-form')) document.getElementById('onboarding-form').classList.remove('hidden');
         }
     } else {
-        document.getElementById('auth-screen').classList.remove('hidden');
-        document.getElementById('bingo-app').classList.add('hidden');
+        if (document.getElementById('auth-screen')) document.getElementById('auth-screen').classList.remove('hidden');
+        if (document.getElementById('bingo-app')) document.getElementById('bingo-app').classList.add('hidden');
     }
 });
 
-document.getElementById('login-btn').onclick = function() {
-    var email = document.getElementById('email').value;
-    var password = document.getElementById('password').value;
-    signInWithEmailAndPassword(auth, email, password).catch(function(e) { alert(e.message); });
-};
-
-document.getElementById('register-btn').onclick = function() {
-    var email = document.getElementById('email').value;
-    var password = document.getElementById('password').value;
-    createUserWithEmailAndPassword(auth, email, password).catch(function(e) { alert(e.message); });
-};
-
-document.getElementById('save-profile-btn').onclick = async function() {
-    var username = document.getElementById('username').value.trim();
-    if (!username) { alert("Kies een gebruikersnaam!"); return; }
-    
-    var profiel = {
-        username: username,
-        huisnummer: document.getElementById('huisnummer').value.trim(),
-        leeftijd: document.getElementById('leeftijd').value,
-        geslacht: document.getElementById('geslacht').value,
-        status: ""
+if (document.getElementById('login-btn')) {
+    document.getElementById('login-btn').onclick = function() {
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        signInWithEmailAndPassword(auth, email, password).catch(function(e) { alert(e.message); });
     };
-    
-    await setDoc(doc(db, "users", auth.currentUser.uid), profiel);
-    currentUserProfile = profiel;
-    startBingoApp();
-};
+}
+
+if (document.getElementById('register-btn')) {
+    document.getElementById('register-btn').onclick = function() {
+        var email = document.getElementById('email').value;
+        var password = document.getElementById('password').value;
+        createUserWithEmailAndPassword(auth, email, password).catch(function(e) { alert(e.message); });
+    };
+}
+
+if (document.getElementById('save-profile-btn')) {
+    document.getElementById('save-profile-btn').onclick = async function() {
+        var username = document.getElementById('username').value.trim();
+        if (!username) { alert("Kies een gebruikersnaam!"); return; }
+        
+        var profiel = {
+            username: username,
+            huisnummer: document.getElementById('huisnummer').value.trim(),
+            leeftijd: document.getElementById('leeftijd').value,
+            geslacht: document.getElementById('geslacht').value,
+            status: ""
+        };
+        
+        await setDoc(doc(db, "users", auth.currentUser.uid, profiel);
+        currentUserProfile = profiel;
+        startBingoApp();
+    };
+}
 
 async function startBingoApp() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('bingo-app').classList.remove('hidden');
-    document.getElementById('user-display-name').innerHTML = `<i data-lucide="user"></i> ${currentUserProfile.username}`;
+    if (document.getElementById('auth-screen')) document.getElementById('auth-screen').classList.add('hidden');
+    if (document.getElementById('bingo-app')) document.getElementById('bingo-app').classList.remove('hidden');
+    if (document.getElementById('user-display-name')) document.getElementById('user-display-name').innerText = "👤 " + currentUserProfile.username;
     
     generateBingoCard();
     await joinBingoClub();
@@ -128,7 +136,7 @@ function checkForBingo() {
 }
 
 async function joinBingoClub() {
-    await setDoc(doc(db, "bingo_players", auth.currentUser.uid), {
+    await setDoc(doc(db, "bingo_players", auth.currentUser.uid, {
         username: currentUserProfile.username,
         huisnummer: currentUserProfile.huisnummer,
         joinedAt: serverTimestamp(),
@@ -158,7 +166,7 @@ async function leaveBingoClub() {
 function setupSpinnerCheckbox() {
     var checkbox = document.getElementById('dont-want-spinner');
     checkbox.addEventListener('change', async function() {
-        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), { dontWantSpinner: checkbox.checked });
+        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid, { dontWantSpinner: checkbox.checked });
     });
 }
 
@@ -256,7 +264,7 @@ function updateVoterList() {
         var btn = document.createElement('button');
         btn.className = 'vote-btn';
         btn.dataset.uid = p.uid;
-        btn.innerHTML = '<i data-lucide="user"></i> ' + p.username;
+        btn.innerText = '👤 ' + p.username;
         btn.onclick = (function(u, n) { return function() { window.voteForPlayer(u, n); }; })(p.uid, p.username);
         var li = document.createElement('li');
         li.appendChild(btn);
@@ -269,9 +277,9 @@ function updateVoterList() {
 
 window.startVoting = async function() {
     gameState = 'voting';
-    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), { gameState: 'voting', votingStartedAt: serverTimestamp() };
-    await setDoc(doc(db, "bingo_votes", "session"), { votes: [], startedAt: serverTimestamp() };
-    await setDoc(doc(db, "bingo_votes", "players"), { players: allPlayers.map(function(p) { return p.uid; }) });
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID, { gameState: 'voting', votingStartedAt: serverTimestamp() });
+    await setDoc(doc(db, "bingo_votes", "session", { votes: [], startedAt: serverTimestamp() });
+    await setDoc(doc(db, "bingo_votes", "players", { players: allPlayers.map(function(p) { return p.uid; }) });
     
     hasVoted = false;
     showAnnouncement("Stemmen is geopend! Klik op een buur.");
@@ -417,7 +425,7 @@ window.drawNumber = async function() {
     startDrawCooldown();
     
     var n = arr[Math.floor(Math.random() * arr.length)];
-    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID), { drawnNumbers: (d.drawnNumbers || []).concat([n]), lastDrawn: n });
+    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID, { drawnNumbers: (d.drawnNumbers || []).concat([n]), lastDrawn: n });
 };
 
 function startDrawCooldown() {
@@ -438,7 +446,7 @@ window.claimBingo = async function() {
     var gs = await getDoc(doc(db, "bingo_game", BINGO_ROOM_ID));
     var d = gs.data();
     var np = (d.prizes || []).concat([{ winner: currentUserProfile.username, prize: p, timestamp: Date.now() }]);
-    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID), { winner: currentUserProfile.username, prize: p, prizes: np });
+    await updateDoc(doc(db, "bingo_game", BINGO_ROOM_ID, { winner: currentUserProfile.username, prize: p, prizes: np });
     showWinner(currentUserProfile.username, p);
 };
 
