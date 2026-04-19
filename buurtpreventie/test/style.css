@@ -298,7 +298,9 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
     .sidebar { display: none; }
     .mobile-nav { display: flex; }
     .top-nav { padding: 0 15px; }
-    .chat-scroll { padding-bottom: 80px; } /* Zorgt dat chat niet achter mobiele nav verdwijnt */
+    .chat-scroll { padding-bottom: 80px; }
+    #settings-tab { overflow-y: auto; height: calc(100vh - 70px); }
+    .settings-wrapper { padding-bottom: 100px; }
 }
 
 /* Auth Screens */
@@ -342,7 +344,6 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
 @media (max-width: 480px) {
     .settings-wrapper { padding: 16px; }
     .settings-card { padding: 20px; }
-    .settings-actions { flex-direction: row; gap: 12px; }
 }
 
 /* Toggle Switch */
