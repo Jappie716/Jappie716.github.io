@@ -18,6 +18,22 @@ const db = getFirestore(app);
 let currentUserProfile = null;
 let currentDoorbellId = null; // Houdt bij welke deurbel momenteel afgaat
 
+// Hulpfuncties om gegevens op te halen
+const getEmail = () => document.getElementById('email').value;
+const getPassword = () => document.getElementById('password').value;
+
+// Inlogknop actie
+document.getElementById('login-btn').onclick = () => {
+    signInWithEmailAndPassword(auth, getEmail(), getPassword())
+        .catch(e => alert("Inloggen mislukt: " + e.message));
+};
+
+// Registreerknop actie
+document.getElementById('register-btn').onclick = () => {
+    createUserWithEmailAndPassword(auth, getEmail(), getPassword())
+        .catch(e => alert("Registratie mislukt: " + e.message));
+};
+
 // AUTH CONTROLE
 onAuthStateChanged(auth, async (user) => {
     if (user) {
