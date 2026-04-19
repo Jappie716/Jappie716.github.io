@@ -213,10 +213,6 @@ window.ringDoorbell = async (targetUid, targetName) => {
 }; // <--- DEZE WAS VERGETEN
 
 function listenForDoorbells() {
-
-function listenForDoorbells() {
-
-function listenForDoorbells() {
     onSnapshot(collection(db, "doorbells"), (snapshot) => {
         snapshot.forEach(d => {
             const data = d.data();
