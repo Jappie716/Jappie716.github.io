@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buurtpark</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .park-screen {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            padding: 20px;
+            text-align: center;
+        }
+        .park-title {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .park-scene {
+            margin-top: 60px;
+            position: relative;
+            height: 60vh;
+            background: #90EE90;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.1);
+        }
+        .tree {
+            font-size: 4rem;
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.3s;
+            user-select: none;
+        }
+        .tree:hover {
+            transform: scale(1.1);
+        }
+        .bench {
+            font-size: 3rem;
+            position: absolute;
+            bottom: 80px;
+            left: 30px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .bench:hover {
+            transform: scale(1.1);
+        }
+        .duck {
+            font-size: 2rem;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.5s;
+        }
+        .pond {
+            font-size: 4rem;
+            position: absolute;
+            bottom: 20px;
+            right: 50px;
+        }
+        .player {
+            font-size: 2.5rem;
+            position: absolute;
+            transition: all 0.3s;
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            font-size: 1.2rem;
+            display: none;
+            z-index: 100;
+        }
+        .message-box.show {
+            display: block;
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .activity-btn {
+            display: block;
+            width: 200px;
+            margin: 10px auto;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            background: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background 0.2s;
+        }
+        .activity-btn:hover {
+            transform: scale(1.05);
+            background: #f0f0f0;
+        }
+        .score {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='index.html'">⬅️ Terug</button>
+    
+    <div class="park-screen">
+        <h1 class="park-title">🌳 Buurtpark</h1>
+        
+        <div class="park-scene" id="parkScene">
+            <div class="tree" style="top: 30px; left: 20px;" onclick="shakeTree()">🌳</div>
+            <div class="tree" style="top: 50px; right: 40px;" onclick="shakeTree()">🌲</div>
+            <div class="tree" style="top: 100px; left: 80px;" onclick="shakeTree()">🌳</div>
+            <div class="bench" style="bottom: 80px; left: 30px;" onclick="sitOnBench()">🪑</div>
+            <div class="bench" style="bottom: 80px; right: 30px;" onclick="sitOnBench()">🪑</div>
+            <div class="pond">🌊</div>
+            <div class="duck" id="duck1" style="bottom: 30px; right: 80px;" onclick="feedDuck()">🦆</div>
+            <div class="duck" id="duck2" style="bottom: 40px; right: 120px;" onclick="feedDuck()">🦆</div>
+            <div class="player" id="player" style="bottom: 50px; left: 50%; transform: translateX(-50%);">🚶</div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Wat wil je doen?</h3>
+            <button class="activity-btn" onclick="walkAround()">🚶 Rondwandelen</button>
+            <button class="activity-btn" onclick="sitOnBench()">🪑 Op bankje zitten</button>
+            <button class="activity-btn" onclick="feedDuck()">🍞 Eenden voeren</button>
+            <button class="activity-btn" onclick="watchBirds()">🐦 Vogels kijken</button>
+            <button class="activity-btn" onclick="shakeTree()">🌳 Boom schudden</button>
+        </div>
+    </div>
+    
+    <div class="message-box" id="messageBox"></div>
+
+    <script>
+        let playerX = 50;
+        let happiness = 50;
+        let ducksFed = 0;
+        
+        function showMessage(text) {
+            const box = document.getElementById('messageBox');
+            box.innerText = text;
+            box.classList.add('show');
+            setTimeout(() => box.classList.remove('show'), 2500);
+        }
+        
+        function updatePlayer() {
+            const player = document.getElementById('player');
+            player.style.left = playerX + '%';
+            player.style.transform = 'translateX(-50%)';
+        }
+        
+        function walkAround() {
+            const messages = [
+                "Je loopt lekker door het park... De bloemen ruiken heerlijk! 🌸",
+                "Je ontmoet de buurvrouw, jullie kletsen even over het weer ☀️",
+                "Je ziet een mooie vlinder! Hij vlog weg... 🦋",
+                "Je loopt langs de vijver. De vissen kijken je aan 🐟",
+                "Even een blokje om, lichaam in beweging! 💪",
+                "Je ademt diep in... Heerlijk die frisse lucht 🌿",
+                "Onderweg zie je een konijn! Het is snel weg �兔"
+            ];
+            playerX = Math.random() * 80 + 10;
+            updatePlayer();
+            
+            happiness += 5;
+            if (happiness > 100) happiness = 100;
+            
+            showMessage(messages[Math.floor(Math.random() * messages.length)]);
+        }
+        
+        function sitOnBench() {
+            const messages = [
+                "Je gaat op het bankje zitten... Even bijkomen rustig uitkijken over het park 🏞️",
+                "Heerlijk zitten hier! Je geniet van het uitzicht 🌺",
+                "Je pauzeert even. De wind speelt met je haren 🍃",
+                "Een oudere meneer komt naast je zitten. 'Mooi weer vandaag hè?' 👴",
+                "Je luistert naar de vogels. Wat een getjilp! 🐦",
+                "Even niets doen is ook heerlijk 😌"
+            ];
+            playerX = 30;
+            updatePlayer();
+            
+            happiness += 10;
+            if (happiness > 100) happiness = 100;
+            
+            showMessage(messages[Math.floor(Math.random() * messages.length)]);
+        }
+        
+        function feedDuck() {
+            if (ducksFed >= 3) {
+                showMessage("De eenden zijn al vol! Ze hebben genoeg gegeten 😊");
+                return;
+            }
+            
+            const messages = [
+                "Je gooit brood naar de eenden. Ze eten het snel op! 🦆🍞",
+                "De eenden kwaken enthousiast! Ze zijn blij met het brood 🦆",
+                "De eenden strijden om het broodstukje! Het is een grappig gezicht 😄",
+                "Een eend komt helemaal naar je toe. Hoe schattig! 🥰"
+            ];
+            
+            playerX = 75;
+            updatePlayer();
+            
+            ducksFed++;
+            happiness += 8;
+            if (happiness > 100) happiness = 100;
+            
+            showMessage(messages[Math.floor(Math.random() * messages.length)]);
+        }
+        
+        function watchBirds() {
+            const messages = [
+                "Je hoort een merel zingen! 🎵 Wat mooi 🐦",
+                "Een ekster zit op de picknicktafel. Hoi! 🖤",
+                "Je ziet twee-duiven ruziën om een kruimeltje 🐦",
+                "Een roodborstje flitst voorbij! Klein maar laut 🔴",
+                "Zeven meeuwen cirkelen boven je head... Ze zoeken naar eten 🐦",
+                "Een uil? Nee, dat is een beeld in het park 🦉"
+            ];
+            playerX = 50;
+            updatePlayer();
+            
+            happiness += 5;
+            if (happiness > 100) happiness = 100;
+            
+            showMessage(messages[Math.floor(Math.random() * messages.length)]);
+        }
+        
+        function shakeTree() {
+            const items = ["Er valt niks uit de boom...", "Er valt een blaadje uit! 🍂", "Er valt een takje uit! 🪵", "Er_valt een vogel ei! Eerst maar terugzetten...", "Er komt een eekhoorn uit! 🐿️ Hij kijkt je aan"];
+
+            playerX = 15;
+            updatePlayer();
+            
+            happiness += 3;
+            if (happiness > 100) happiness = 100;
+            
+            showMessage(items[Math.floor(Math.random() * items.length)]);
+        }
+        
+        // Laat de eenden bewegen
+        setInterval(() => {
+            const duck1 = document.getElementById('duck1');
+            const duck2 = document.getElementById('duck2');
+            
+            const r1 = Math.random() * 10 - 5;
+            const r2 = Math.random() * 10 - 5;
+            
+            duck1.style.bottom = (30 + r1) + 'px';
+            duck1.style.right = (80 + r2) + 'px';
+            duck2.style.bottom = (40 - r2) + 'px';
+            duck2.style.right = (120 + r1) + 'px';
+        }, 2000);
+    </script>
+</body>
+</html>
