@@ -61,10 +61,19 @@
 
             <main class="viewport">
                 <section id="world-tab" class="tab-content">
-                    <div class="world-map">
-                        <div class="building bingo" onclick="enterRoom('Bingo Club')">🎰<span>Bingo Club</span></div>
-                        <div class="building my-house" onclick="showTab('huis')">🏡<span>Mijn Huis</span></div>
-                        <div class="building park" onclick="enterRoom('Buurtpark')">🌳<span>Buurtpark</span></div>
+                    <div id="map-container" class="map-container">
+                        <div class="world-map">
+                            <!-- Speciale gebouwen - klikbare overlays -->
+                            <div class="special-building bingo-club" onclick="openBingo()" title="Bingo Club">
+                                <span class="building-label">🎰 Bingo Club</span>
+                            </div>
+                            <div class="special-building park" onclick="visitPark()" title="Buurtpark">
+                                <span class="building-label">🌳 Buurtpark</span>
+                            </div>
+                            
+                            <!-- Huisjes worden hier dynamisch toegevoegd door script.js -->
+                            <div id="houses-layer" class="houses-layer"></div>
+                        </div>
                     </div>
                 </section>
 
@@ -102,11 +111,10 @@
                                 <input type="text" id="settings-huisnummer" placeholder="Bijv. 42">
                             </div>
                             <div class="form-group">
-                                <label for="settings-status">Status</label>
-                                <input type="text" id="settings-status" placeholder="Bijv. In de tuin">
+                                <label for="settings-status">Leeftijd</label>
+                                <input type="number" id="settings-status" placeholder="Leeftijd">
                             </div>
-                            <button id="save-settings-btn" class="save-btn">Opslaan</button>
-                        </div>
+                            </div>
                         
                         <div class="settings-card">
                             <h3 class="settings-title">Voorkeuren</h3>
@@ -119,7 +127,10 @@
                             </div>
                         </div>
                         
-                        <button id="logout-btn" class="logout-btn">Log uit</button>
+                        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 16px; margin-bottom: 40px;">
+                            <button id="save-settings-btn" class="save-btn">Opslaan</button>
+                            <button id="logout-btn" class="logout-btn">Log uit</button>
+                        </div>
                     </div>
                 </section>
             </main>
