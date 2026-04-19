@@ -284,7 +284,6 @@ function showAnnouncement(message) {
 
 function listenToLobby() {
     unsubscribeStatus = onSnapshot(doc(db, "bingo_game", GAME_STATUS_ID), (docSnap) => {
-        let gameState = 'lobby';
         if (docSnap.exists()) {
             const data = docSnap.data();
             gameState = data.gameState || 'lobby';
@@ -292,6 +291,8 @@ function listenToLobby() {
             if (data.announcement) {
                 showAnnouncement(data.announcement);
             }
+        } else {
+            gameState = 'lobby';
         }
         
         if (gameState === 'lobby' || gameState === 'voting') {
@@ -370,21 +371,27 @@ function updateDrawerControls() {
     }
 }
 
+let gameState = 'lobby';
+
 function updateVoterList() {
     const voterList = document.getElementById('voter-list');
     if (!voterList) return;
     
     const votingSection = document.getElementById('voting-section');
-    
-    const statusSnap = allPlayers.find(p => p.uid === auth.currentUser.uid);
-    const gameState = statusSnap?.gameState;
+    const openVotingBtn = document.getElementById('open-voting-btn');
     
     if (gameState === 'voting') {
         votingSection.classList.remove('hidden');
+        if (openVotingBtn) openVotingBtn.classList.add('hidden');
+    } else if (gameState === 'lobby') {
+        votingSection.classList.add('hidden');
+        if (openVotingBtn) openVotingBtn.classList.remove('hidden');
     } else {
         votingSection.classList.add('hidden');
-        return;
+        if (openVotingBtn) openVotingBtn.classList.add('hidden');
     }
+    
+    if (gameState !== 'voting') return;
     
     voterList.innerHTML = '';
     
