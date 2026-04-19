@@ -198,81 +198,9 @@ function updateVoteButtonState(selectedUid) {
 }
 
 async function checkAllVotesIn() {
-    const votesSnap = await getDoc(doc(db, "bingo_votes", "session"));
-    const playersSnap = await getDoc(doc(db, "bingo_votes", "players"));
-    
-    if (!votesSnap.exists() || !playersSnap.exists()) return;
-    
-    const totalPlayers = playersSnap.data().players || [];
-    const voteDocs = votesSnap.data().votes || [];
-    
-    if (voteDocs.length === totalPlayers.length) {
-        await countVotesAndSelectWinner();
-    }
 }
 
 async function countVotesAndSelectWinner() {
-    const votesSnap = await getDoc(doc(db, "bingo_votes", "session"));
-    const votes = votesSnap.data()?.votes || [];
-    
-    const voteCount = {};
-    votes.forEach(v => {
-        voteCount[v.votedFor] = (voteCount[v.votedFor] || 0) + 1;
-    });
-    
-    let maxVotes = 0;
-    let winners = [];
-    
-    for (const [uid, count] of Object.entries(voteCount)) {
-        if (count > maxVotes) {
-            maxVotes = count;
-            winners = [uid];
-        } else if (count === maxVotes) {
-            winners.push(uid);
-        }
-    }
-    
-    let winnerUid = winners[0];
-    let wasTie = false;
-    
-    if (winners.length > 1) {
-        wasTie = true;
-        winnerUid = winners[Math.floor(Math.random() * winners.length)];
-    }
-    
-    const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid));
-    const winnerName = winnerDoc.data()?.username || 'Onbekend';
-    
-    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
-        gameState: 'voting_complete',
-        winnerUid: winnerUid,
-        winnerName: winnerName,
-        wasTie: wasTie,
-        announcement: wasTie 
-            ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
-            : `Er is gestemd: ${winnerName} is de draaier geworden!`
-    });
-    
-    showAnnouncement(wasTie 
-        ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
-        : `Er is gestemd: ${winnerName} is de draaier geworden!`);
-    
-    setTimeout(async () => {
-        await updateDoc(doc(db, "bingo_players", winnerUid), { isSpinner: true });
-        await setDoc(doc(db, "bingo_game", BINGO_ROOM_ID), {
-            drawnNumbers: [],
-            lastDrawn: null,
-            spinner: winnerUid,
-            winner: null,
-            prize: null,
-            prizes: [],
-            createdAt: serverTimestamp()
-        });
-        await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
-            gameState: 'playing',
-            startedAt: serverTimestamp()
-        });
-    }, 3000);
 }
 
 function showAnnouncement(message) {
@@ -295,8 +223,12 @@ function listenToLobby() {
             gameState = 'lobby';
         }
         
-        if (gameState === 'lobby' || gameState === 'voting') {
-            showLobby(gameState === 'voting');
+        if (gameState === 'lobby') {
+            document.getElementById('lobby-options')?.classList.remove('hidden');
+            showLobby(false);
+        } else if (gameState === 'voting') {
+            document.getElementById('lobby-options')?.classList.add('hidden');
+            showLobby(true);
         } else {
             showGame();
         }
@@ -416,6 +348,8 @@ function updateVoterList() {
 }
 
 window.startVoting = async () => {
+    gameState = 'voting';
+    
     await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
         gameState: 'voting',
         votingStartedAt: serverTimestamp()
@@ -430,9 +364,132 @@ window.startVoting = async () => {
         players: allPlayers.map(p => p.uid)
     });
     
-hasVoted = false;
+    hasVoted = false;
     showAnnouncement('🗳️ Stemmen is geopend! Klik op een buur om te stemmen.');
+    
+    document.getElementById('lobby-options')?.classList.add('hidden');
+    startVotingTimer();
 };
+
+let votingTimerInterval = null;
+
+function startVotingTimer() {
+    const timerEl = document.getElementById('voting-timer');
+    const countdownEl = document.getElementById('timer-countdown');
+    let timeLeft = 30;
+    
+    timerEl?.classList.remove('hidden');
+    countdownEl.innerText = timeLeft;
+    
+    votingTimerInterval = setInterval(async () => {
+        timeLeft--;
+        countdownEl.innerText = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(votingTimerInterval);
+            await endVoting();
+        }
+    }, 1000);
+}
+
+async function endVoting() {
+    const statusDoc = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID);
+    if (statusDoc.exists() && statusDoc.data().gameState !== 'voting') return;
+    
+    const sessionDoc = await getDoc(doc(db, "bingo_votes", "session");
+    const playersDoc = await getDoc(doc(db, "bingo_votes", "players");
+    
+    const votes = sessionDoc.data()?.votes || [];
+    const players = playersDoc.data()?.players || [];
+    
+    let winnerUid = null;
+    let winnerName = 'Niemand';
+    let wasTie = false;
+    
+    if (votes.length > 0) {
+        const voteCount = {};
+        votes.forEach(v => {
+            voteCount[v.votedFor] = (voteCount[v.votedFor] || 0) + 1;
+        });
+        
+        let maxVotes = 0;
+        let winners = [];
+        
+        for (const [uid, count] of Object.entries(voteCount)) {
+            if (count > maxVotes) {
+                maxVotes = count;
+                winners = [uid];
+            } else if (count === maxVotes) {
+                winners.push(uid);
+            }
+        }
+        
+        winnerUid = winners[0];
+        
+        if (winners.length > 1) {
+            wasTie = true;
+            winnerUid = winners[Math.floor(Math.random() * winners.length)];
+        }
+        
+        const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid));
+        winnerName = winnerDoc.data()?.username || 'Onbekend';
+    } else if (players.length > 0) {
+        const availablePlayers = players.filter(p => {
+            const player = allPlayers.find(ap => ap.uid === p);
+            return player && !player.dontWantSpinner;
+        });
+        
+        if (availablePlayers.length > 0) {
+            winnerUid = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
+            const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
+            winnerName = winnerDoc.data()?.username || 'Onbekend';
+        } else {
+            winnerName = 'Niemand beschikbaar';
+        }
+    }
+    
+    document.getElementById('voting-timer')?.classList.add('hidden');
+    document.getElementById('lobby-options')?.classList.remove('hidden');
+    
+    if (winnerUid) {
+        await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+            gameState: 'voting_complete',
+            winnerUid: winnerUid,
+            winnerName: winnerName,
+            wasTie: wasTie,
+            announcement: wasTie 
+                ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
+                : `Er is gestemd: ${winnerName} is de draaier geworden!`
+        });
+        
+        showAnnouncement(wasTie 
+            ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
+            : `Er is gestemd: ${winnerName} is de draaier geworden!`);
+        
+        setTimeout(async () => {
+            await updateDoc(doc(db, "bingo_players", winnerUid), { isSpinner: true });
+            await setDoc(doc(db, "bingo_game", BINGO_ROOM_ID), {
+                drawnNumbers: [],
+                lastDrawn: null,
+                spinner: winnerUid,
+                winner: null,
+                prize: null,
+                prizes: [],
+                createdAt: serverTimestamp()
+            });
+            await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+                gameState: 'playing',
+                startedAt: serverTimestamp()
+            });
+        }, 3000);
+    } else {
+        await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+            gameState: 'lobby',
+            announcement: 'Geen geldige draaier gekozen. Probeer opnieuw!'
+        });
+        showAnnouncement('Geen geldige draaier gekozen. Probeer opnieuw!');
+    }
+}
 
 function showLobby(showVoting = false) {
     document.getElementById('bingo-lobby').classList.remove('hidden');
@@ -443,6 +500,7 @@ function showLobby(showVoting = false) {
         updateVoterList();
     } else {
         document.getElementById('voting-section').classList.add('hidden');
+        document.getElementById('lobby-options')?.classList.remove('hidden');
     }
 }
 
