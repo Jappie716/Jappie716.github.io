@@ -299,11 +299,13 @@ function updateDrawerControls() {
 let gameState = 'lobby';
 
 function updateVoterList() {
-    const voterList = document.getElementById('voter-list');
+    let voterList = document.getElementById('voter-list');
     if (!voterList) return;
     
-    const votingSection = document.getElementById('voting-section');
-    const openVotingBtn = document.getElementById('open-voting-btn');
+    let votingSection = document.getElementById('voting-section');
+    let openVotingBtn = document.getElementById('open-voting-btn');
+    
+    if (!allPlayers || allPlayers.length === 0) return;
     
     if (gameState === 'voting') {
         votingSection.classList.remove('hidden');
@@ -322,14 +324,15 @@ function updateVoterList() {
     
     allPlayers.forEach(player => {
         if (player.uid === auth.currentUser.uid) return;
+        if (!player.username) return;
         
-        const btn = document.createElement('button');
+        let btn = document.createElement('button');
         btn.className = 'vote-btn';
         btn.dataset.uid = player.uid;
-        btn.innerHTML = `👤 ${player.username}`;
+        btn.innerText = '👤 ' + player.username;
         btn.onclick = () => window.voteForPlayer(player.uid, player.username);
         
-        const li = document.createElement('li');
+        let li = document.createElement('li');
         li.appendChild(btn);
         voterList.appendChild(li);
     });
@@ -388,14 +391,16 @@ function startVotingTimer() {
 }
 
 async function endVoting() {
-    const statusDoc = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID);
+    let statusDoc = await getDoc(doc(db, "bingo_game", GAME_STATUS_ID);
     if (statusDoc.exists() && statusDoc.data().gameState !== 'voting') return;
     
-    const sessionDoc = await getDoc(doc(db, "bingo_votes", "session");
-    const playersDoc = await getDoc(doc(db, "bingo_votes", "players");
+    let sessionDoc = await getDoc(doc(db, "bingo_votes", "session");
+    let playersDoc = await getDoc(doc(db, "bingo_votes", "players");
     
-    const votes = sessionDoc.data()?.votes || [];
-    const players = playersDoc.data()?.players || [];
+    let votes = sessionDoc.data() ? sessionDoc.data().votes : [];
+    if (!votes) votes = [];
+    let players = playersDoc.data() ? playersDoc.data().players : [];
+    if (!players) players = [];
     
     let winnerUid = null;
     let winnerName = 'Niemand';
@@ -426,18 +431,18 @@ async function endVoting() {
             winnerUid = winners[Math.floor(Math.random() * winners.length)];
         }
         
-        const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
-        winnerName = winnerDoc.data()?.username || 'Onbekend';
+        let winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
+        winnerName = winnerDoc.data() ? winnerDoc.data().username : 'Onbekend';
     } else if (players.length > 0) {
-        const availablePlayers = players.filter(p => {
-            const player = allPlayers.find(ap => ap.uid === p);
+        let availablePlayers = players.filter(p => {
+            let player = allPlayers.find(ap => ap.uid === p);
             return player && !player.dontWantSpinner;
         });
         
         if (availablePlayers.length > 0) {
             winnerUid = availablePlayers[Math.floor(Math.random() * availablePlayers.length)];
-            const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid);
-            winnerName = winnerDoc.data()?.username || 'Onbekend';
+            let winnerDoc2 = await getDoc(doc(db, "bingo_players", winnerUid);
+            winnerName = winnerDoc2.data() ? winnerDoc2.data().username : 'Onbekend';
         } else {
             winnerName = 'Niemand beschikbaar';
         }
