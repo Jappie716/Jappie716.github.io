@@ -16,6 +16,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const BINGO_ROOM_ID = "bingo-club-main";
+const GAME_STATUS_ID = "status";
 const PRIZES = [
     "Een digitale pot pruimen 🍑",
     "Een virtueel goldenticket 🎫",
@@ -76,7 +77,8 @@ async function startBingoApp() {
     
     generateBingoCard();
     await joinBingoClub();
-    listenToBingoRoom();
+    listenToLobby();
+    setupSpinnerCheckbox();
     lucide.createIcons();
 }
 
@@ -139,7 +141,8 @@ async function joinBingoClub() {
         username: currentUserProfile.username,
         huisnummer: currentUserProfile.huisnummer,
         joinedAt: serverTimestamp(),
-        isSpinner: false
+        isSpinner: false,
+        dontWantSpinner: false
     });
 }
 
@@ -150,44 +153,78 @@ async function leaveBingoClub() {
 
 let unsubscribePlayers = null;
 let unsubscribeGame = null;
+let unsubscribeStatus = null;
 
-function listenToBingoRoom() {
-    // Listen to players in the bingo club
+function setupSpinnerCheckbox() {
+    const checkbox = document.getElementById('dont-want-spinner');
+    checkbox.addEventListener('change', async () => {
+        await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), {
+            dontWantSpinner: checkbox.checked
+        });
+    });
+}
+
+function listenToLobby() {
+    unsubscribeStatus = onSnapshot(doc(db, "bingo_game", GAME_STATUS_ID), (docSnap) => {
+        let gameState = 'lobby';
+        if (docSnap.exists()) {
+            gameState = docSnap.data().gameState || 'lobby';
+        }
+        
+        if (gameState === 'lobby') {
+            showLobby();
+        } else {
+            showGame();
+        }
+    });
+    
     unsubscribePlayers = onSnapshot(collection(db, "bingo_players"), (snapshot) => {
+        const lobbyList = document.getElementById('lobby-player-list');
         const playerList = document.getElementById('player-list');
-        playerList.innerHTML = '';
+        
+        if (lobbyList) lobbyList.innerHTML = '';
+        if (playerList) playerList.innerHTML = '';
         
         let hasSpinner = false;
         
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            const li = document.createElement('li');
-            li.innerHTML = `👤 ${data.username}`;
             
-            if (data.isSpinner) {
-                li.classList.add('spinner');
-                li.innerHTML += `<span class="spinner-badge">DRAAIER</span>`;
-                hasSpinner = true;
+            if (lobbyList) {
+                const li = document.createElement('li');
+                li.innerHTML = `👤 ${data.username}`;
+                if (data.isSpinner) {
+                    li.classList.add('spinner');
+                    li.innerHTML += `<span class="spinner-badge">DRAAIER</span>`;
+                }
+                lobbyList.appendChild(li);
             }
             
-            playerList.appendChild(li);
+            if (playerList) {
+                const li = document.createElement('li');
+                li.innerHTML = `👤 ${data.username}`;
+                if (data.isSpinner) {
+                    li.classList.add('spinner');
+                    li.innerHTML += `<span class="spinner-badge">DRAAIER</span>`;
+                    hasSpinner = true;
+                }
+                playerList.appendChild(li);
+            }
         });
         
-        // Check if we should be spinner
         const isCurrentUserSpinner = snapshot.docs.some(d => d.id === auth.currentUser.uid && d.data().isSpinner);
         
         if (isCurrentUserSpinner) {
             isSpinner = true;
-            document.getElementById('spinner-controls').classList.remove('hidden');
-            document.getElementById('player-info').classList.add('hidden');
+            document.getElementById('spinner-controls')?.classList.remove('hidden');
+            document.getElementById('player-info')?.classList.add('hidden');
         } else {
             isSpinner = false;
-            document.getElementById('spinner-controls').classList.add('hidden');
-            document.getElementById('player-info').classList.remove('hidden');
+            document.getElementById('spinner-controls')?.classList.add('hidden');
+            document.getElementById('player-info')?.classList.remove('hidden');
         }
         
-        // If no spinner, anyone can become one
-        if (!hasSpinner && !isSpinner) {
+        if (!hasSpinner && !isSpinner && document.getElementById('player-info')) {
             document.getElementById('player-info').innerHTML += `
                 <button onclick="becomeSpinner()" class="draw-btn" style="margin-top: 15px;">
                     🎰 Word de Draaier
@@ -196,13 +233,24 @@ function listenToBingoRoom() {
         }
     });
     
-    // Listen to game state
     unsubscribeGame = onSnapshot(doc(db, "bingo_game", BINGO_ROOM_ID), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
             updateGameUI(data);
         }
     });
+}
+
+function showLobby() {
+    document.getElementById('bingo-lobby').classList.remove('hidden');
+    document.getElementById('bingo-app').classList.add('hidden');
+}
+
+function showGame() {
+    document.getElementById('bingo-lobby').classList.add('hidden');
+    document.getElementById('bingo-app').classList.remove('hidden');
+    document.getElementById('bingo-card-section')?.classList.remove('hidden');
+    document.getElementById('spinner-controls')?.classList.remove('hidden');
 }
 
 function updateGameUI(data) {
@@ -256,6 +304,12 @@ function updateGameUI(data) {
 }
 
 window.becomeSpinner = async () => {
+    const playerDoc = await getDoc(doc(db, "bingo_players", auth.currentUser.uid));
+    if (playerDoc.data()?.dontWantSpinner) {
+        alert("Je hebt aangegeven dat je niet de draaier wilt zijn. Vink het vinkje uit om toch te kunnen draaien.");
+        return;
+    }
+    
     await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), { isSpinner: true });
     await setDoc(doc(db, "bingo_game", BINGO_ROOM_ID), {
         drawnNumbers: [],
@@ -265,6 +319,10 @@ window.becomeSpinner = async () => {
         prize: null,
         prizes: [],
         createdAt: serverTimestamp()
+    });
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+        gameState: 'playing',
+        startedAt: serverTimestamp()
     });
 };
 
