@@ -33,6 +33,11 @@ let isSpinner = false;
 let bingoCard = [];
 let markedNumbers = new Set();
 let drawnNumbers = new Set();
+let hasVoted = false;
+let allPlayers = [];
+let currentDraatje = null;
+let canDraw = true;
+let drawCooldown = 7;
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -120,7 +125,6 @@ function markNumber(num, cell) {
 
 function checkForBingo() {
     const cells = document.querySelectorAll('.bingo-cell');
-    const marked = Array.from(cells).map((c, i) => c.classList.contains('marked') ? i : -1).filter(i => i !== -1);
     
     const winningCombos = [
         [0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14], [15,16,17,18,19], [20,21,22,23,24], // Rows
@@ -142,9 +146,26 @@ async function joinBingoClub() {
         huisnummer: currentUserProfile.huisnummer,
         joinedAt: serverTimestamp(),
         isSpinner: false,
-        dontWantSpinner: false
+        dontWantSpinner: false,
+        votedFor: null
     });
 }
+
+window.voteForPlayer = async (targetUid, targetUsername) => {
+    if (hasVoted) return;
+    
+    hasVoted = true;
+    await setDoc(doc(db, "bingo_votes", auth.currentUser.uid), {
+        votedFor: targetUid,
+        votedForName: targetUsername,
+        voterUid: auth.currentUser.uid,
+        voterName: currentUserProfile.username,
+        timestamp: serverTimestamp()
+    });
+    
+    updateVoteButtonState(targetUid);
+    checkAllVotesIn();
+};
 
 async function leaveBingoClub() {
     await deleteDoc(doc(db, "bingo_players", auth.currentUser.uid));
@@ -164,15 +185,117 @@ function setupSpinnerCheckbox() {
     });
 }
 
+function updateVoteButtonState(selectedUid) {
+    const buttons = document.querySelectorAll('.vote-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.uid === selectedUid) {
+            btn.classList.add('voted');
+            btn.innerHTML = '✓ Gestemd!';
+        } else {
+            btn.classList.remove('voted');
+        }
+    });
+}
+
+async function checkAllVotesIn() {
+    const votesSnap = await getDoc(doc(db, "bingo_votes", "session"));
+    const playersSnap = await getDoc(doc(db, "bingo_votes", "players"));
+    
+    if (!votesSnap.exists() || !playersSnap.exists()) return;
+    
+    const totalPlayers = playersSnap.data().players || [];
+    const voteDocs = votesSnap.data().votes || [];
+    
+    if (voteDocs.length === totalPlayers.length) {
+        await countVotesAndSelectWinner();
+    }
+}
+
+async function countVotesAndSelectWinner() {
+    const votesSnap = await getDoc(doc(db, "bingo_votes", "session"));
+    const votes = votesSnap.data()?.votes || [];
+    
+    const voteCount = {};
+    votes.forEach(v => {
+        voteCount[v.votedFor] = (voteCount[v.votedFor] || 0) + 1;
+    });
+    
+    let maxVotes = 0;
+    let winners = [];
+    
+    for (const [uid, count] of Object.entries(voteCount)) {
+        if (count > maxVotes) {
+            maxVotes = count;
+            winners = [uid];
+        } else if (count === maxVotes) {
+            winners.push(uid);
+        }
+    }
+    
+    let winnerUid = winners[0];
+    let wasTie = false;
+    
+    if (winners.length > 1) {
+        wasTie = true;
+        winnerUid = winners[Math.floor(Math.random() * winners.length)];
+    }
+    
+    const winnerDoc = await getDoc(doc(db, "bingo_players", winnerUid));
+    const winnerName = winnerDoc.data()?.username || 'Onbekend';
+    
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+        gameState: 'voting_complete',
+        winnerUid: winnerUid,
+        winnerName: winnerName,
+        wasTie: wasTie,
+        announcement: wasTie 
+            ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
+            : `Er is gestemd: ${winnerName} is de draaier geworden!`
+    });
+    
+    showAnnouncement(wasTie 
+        ? `Het was gelijkspel, de computer heeft ${winnerName} gekozen!`
+        : `Er is gestemd: ${winnerName} is de draaier geworden!`);
+    
+    setTimeout(async () => {
+        await updateDoc(doc(db, "bingo_players", winnerUid), { isSpinner: true });
+        await setDoc(doc(db, "bingo_game", BINGO_ROOM_ID), {
+            drawnNumbers: [],
+            lastDrawn: null,
+            spinner: winnerUid,
+            winner: null,
+            prize: null,
+            prizes: [],
+            createdAt: serverTimestamp()
+        });
+        await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+            gameState: 'playing',
+            startedAt: serverTimestamp()
+        });
+    }, 3000);
+}
+
+function showAnnouncement(message) {
+    const announcement = document.getElementById('bingo-announcements');
+    const text = announcement.querySelector('.announcement-text');
+    text.innerText = message;
+    announcement.classList.remove('hidden');
+}
+
 function listenToLobby() {
     unsubscribeStatus = onSnapshot(doc(db, "bingo_game", GAME_STATUS_ID), (docSnap) => {
         let gameState = 'lobby';
         if (docSnap.exists()) {
-            gameState = docSnap.data().gameState || 'lobby';
+            const data = docSnap.data();
+            gameState = data.gameState || 'lobby';
+            
+            if (data.announcement) {
+                showAnnouncement(data.announcement);
+            }
         }
         
-        if (gameState === 'lobby') {
-            showLobby();
+        if (gameState === 'lobby' || gameState === 'voting') {
+            showLobby(gameState === 'voting');
         } else {
             showGame();
         }
@@ -185,10 +308,12 @@ function listenToLobby() {
         if (lobbyList) lobbyList.innerHTML = '';
         if (playerList) playerList.innerHTML = '';
         
+        allPlayers = [];
         let hasSpinner = false;
         
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
+            allPlayers.push({ uid: docSnap.id, ...data });
             
             if (lobbyList) {
                 const li = document.createElement('li');
@@ -212,38 +337,106 @@ function listenToLobby() {
             }
         });
         
-        const isCurrentUserSpinner = snapshot.docs.some(d => d.id === auth.currentUser.uid && d.data().isSpinner);
+        const statusSnap = allPlayers.find(p => p.uid === auth.currentUser.uid);
+        hasVoted = statusSnap?.votedFor ? true : false;
         
-        if (isCurrentUserSpinner) {
-            isSpinner = true;
-            document.getElementById('spinner-controls')?.classList.remove('hidden');
-            document.getElementById('player-info')?.classList.add('hidden');
-        } else {
-            isSpinner = false;
-            document.getElementById('spinner-controls')?.classList.add('hidden');
-            document.getElementById('player-info')?.classList.remove('hidden');
-        }
-        
-        if (!hasSpinner && !isSpinner && document.getElementById('player-info')) {
-            document.getElementById('player-info').innerHTML += `
-                <button onclick="becomeSpinner()" class="draw-btn" style="margin-top: 15px;">
-                    🎰 Word de Draaier
-                </button>
-            `;
-        }
+        updateVoterList();
+        updateDrawerControls();
     });
     
     unsubscribeGame = onSnapshot(doc(db, "bingo_game", BINGO_ROOM_ID), (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
+            currentDraatje = data.spinner;
             updateGameUI(data);
+            updateDrawerControls();
         }
     });
 }
 
-function showLobby() {
+function updateDrawerControls() {
+    const isCurrentUserDraatje = currentDraatje === auth.currentUser.uid;
+    
+    if (isCurrentUserDraatje) {
+        isSpinner = true;
+        document.getElementById('spinner-controls')?.classList.remove('hidden');
+        document.getElementById('waiting-for-draaier')?.classList.add('hidden');
+        document.getElementById('player-info')?.classList.add('hidden');
+    } else {
+        isSpinner = false;
+        document.getElementById('spinner-controls')?.classList.add('hidden');
+        document.getElementById('waiting-for-draaier')?.classList.remove('hidden');
+        document.getElementById('player-info')?.classList.remove('hidden');
+    }
+}
+
+function updateVoterList() {
+    const voterList = document.getElementById('voter-list');
+    if (!voterList) return;
+    
+    const votingSection = document.getElementById('voting-section');
+    
+    const statusSnap = allPlayers.find(p => p.uid === auth.currentUser.uid);
+    const gameState = statusSnap?.gameState;
+    
+    if (gameState === 'voting') {
+        votingSection.classList.remove('hidden');
+    } else {
+        votingSection.classList.add('hidden');
+        return;
+    }
+    
+    voterList.innerHTML = '';
+    
+    allPlayers.forEach(player => {
+        if (player.uid === auth.currentUser.uid) return;
+        
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <button class="vote-btn" data-uid="${player.uid}" onclick="voteForPlayer('${player.uid}', '${player.username}')">
+                👤 ${player.username}
+            </button>
+        `;
+        voterList.appendChild(li);
+    });
+    
+    if (hasVoted) {
+        const myVote = allPlayers.find(p => p.uid === auth.currentUser.uid)?.votedFor;
+        if (myVote) {
+            updateVoteButtonState(myVote);
+        }
+    }
+}
+
+window.startVoting = async () => {
+    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
+        gameState: 'voting',
+        votingStartedAt: serverTimestamp()
+    });
+    
+    await setDoc(doc(db, "bingo_votes", "session"), {
+        votes: [],
+        startedAt: serverTimestamp()
+    });
+    
+    await setDoc(doc(db, "bingo_votes", "players"), {
+        players: allPlayers.map(p => p.uid)
+    });
+    
+hasVoted = false;
+    showAnnouncement('🗳️ Stemmen is geopend! Klik op een buur om te stemmen.');
+};
+
+function showLobby(showVoting = false) {
     document.getElementById('bingo-lobby').classList.remove('hidden');
     document.getElementById('bingo-app').classList.add('hidden');
+    
+    if (showVoting) {
+        document.getElementById('voting-section').classList.remove('hidden');
+        updateVoterList();
+    } else {
+        document.getElementById('voting-section').classList.add('hidden');
+    }
 }
 
 function showGame() {
@@ -254,7 +447,6 @@ function showGame() {
 }
 
 function updateGameUI(data) {
-    // Update drawn numbers
     if (data.drawnNumbers) {
         drawnNumbers = new Set(data.drawnNumbers);
         document.getElementById('drawn-count').innerText = data.drawnNumbers.length;
@@ -267,31 +459,18 @@ function updateGameUI(data) {
             chip.innerText = num;
             container.appendChild(chip);
         });
-        
-        // Mark numbers on our card
-        document.querySelectorAll('.bingo-cell').forEach((cell, index) => {
-            const num = bingoCard[index];
-            if (num !== "FREE" && data.drawnNumbers.includes(num)) {
-                cell.classList.add('marked');
-                markedNumbers.add(num);
-            }
-        });
-        
-        checkForBingo();
     }
     
-    // Show last drawn number
     if (data.lastDrawn) {
         document.getElementById('drawn-number-display').classList.remove('hidden');
         document.getElementById('last-drawn').innerText = data.lastDrawn;
+        showGameAnnouncement(`🎯 Getal getrokken: ${data.lastDrawn}!`);
     }
     
-    // Show winner
     if (data.winner) {
         showWinner(data.winner, data.prize);
     }
     
-    // Show prizes
     if (data.prizes) {
         const prizeList = document.getElementById('prize-list');
         prizeList.innerHTML = '';
@@ -303,30 +482,20 @@ function updateGameUI(data) {
     }
 }
 
-window.becomeSpinner = async () => {
-    const playerDoc = await getDoc(doc(db, "bingo_players", auth.currentUser.uid));
-    if (playerDoc.data()?.dontWantSpinner) {
-        alert("Je hebt aangegeven dat je niet de draaier wilt zijn. Vink het vinkje uit om toch te kunnen draaien.");
-        return;
-    }
+function showGameAnnouncement(message) {
+    const announcement = document.getElementById('game-announcements');
+    const text = announcement.querySelector('.game-announcement-text');
+    text.innerText = message;
+    announcement.classList.remove('hidden');
     
-    await updateDoc(doc(db, "bingo_players", auth.currentUser.uid), { isSpinner: true });
-    await setDoc(doc(db, "bingo_game", BINGO_ROOM_ID), {
-        drawnNumbers: [],
-        lastDrawn: null,
-        spinner: auth.currentUser.uid,
-        winner: null,
-        prize: null,
-        prizes: [],
-        createdAt: serverTimestamp()
-    });
-    await setDoc(doc(db, "bingo_game", GAME_STATUS_ID), {
-        gameState: 'playing',
-        startedAt: serverTimestamp()
-    });
-};
+    setTimeout(() => {
+        announcement.classList.add('hidden');
+    }, 5000);
+}
 
 window.drawNumber = async () => {
+    if (!canDraw) return;
+    
     const gameDoc = await getDoc(doc(db, "bingo_game", BINGO_ROOM_ID));
     if (!gameDoc.exists()) return;
     
@@ -338,6 +507,9 @@ window.drawNumber = async () => {
         return;
     }
     
+    canDraw = false;
+    startDrawCooldown();
+    
     const newNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
     const newDrawnNumbers = [...(data.drawnNumbers || []), newNumber];
     
@@ -346,6 +518,28 @@ window.drawNumber = async () => {
         lastDrawn: newNumber
     });
 };
+
+function startDrawCooldown() {
+    const btn = document.getElementById('draw-number-btn');
+    let countdown = drawCooldown;
+    
+    btn.classList.add('cooldown');
+    btn.disabled = true;
+    
+    const interval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            btn.innerHTML = `⏳ ${countdown}s wachten...`;
+        } else {
+            clearInterval(interval);
+            canDraw = true;
+            btn.classList.remove('cooldown');
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="dices"></i> Trek een bal`;
+            lucide.createIcons();
+        }
+    }, 1000);
+}
 
 window.claimBingo = async () => {
     if (!checkForBingo()) {
