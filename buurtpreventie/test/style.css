@@ -81,3 +81,39 @@ body { margin: 0; background: var(--bg); color: var(--text); overflow: hidden; h
 .neighbor-house { background: #f59e0b; } /* Oranje kleur voor buren */
 .neighbor-house:hover { filter: brightness(1.1); transform: scale(1.05); }
 .my-house { background: var(--primary); color: white; }
+
+/* Settings Layout */
+.settings-wrapper { padding: 24px; max-width: 600px; margin: 0 auto; }
+.settings-card { background: var(--card); color: var(--text); padding: 28px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px; transition: 0.3s; }
+.settings-title { font-size: 20px; font-weight: 700; margin: 0 0 24px 0; color: var(--text); }
+
+/* Form Groups */
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.form-group input[type="text"] { width: 100%; padding: 16px 18px; border-radius: 12px; border: 2px solid #e5e7eb; background: var(--bg); color: var(--text); font-size: 17px; transition: 0.2s; }
+.form-group input[type="text"]:focus { border-color: var(--primary); outline: none; }
+
+/* Save Button */
+.save-btn { background: var(--primary); color: white; border: none; padding: 16px 40px; border-radius: 30px; font-size: 17px; font-weight: 600; cursor: pointer; display: block; margin: 28px auto 0; transition: 0.2s; }
+.save-btn:hover { background: var(--accent); }
+
+/* Logout Button */
+.logout-btn { background: #ef4444; color: white; border: none; width: auto; padding: 16px 48px; border-radius: 30px; font-size: 17px; font-weight: 600; cursor: pointer; display: block; margin: 16px auto 40px; transition: 0.2s; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+.logout-btn:hover { background: #dc2626; transform: translateY(-2px); }
+
+/* Setting Item */
+.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 17px; }
+
+/* Mobile Layout */
+@media (max-width: 480px) {
+    .settings-wrapper { padding: 16px; }
+    .settings-card { padding: 20px; }
+}
+
+/* Toggle Switch */
+.switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--primary); }
+input:checked + .slider:before { transform: translateX(26px); }
