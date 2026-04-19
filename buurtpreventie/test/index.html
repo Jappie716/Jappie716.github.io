@@ -90,25 +90,36 @@
                 </section>
 
                 <section id="settings-tab" class="tab-content hidden">
-                    <div class="settings-card">
-                        <h3>Profiel</h3>
-                        <input type="text" id="settings-username" placeholder="Gebruikersnaam">
-                        <input type="text" id="settings-huisnummer" placeholder="Huisnummer">
-                        <input type="text" id="settings-status" placeholder="Status (bijv. In de tuin)">
-                        <button id="save-settings-btn" class="primary-btn">Opslaan</button>
-                        
-                        <div class="setting-divider"></div>
-                        
-                        <h3>Voorkeuren</h3>
-                        <div class="setting-item">
-                            <span>Donkere Modus</span>
-                            <label class="switch">
-                                <input type="checkbox" id="dark-toggle">
-                                <span class="slider"></span>
-                            </label>
+                    <div class="settings-wrapper">
+                        <div class="settings-card">
+                            <h3 class="settings-title">Profiel</h3>
+                            <div class="form-group">
+                                <label for="settings-username">Naam</label>
+                                <input type="text" id="settings-username" placeholder="Jouw naam">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-huisnummer">Huisnummer</label>
+                                <input type="text" id="settings-huisnummer" placeholder="Bijv. 42">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-status">Status</label>
+                                <input type="text" id="settings-status" placeholder="Bijv. In de tuin">
+                            </div>
+                            <button id="save-settings-btn" class="save-btn">Opslaan</button>
                         </div>
                         
-                        <button id="logout-btn" class="danger-btn">Log uit</button>
+                        <div class="settings-card">
+                            <h3 class="settings-title">Voorkeuren</h3>
+                            <div class="setting-item">
+                                <span>Donkere Modus</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="dark-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button id="logout-btn" class="logout-btn">Log uit</button>
                     </div>
                 </section>
             </main>
