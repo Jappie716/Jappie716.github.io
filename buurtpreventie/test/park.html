@@ -164,7 +164,7 @@
             const box = document.getElementById('messageBox');
             box.innerText = text;
             box.classList.add('show');
-            setTimeout(() => box.classList.remove('show'), 2500);
+            setTimeout(() => box.classList.remove('show'), 5000);
         }
         
         function updatePlayer() {
@@ -177,11 +177,34 @@
             const messages = [
                 "Je loopt lekker door het park... De bloemen ruiken heerlijk! 🌸",
                 "Je ontmoet de buurvrouw, jullie kletsen even over het weer ☀️",
-                "Je ziet een mooie vlinder! Hij vlog weg... 🦋",
+                "Je ziet een mooie vlinder! Hij vliegt weg... 🦋",
                 "Je loopt langs de vijver. De vissen kijken je aan 🐟",
                 "Even een blokje om, lichaam in beweging! 💪",
                 "Je ademt diep in... Heerlijk die frisse lucht 🌿",
-                "Onderweg zie je een konijn! Het is snel weg �兔"
+                "Onderweg zie je een konijn! Het is snel weg! 🐰",
+                "Je ziet een kindje met een ijsje. Zou je er ook één willen? 🍦",
+                "Je loopt langs de speeltuin. De kids hebben plezier! 🎢",
+                "Een golden retriever rent langs. 'Hoi!' 🐕",
+                "Je ziet een fotootje van het park maken. Mooi hoekje! 📸",
+                "Je pauzeert even bij de waterfountain. Heerlijk verfrissend! 💧",
+                "Je loopt langs het tennisveldje. Iedereen speelt fanatiek! 🎾",
+                "Daar is de beheerder! Hij wijst naar het hondenlosloopgebied 🐕‍🦺",
+                "Je ziet een ouder stel wandelen. Ze kijken tevreden 👫",
+                "Een skateborder is aan het oefenen. Vet cool! 🛹",
+                "Je loopt onder een bruggetje door. Je stem weergalmt! 📣",
+                "Er staat een picknicktafel. Misschien voor later? 🍱",
+                "Je zietje buurman met zijn labradoodle. Fluffy! 🐩",
+                "De zon schijnt door de bomen. Heerlijk die schaduw! ☂️",
+                "Je komt langs de bloemperken. Wat een kleuren! 🌷🌻🌹",
+                "Een jogger rent je voorbij. Respekt! 🏃",
+                "Je ziet een ijsco kar! Hoe laat is het eigenlijk? 🍦",
+                "Je loopt in het grind. Hoe krakeling... 👣",
+                "Je ziet een zwerfkatje. Het is bang, denk je? 🐱",
+                "Een mountainbiker dendert voorbij. Pass op! 🚵",
+                "Je komt langs de jeu de boules baan. Ze spelen fanatiek! 🎳",
+                "Er staat een bankje met uitzicht op de vijver. Mooi! 🪑",
+                "Je ziet een roodborstje op het hekje zitten. Roood Rood! 🐦",
+                "Een windje waait door je haren. Fris! 🍃"
             ];
             playerX = Math.random() * 80 + 10;
             updatePlayer();
@@ -194,12 +217,35 @@
         
         function sitOnBench() {
             const messages = [
-                "Je gaat op het gras zitten... Even bijkomen rustig uitkijken over het park 🏞️",
+                "Je gaat op het bankje zitten... Even bijkomen en rustig uitkijken over het park 🏞️",
                 "Heerlijk zitten hier! Je geniet van het uitzicht 🌺",
                 "Je pauzeert even. De wind speelt met je haren 🍃",
                 "Een oudere meneer komt naast je zitten. 'Mooi weer vandaag hè?' 👴",
                 "Je luistert naar de vogels. Wat een getjilp! 🐦",
-                "Even niets doen is ook heerlijk 😌"
+                "Even niets doen is ook heerlijk 😌",
+                "Je kijkt uit over de vijver. De eenden dobberen rustig 🎣",
+                "Een meeuw landt naast je. Samen genieten van het uitzicht 🐦",
+                "Je ziet kinderen spelen in de speeltuin. Hoeft niet meer! 🎠",
+                "Je hoort het ruisen van de bomen. Heerlijk rustgevend 🌳",
+                "Een vrouw met een kinderwagen gaat naast je zitten. Ze glimlacht 👶",
+                "Je haalt diep adem. De lucht is zo puur! ✨",
+                "Je kijkt toe hoe de honden rennen. Welke is je favoriet? 🐕",
+                "Een oude vrouw komt voorbij met haar rollator. Stevig! 👵",
+                "Je ziet de schaduwen van de bomen bewegen op de grond 🍂",
+                "Een windje maakt het net te fris. Je rilt even 🌬️",
+                "Je ziet de zon door de blaadjes schijnen. Goudgeel! 🌞",
+                "Twee duiven vechten om een broodkruimeltje. Amuserend! 🐦",
+                "Je hoort een kind roepen: 'Papa, kijk!' Dat zal wel iets bijzonders zijn 👨‍👧",
+                "Je ontspant je schouders... Even alles laten gaan 😌",
+                "Je kijkt naar de wolken. Die ene lijkt op een konijn! ☁️",
+                "Een eekhoorn klimt in een boom. Hoe behendig! 🐿️",
+                "Je ziet een stelletje hand in hand lopen. Love is in the air! 💕",
+                "Je leunt achterover. Je rug zegt bedankt! 🪑",
+                "Een man leest een krant. Het nieuws van vandaag 📰",
+                "Je ziet de blaadjes bewegen. Herfst in aantocht! 🍁",
+                "Een katje komt dichterbij. Het snuffelt aan je schoen 🐱",
+                "Je hoort het gelach van kinderen uit de verte. Plezier! 😂",
+                "Een vlinder landt op je knie! Je durf niet te bewegen... 🦋"
             ];
             playerX = 30;
             updatePlayer();
@@ -220,7 +266,23 @@
                 "Je gooit brood naar de eenden. Ze eten het snel op! 🦆🍞",
                 "De eenden kwaken enthousiast! Ze zijn blij met het brood 🦆",
                 "De eenden strijden om het broodstukje! Het is een grappig gezicht 😄",
-                "Een eend komt helemaal naar je toe. Hoe schattig! 🥰"
+                "Een eend komt helemaal naar je toe. Hoe schattig! 🥰",
+                "Een kooikerhondje wil ook! Maar honden mogen geen brood... 🐕",
+                "Je bent door je brood heen! De eenden kijken je aan 🦆👀",
+                "De eenden eten alles op. Geen kruimeltje over! ✨",
+                "Een jonge eend leert van de oudere. Hoe schattig! 🐣",
+                "Ze maken er een feestje van! Kwak kwak! 🎉",
+                "Je brokjes drijven op het water. De vissen willen ook! 🐟",
+                "De meeuwen komen erbij. Nu wordt het een feest! 🐦",
+                "Een eend schudt zijn veren. Je wordt nat! 💦",
+                "De eenden swemmen in een rij. Als een klein leger! 🦆",
+                "Je gooit een groot stuk. Die grote eend pakt het! 💪",
+                "Het voelt als mindfulness. Gewoon eenden voeren 🧘",
+                "Een eend doet zijn vleugels wijd. Foto-moment! 📸",
+                "Een kind komt ook eenden voeren. Samen doen! 👧",
+                "De eenden kwaken harder. Ze willen meer! 🦆🦆🦆",
+                "Je gooit in de verte. Ze zwemmen ernaartoe! 🏊",
+                "Een ei? Nee, dat ligt er al lang. Van vroeger! 🥚"
             ];
             
             playerX = 75;
@@ -238,9 +300,32 @@
                 "Je hoort een merel zingen! 🎵 Wat mooi 🐦",
                 "Een ekster zit op de picknicktafel. Hoi! 🖤",
                 "Je ziet twee-duiven ruziën om een kruimeltje 🐦",
-                "Een roodborstje flitst voorbij! Klein maar laut 🔴",
-                "Zeven meeuwen cirkelen boven je head... Ze zoeken naar eten 🐦",
-                "Een uil? Nee, dat is een beeld in het park 🦉"
+                "Een roodborstje flitst voorbij! Klein maar leuk 🔴",
+                "Zeven meeuwen cirkelen boven je hoofd... Ze zoeken naar eten 🐦",
+                "Een uil? Nee, dat is een beeld in het park 🦉",
+                "Een koolmeesje flitst van tak naar tak. Wat een actie! 🐤",
+                "Twee eksters zitten samen. Zijn het vrienden? 🐦‍⬛",
+                "Je hoort getik... Een specht! Hoe hard werken! 🪵",
+                "Een duif loopt rustig rond. Op zoek naar lekkers 🐦",
+                "Een zwaluw vliegt laag. Regen onderweg? 🌧️",
+                "Een kraai zit op het hek. Ze kijken zo slim! 🐦‍⬛",
+                "Een fazant! Hoe exotisch! Veel te mooi 🦚",
+                "Je hoort gekwaker. Een eend in de verte 🦆",
+                "Een kalkoen? Nee, dat is een kalkoenseend 🦆",
+                "Een mus zit op de grond. Zo'n gewoon vogeltje 🐦",
+                "Een reiger staat stil in het water. Zolang wachten! 🦢",
+                "Een duif zit naast je. Geen angst! 🐦",
+                "Een gans loopt voorbij. Liever niet te dichtbij! 🪿",
+                "Je ziet een vogelnest hoog in de boom. 🥚",
+                "Een groepje kleine vogels vliegt in formatie. Weg naar het zuiden? ✈️",
+                "Een roodborstje zingt. Je neuriet mee 🎶",
+                "Een uil kijkt je aan vanuit een boom. Wat een blik! 🦉",
+                "Twee duiven zijn aan het koeren. Liefde! 🐦💕",
+                "Een specht tikt ritmisch. Bonk bonk bonk! 🥁",
+                "Een ekster vliegt voorbij met glinsterende staart 🖤✨",
+                "Een meeuw screamt. Krijg je er koude rillingen van! 😱",
+                "Een klein brown vogeltje. Wat was het ook alweer? 🐦",
+                "Je ziet een vogel met een worm! Lunchtime! 🐛"
             ];
             playerX = 50;
             updatePlayer();
@@ -252,7 +337,37 @@
         }
         
         function shakeTree() {
-            const items = ["Er valt niks uit de boom...", "Er valt een blaadje uit! 🍂", "Er valt een takje uit! 🪵", "Er_valt een vogel ei! Eerst maar terugzetten...", "Er komt een eekhoorn uit! 🐿️ Hij kijkt je aan"];
+            const items = [
+                "Er valt niks uit de boom... Misschien te vroeg?",
+                "Er valt een blaadje uit! 🍂 Het dwarzelt neer",
+                "Er valt een takje uit! 🪵 De boom is aan het verharen",
+                "Er valt een vogelei! Je zet het snel terug! 🥚",
+                "Er komt een eekhoorn uit! 🐿️ Hij kijkt je verontwaardigd aan",
+                "Er valt een dennenappel! Bom! 🐿️",
+                "Niks... De boom is koppig 🌳",
+                "Er komt een vogel uit gevlogen! Verrassing! 🐦",
+                "Er dwarzelt stof neer. Het is droog vandaag 💨",
+                "Er valt een insect uit! Gelukkig geen spin 🪲",
+                "Je schudt harder... Er komt een regenworm uit! 🪱",
+                "Er valt een verenkleed uit. Van een mol? 🐹",
+                "Er komt een kat uit de boom! Hoe kwam die daar? 🐱",
+                "Er dwarzelt een blaadje... nog een... nog een! 🍂🍂🍂",
+                "Niks te zien. Misschien te zacht geschud? 💪",
+                "Er valt een knoestige tak uit. Flink stuk! 🪵",
+                "Er komt een bosje mos uit. Zacht en groen! 🌿",
+                "Je schudt en schudt... Een vleermuis! 🦇 Gelukkig overdag",
+                "Er valt een eekhoornnootje uit! Vergeten voorraad! 🌰",
+                "Er komt een egeltje tevoorschijn! Hoe schattig! 🦔",
+                "Er dwarzelt zand neer. De boom is aan het verliezen... 🏜️",
+                "Er komt een部的rups uit! Hij kruipt weer terug 🐛",
+                "Er valt een oude nest uit! Van vorig jaar 🪺",
+                "Je schudt nog eens... Er komt een wesp! Gelukkig vriendelijk! 🐝",
+                "Er valt niks uit. De boom is stabiel! 🌳",
+                "Er dwarzelt een spinnenweb naar beneden. Weeffout! 🕸️",
+                "Er komt een pimpelmees uit! Hoe blauw! 💙",
+                "Er valt een schorsje af. De boom vervelt 🪵",
+                "Er zit een koolmees in! Hij is boos dat je stoort 🐤"
+            ];
 
             playerX = 15;
             updatePlayer();
