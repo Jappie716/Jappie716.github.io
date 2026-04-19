@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BuurtWacht World</title>
+    <title>Buurtpreventie World</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -12,7 +12,7 @@
     <div id="auth-screen" class="screen">
         <div class="auth-box pulse" id="login-form">
             <div class="logo-icon">🛡️</div>
-            <h1>BuurtWacht</h1>
+            <h1>Buurtpreventie</h1>
             <input type="email" id="email" placeholder="E-mail">
             <input type="password" id="password" placeholder="Wachtwoord">
             <button id="login-btn" class="primary-btn">Inloggen</button>
@@ -23,7 +23,7 @@
             <h2>Welkom in de buurt! 🏠</h2>
             <p>Stel je profiel in</p>
             <input type="text" id="username" placeholder="Gebruikersnaam">
-            <input type="text" id="straat" placeholder="Straatnaam">
+            <input type="text" id="huisnummer" placeholder="Huisnummer">
             <div class="row">
                 <input type="number" id="leeftijd" placeholder="Leeftijd">
                 <select id="geslacht">
@@ -39,7 +39,7 @@
     <div id="main-app" class="app-container hidden">
         
         <aside class="sidebar">
-            <div class="sidebar-logo">🛡️ BuurtWacht</div>
+            <div class="sidebar-logo">🛡️ Buurtpreventie</div>
             <nav>
                 <button onclick="showTab('world')" class="nav-btn active"><i data-lucide="map"></i> De Wijk</button>
                 <button onclick="showTab('chat')" class="nav-btn"><i data-lucide="message-circle"></i> BuurtChat</button>
@@ -90,17 +90,36 @@
                 </section>
 
                 <section id="settings-tab" class="tab-content hidden">
-                    <div class="settings-card">
-                        <h3>Voorkeuren</h3>
-                        <div class="setting-item">
-                            <span>Donkere Modus</span>
-                            <label class="switch">
-                                <input type="checkbox" id="dark-toggle">
-                                <span class="slider"></span>
-                            </label>
+                    <div class="settings-wrapper">
+                        <div class="settings-card">
+                            <h3 class="settings-title">Profiel</h3>
+                            <div class="form-group">
+                                <label for="settings-username">Naam</label>
+                                <input type="text" id="settings-username" placeholder="Jouw naam">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-huisnummer">Huisnummer</label>
+                                <input type="text" id="settings-huisnummer" placeholder="Bijv. 42">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-status">Status</label>
+                                <input type="text" id="settings-status" placeholder="Bijv. In de tuin">
+                            </div>
+                            <button id="save-settings-btn" class="save-btn">Opslaan</button>
                         </div>
-                        <br>
-                        <button id="logout-btn" class="secondary-btn">Log uit</button>
+                        
+                        <div class="settings-card">
+                            <h3 class="settings-title">Voorkeuren</h3>
+                            <div class="setting-item">
+                                <span>Donkere Modus</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="dark-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button id="logout-btn" class="logout-btn">Log uit</button>
                     </div>
                 </section>
             </main>
