@@ -46,7 +46,26 @@ async function startApp() {
     setText("user-display-name", "👤 " + currentUserProfile.username);
 
     await joinLobby();
+    setupLobbyListeners();
     listen();
+}
+
+function setupLobbyListeners() {
+    const noSpinnerCheck = document.getElementById("no-spinner-check");
+    if (noSpinnerCheck) {
+        noSpinnerCheck.addEventListener("change", async (e) => {
+            await updateDoc(doc(db, "players", auth.currentUser.uid), {
+                wantsToSpin: !e.target.checked
+            });
+        });
+    }
+
+    const startVoteBtn = document.getElementById("start-vote-btn");
+    if (startVoteBtn) {
+        startVoteBtn.addEventListener("click", () => {
+            console.log("Start Stemmen geklikt");
+        });
+    }
 }
 
 /* ================= LOBBY ================= */
@@ -79,17 +98,21 @@ function listen() {
         });
 
         renderPlayers();
+        renderLobbyPlayers();
     });
 
-    // game
-    onSnapshot(doc(db, "game", "main"), snap => {
+    // gameState
+    onSnapshot(doc(db, "game", "state"), snap => {
         if (!snap.exists()) return;
 
-        const data = snap.data();
-        currentSpinner = data.spinner;
+        const state = snap.data().state;
 
-        if (data.lastNumber) {
-            showMessage("Getal: " + data.lastNumber);
+        if (state === "lobby") {
+            show("bingo-lobby");
+            hide("bingo-app");
+        } else {
+            hide("bingo-lobby");
+            show("bingo-app");
         }
     });
 }
@@ -106,6 +129,20 @@ function renderPlayers() {
         const li = document.createElement("li");
         li.innerText = "👤 " + p.username + (p.isSpinner ? " 🎯" : "");
         list.appendChild(li);
+    });
+}
+
+function renderLobbyPlayers() {
+    const list = document.getElementById("lobby-players-list");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    allPlayers.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "lobby-player-item";
+        div.innerText = "👤 " + p.username;
+        list.appendChild(div);
     });
 }
 
