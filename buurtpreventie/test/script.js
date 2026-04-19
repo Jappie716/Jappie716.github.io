@@ -182,7 +182,6 @@ window.visitPark = () => {
     alert('🌳 Je geniet even van de rust in het park... \n\nEven tot rust komen in de natuur is heerlijk!');
 };
 
-// --- NIEUW: DEURBEL LOGICA ---
 window.ringDoorbell = async (targetUid, targetName) => {
     alert(`Je belt aan bij ${targetName}... Ding Dong! 🔔`);
     
@@ -195,6 +194,11 @@ window.ringDoorbell = async (targetUid, targetName) => {
         status: 'ringing', // kan 'ringing', 'accepted', of 'declined' zijn
         time: serverTimestamp()
     });
+}; // <--- DEZE WAS VERGETEN
+
+function listenForDoorbells() {
+
+function listenForDoorbells() {
 
 function listenForDoorbells() {
     onSnapshot(collection(db, "doorbells"), (snapshot) => {
