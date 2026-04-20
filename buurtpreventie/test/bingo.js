@@ -229,9 +229,11 @@ onAuthStateChanged(auth, async (user) => {
 
   if (!user) {
     showScreen("auth");
-    return;
+    return;  // ← stopt hier, listener wordt NIET gestart
   }
 
+  // Wacht tot het token écht actief is voordat we Firestore benaderen
+  await user.getIdToken(true);
   // ── Logged in ──
   try {
     // Fetch the display name from Firestore (email/password auth has no displayName)
