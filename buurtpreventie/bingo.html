@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bingo Club – Lobby</title>
+  <link rel="stylesheet" href="bingo.css" />
+
+  <!-- Google Fonts: old-fashioned, warm, readable -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ AUTH SCREEN ═══════════════════════════════════════ -->
+  <div id="auth-screen" class="screen">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="bingo-stamp">B·I·N·G·O</div>
+        <h1>Bingo Club</h1>
+        <p class="subtitle">Welkom! Meld u aan om mee te spelen.</p>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="tab-row" role="tablist">
+        <button id="tab-login"    class="tab-btn active" role="tab" aria-selected="true">Inloggen</button>
+        <button id="tab-register" class="tab-btn"        role="tab" aria-selected="false">Registreren</button>
+      </div>
+
+      <!-- Login panel -->
+      <div id="panel-login" class="tab-panel">
+        <label for="login-email">E-mailadres</label>
+        <input id="login-email" type="email" placeholder="uw@email.nl" autocomplete="email" />
+
+        <label for="login-password">Wachtwoord</label>
+        <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+
+        <button id="btn-login" class="btn-primary">Inloggen</button>
+      </div>
+
+      <!-- Register panel -->
+      <div id="panel-register" class="tab-panel hidden">
+        <label for="reg-username">Uw naam (zoals op het bord)</label>
+        <input id="reg-username" type="text" placeholder="bijv. Grietje" autocomplete="nickname" maxlength="30" />
+
+        <label for="reg-email">E-mailadres</label>
+        <input id="reg-email" type="email" placeholder="uw@email.nl" autocomplete="email" />
+
+        <label for="reg-password">Wachtwoord (min. 6 tekens)</label>
+        <input id="reg-password" type="password" placeholder="••••••••" autocomplete="new-password" />
+
+        <button id="btn-register" class="btn-primary">Account aanmaken</button>
+      </div>
+
+      <p id="auth-error" class="error-msg" aria-live="polite"></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LOBBY SCREEN ═══════════════════════════════════════ -->
+  <div id="lobby-screen" class="screen hidden">
+
+    <!-- Top bar -->
+    <header class="lobby-header">
+      <div class="header-brand">
+        <span class="header-stamp">BINGO</span>
+        <span class="header-title">Club Lobby</span>
+      </div>
+      <div class="header-user">
+        <span id="header-username" class="header-username"></span>
+        <button id="btn-logout" class="btn-logout" title="Uitloggen">Uitloggen</button>
+      </div>
+    </header>
+
+    <!-- Main board -->
+    <main class="lobby-main">
+
+      <!-- The wooden notice board -->
+      <section class="notice-board" aria-label="Aanwezigenlijst">
+        <div class="board-header">
+          <h2>Wie is er vanavond?</h2>
+          <span id="player-count" class="player-count">0 spelers</span>
+        </div>
+        <div class="board-pin board-pin--left"></div>
+        <div class="board-pin board-pin--right"></div>
+
+        <!-- Live player list -->
+        <ul id="player-list" aria-live="polite" aria-label="Aanwezige spelers">
+          <li class="player-placeholder">Even laden…</li>
+        </ul>
+      </section>
+
+      <!-- Spinner opt-out card -->
+      <section class="opt-out-card" aria-label="Draaier instelling">
+        <h3>Mijn voorkeur</h3>
+        <label class="opt-out-label" for="opt-out-check">
+          <input id="opt-out-check" type="checkbox" />
+          <span class="opt-out-box" aria-hidden="true"></span>
+          <span class="opt-out-text">Ik wil <strong>GEEN</strong> draaier zijn</span>
+        </label>
+        <p class="opt-out-hint">Vink dit aan als u de nummers liever niet omdraait.</p>
+        <p id="opt-out-status" class="opt-out-status" aria-live="polite"></p>
+      </section>
+
+    </main>
+
+    <footer class="lobby-footer">
+      <span>Bingo Club &copy; <span id="footer-year"></span> &mdash; Veel plezier!</span>
+    </footer>
+  </div>
+
+  <!-- Firebase (ESM CDN) + app logic -->
+  <script type="module" src="bingo.js"></script>
+</body>
+</html>
