@@ -236,9 +236,9 @@ onAuthStateChanged(auth, async (user) => {
   await user.getIdToken(true);
   // ── Logged in ──
   try {
-    // Fetch the display name from Firestore (email/password auth has no displayName)
-    const snap = await getDoc(playerRef(user.uid));
-    const storedName = snap.exists() ? snap.data().username : user.email;
+    // Haal username op uit /users/{uid} (de centrale gebruikerscollectie)
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    const storedName = userSnap.exists() ? userSnap.data().username : user.email;
 
     headerUsername.textContent = storedName;
     await ensurePlayerDoc(user.uid, storedName);
@@ -314,13 +314,11 @@ btnRegister.addEventListener("click", async () => {
   btnRegister.textContent = "Bezig…";
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    // Write player doc immediately so the name is available
-    await setDoc(playerRef(cred.user.uid), {
-      username:  username,
-      canSpin:   true,
-      lastSeen:  serverTimestamp(),
+    // Schrijf het users-doc zodat de username beschikbaar is voor de hele app
+    await setDoc(doc(db, "users", cred.user.uid), {
+      username: username,
     });
-    // onAuthStateChanged handles screen transition
+    // bingo_players doc wordt aangemaakt door ensurePlayerDoc in onAuthStateChanged
   } catch (err) {
     setAuthError(friendlyError(err.code));
   } finally {
