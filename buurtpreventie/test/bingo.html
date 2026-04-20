@@ -13,7 +13,7 @@
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════ AUTH SCREEN ═══════════════════════════════════════ -->
+  <!-- ══════════════════════════ AUTH SCREEN ══════════════════════════ -->
   <div id="auth-screen" class="screen">
     <div class="auth-card">
       <div class="auth-header">
@@ -22,7 +22,6 @@
         <p class="subtitle">Welkom! Meld u aan om mee te spelen.</p>
       </div>
 
-      <!-- Tab switcher -->
       <div class="tab-row" role="tablist">
         <button id="tab-login"    class="tab-btn active" role="tab" aria-selected="true">Inloggen</button>
         <button id="tab-register" class="tab-btn"        role="tab" aria-selected="false">Registreren</button>
@@ -57,7 +56,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════ LOBBY SCREEN ═══════════════════════════════════════ -->
+  <!-- ══════════════════════════ LOBBY SCREEN ══════════════════════════ -->
   <div id="lobby-screen" class="screen hidden">
 
     <!-- Top bar -->
@@ -75,7 +74,7 @@
     <!-- Main board -->
     <main class="lobby-main">
 
-      <!-- The wooden notice board -->
+      <!-- Wooden notice board -->
       <section class="notice-board" aria-label="Aanwezigenlijst">
         <div class="board-header">
           <h2>Wie is er vanavond?</h2>
@@ -90,17 +89,31 @@
         </ul>
       </section>
 
-      <!-- Spinner opt-out card -->
-      <section class="opt-out-card" aria-label="Draaier instelling">
-        <h3>Mijn voorkeur</h3>
-        <label class="opt-out-label" for="opt-out-check">
-          <input id="opt-out-check" type="checkbox" />
-          <span class="opt-out-box" aria-hidden="true"></span>
-          <span class="opt-out-text">Ik wil <strong>GEEN</strong> draaier zijn</span>
-        </label>
-        <p class="opt-out-hint">Vink dit aan als u de nummers liever niet omdraait.</p>
-        <p id="opt-out-status" class="opt-out-status" aria-live="polite"></p>
-      </section>
+      <!-- Right column -->
+      <div class="side-column">
+
+        <!-- Spinner opt-out card -->
+        <section class="opt-out-card" aria-label="Draaier instelling">
+          <h3>Mijn voorkeur</h3>
+          <label class="opt-out-label" for="opt-out-check">
+            <input id="opt-out-check" type="checkbox" />
+            <span class="opt-out-box" aria-hidden="true"></span>
+            <span class="opt-out-text">Ik wil <strong>GEEN</strong> draaier zijn</span>
+          </label>
+          <p class="opt-out-hint">Vink dit aan als u de nummers liever niet omdraait.</p>
+          <p id="opt-out-status" class="opt-out-status" aria-live="polite"></p>
+        </section>
+
+        <!-- Start game card — hidden until >= 2 players -->
+        <section id="start-section" class="start-card hidden" aria-label="Spel starten">
+          <h3>Klaar voor het spel?</h3>
+          <p class="start-hint">Klik op de knop als u klaar bent om te beginnen.<br>Het spel start zodra de helft van de spelers klaar is.</p>
+          <button id="btn-ready" class="btn-ready">Klaar om te spelen!</button>
+          <p id="ready-status" class="ready-status" aria-live="polite"></p>
+          <p id="countdown"    class="countdown hidden" aria-live="polite"></p>
+        </section>
+
+      </div><!-- /side-column -->
 
     </main>
 
@@ -109,7 +122,6 @@
     </footer>
   </div>
 
-  <!-- Firebase (ESM CDN) + app logic -->
   <script type="module" src="bingo.js"></script>
 </body>
 </html>
