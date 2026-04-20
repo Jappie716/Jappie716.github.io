@@ -1,208 +1,118 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, serverTimestamp, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-/* ================= CONFIG ================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
-  authDomain: "buurtpreventie-b74ad.firebaseapp.com",
-  projectId: "buurtpreventie-b74ad",
-  storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
-  messagingSenderId: "374517472678",
-  appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
+    apiKey: "AIzaSyBHKSY-NN4pUX5YGP cuT0I11QaqwI",
+    authDomain: "buurtpreventie.firebaseapp.com",
+    projectId: "buurtpreventie",
+    storageBucket: "buurtpreventie.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123def456"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-/* ================= STATE ================= */
+let unsubscribePlayers = null;
 
-let currentUserProfile = null;
-let allPlayers = [];
-let hasVoted = false;
-let currentSpinner = null;
-let canDraw = true;
-
-/* ================= AUTH ================= */
-
-onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-
-    const snap = await getDoc(doc(db, "users", user.uid));
-    if (!snap.exists()) return;
-
-    currentUserProfile = snap.data();
-    startApp();
-
-    document.getElementById('no-spinner-check').onchange = async (e) => {
-        await updateDoc(doc(db, "players", auth.currentUser.uid), {
-            wantsToSpin: !e.target.checked
-        });
-    };
-});
-
-/* ================= START ================= */
-
-async function startApp() {
-    hide("auth-screen");
-    show("bingo-app");
-
-    setText("user-display-name", "👤 " + currentUserProfile.username);
-
-    await joinLobby();
-    setupLobbyListeners();
-    listen();
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
 }
 
-function setupLobbyListeners() {
-    const startVoteBtn = document.getElementById("start-vote-btn");
-    if (startVoteBtn) {
-        startVoteBtn.addEventListener("click", () => {
-            console.log("Start Stemmen geklikt");
-        });
-    }
-}
-
-/* ================= LOBBY ================= */
-
-async function joinLobby() {
-    await setDoc(doc(db, "players", auth.currentUser.uid), {
-        username: currentUserProfile.username,
-        joinedAt: serverTimestamp(),
-        isSpinner: false,
-        votedFor: null
-    });
-}
-
-window.leave = async () => {
-    await deleteDoc(doc(db, "players", auth.currentUser.uid));
-    location.reload();
-};
-
-/* ================= LISTENERS ================= */
-
-function listen() {
-
-    // spelers
-    onSnapshot(collection(db, "players"), snap => {
-        allPlayers = [];
-
-        snap.forEach(d => {
-            const data = d.data();
-            allPlayers.push({ uid: d.id, ...data });
-        });
-
-        renderPlayers();
-        updateLobbyUI(allPlayers);
-    });
-
-    // gameState
-    onSnapshot(doc(db, "game", "state"), snap => {
-        if (!snap.exists()) return;
-
-        const state = snap.data().state;
-
-        if (state === "lobby") {
-            show("bingo-lobby");
-            hide("bingo-app");
-        } else {
-            hide("bingo-lobby");
-            show("bingo-app");
+function showPlayerList(snapshot) {
+    const playerList = document.getElementById('player-list');
+    playerList.innerHTML = '';
+    
+    const players = [];
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.online !== false) {
+            players.push({ id: doc.id, name: data.name });
         }
     });
+
+    players.sort((a, b) => a.name.localeCompare(b.name, 'nl'));
+
+    players.forEach(player => {
+        const div = document.createElement('div');
+        div.className = 'player-item';
+        div.textContent = player.name;
+        playerList.appendChild(div);
+    });
+
+    const startBtn = document.getElementById('start-voting-btn');
+    startBtn.style.display = players.length >= 2 ? 'block' : 'none';
 }
 
-/* ================= UI ================= */
+async function createOrUpdatePlayer(user) {
+    const playerRef = doc(db, 'players', user.uid);
+    const playerDoc = await getDoc(playerRef);
 
-function renderPlayers() {
-    const list = document.getElementById("player-list");
-    if (!list) return;
+    if (!playerDoc.exists()) {
+        await setDoc(playerRef, {
+            name: user.displayName || 'Anoniem',
+            email: user.email,
+            canSpin: true,
+            online: true,
+            createdAt: serverTimestamp()
+        });
+    } else {
+        await updateDoc(playerRef, {
+            online: true,
+            lastSeen: serverTimestamp()
+        });
+    }
+}
 
-    list.innerHTML = "";
+function setupOptOutListener(user) {
+    const checkbox = document.getElementById('opt-out-check');
+    const playerRef = doc(db, 'players', user.uid);
 
-    allPlayers.forEach(p => {
-        const li = document.createElement("li");
-        li.innerText = "👤 " + p.username + (p.isSpinner ? " 🎯" : "");
-        list.appendChild(li);
+    checkbox.addEventListener('change', async () => {
+        await updateDoc(playerRef, {
+            canSpin: !checkbox.checked
+        });
     });
 }
 
-function updateLobbyUI(players) {
-    const list = document.getElementById("lobby-players-list");
-    if (!list) return;
-    list.innerHTML = "";
-    players.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "player-item";
-        div.innerText = "👤 " + p.username + (p.wantsToSpin === false ? " (Kijkt toe)" : "");
-        list.appendChild(div);
+function initAuth() {
+    document.getElementById('login-btn').addEventListener('click', () => {
+        signInWithPopup(auth, provider).catch(console.error);
     });
 }
 
-function show(id) {
-    document.getElementById(id)?.classList.remove("hidden");
-}
-
-function hide(id) {
-    document.getElementById(id)?.classList.add("hidden");
-}
-
-function setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.innerText = text;
-}
-
-function showMessage(msg) {
-    console.log("📢", msg);
-}
-
-/* ================= VOTING ================= */
-
-window.vote = async (targetUid) => {
-    if (hasVoted) return;
-    hasVoted = true;
-
-    await updateDoc(doc(db, "players", auth.currentUser.uid), {
-        votedFor: targetUid
-    });
-};
-
-/* ================= DRAW ================= */
-
-window.draw = async () => {
-    if (!canDraw) return;
-
-    const ref = doc(db, "game", "main");
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return;
-
-    const data = snap.data();
-    let drawn = data.drawn || [];
-
-    let pool = [];
-    for (let i = 1; i <= 75; i++) {
-        if (!drawn.includes(i)) pool.push(i);
+onAuthStateChanged(auth, async (user) => {
+    if (unsubscribePlayers) {
+        unsubscribePlayers();
+        unsubscribePlayers = null;
     }
 
-    if (pool.length === 0) return;
+    if (user) {
+        await createOrUpdatePlayer(user);
 
-    const number = pool[Math.floor(Math.random() * pool.length)];
+        switchScreen('bingo-lobby');
 
-    await updateDoc(ref, {
-        drawn: [...drawn, number],
-        lastNumber: number
-    });
+        unsubscribePlayers = onSnapshot(
+            collection(db, 'players'),
+            (snapshot) => {
+                showPlayerList(snapshot);
+                const playerData = snapshot.docs.find(d => d.id === user.uid);
+                if (playerData) {
+                    const checkbox = document.getElementById('opt-out-check');
+                    checkbox.checked = !playerData.data().canSpin;
+                }
+            },
+            console.error
+        );
 
-    canDraw = false;
-    setTimeout(() => canDraw = true, 4000);
-};
+        setupOptOutListener(user);
+    } else {
+        switchScreen('auth-screen');
+    }
+});
 
-/* ================= BINGO ================= */
-
-window.claim = async () => {
-    await updateDoc(doc(db, "game", "main"), {
-        winner: currentUserProfile.username
-    });
-};
+initAuth();
