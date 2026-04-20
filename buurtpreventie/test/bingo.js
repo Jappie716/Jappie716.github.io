@@ -210,8 +210,9 @@ function startPlayerListener(currentUid) {
         optOutCheck.checked = !myData.canSpin;
       }
     },
-    (err) => {
-      console.error("Player listener error:", err);
+   (err) => {
+      console.error("Foutcode:", err.code);
+      console.error("Foutmelding:", err.message);
       playerList.innerHTML = `<li class="player-placeholder">⚠ Kan lijst niet laden.</li>`;
     }
   );
@@ -219,6 +220,7 @@ function startPlayerListener(currentUid) {
 
 // ─── 5. Auth state observer ───────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
+  console.log("Auth user:", user ? user.uid : "NIET INGELOGD");
   // Clean up any previous listener
   if (unsubscribePlayers) {
     unsubscribePlayers();
