@@ -173,12 +173,12 @@ async function updateCanSpin(uid, checkboxChecked) {
 }
 
 /**
- * Start a live Firestore listener on the 'players' collection.
+ * Start a live Firestore listener on the 'bingo_players' collection.
  * Returns an unsubscribe function.
  */
 function startPlayerListener(currentUid) {
   return onSnapshot(
-    collection(db, "players"),
+    collection(db, "bingo_players"),
     (snapshot) => {
       playerList.innerHTML = "";
 
