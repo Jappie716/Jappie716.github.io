@@ -1,176 +1,343 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-firestore.js";
+// ═══════════════════════════════════════════════════════════════════
+//  bingo.js  –  Phase 1: Lobby & User Presence
+//  Uses Firebase v10 ESM (CDN).
+//  Replace the firebaseConfig object with your own project's config.
+// ═══════════════════════════════════════════════════════════════════
 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  updateDoc,
+  getDoc,
+  collection,
+  onSnapshot,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ─── 1. Firebase config ────────────────────────────────────────────
+// TODO: Replace with your own Firebase project configuration.
 const firebaseConfig = {
-    apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
-    authDomain: "buurtpreventie-b74ad.firebaseapp.com",
-    projectId: "buurtpreventie-b74ad",
-    storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
-    messagingSenderId: "374517472678",
-    appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
+  apiKey: "AIzaSyCKbHyMpd5Um3Zpo8BoODQ1_yYpB9EneE0",
+  authDomain: "buurtpreventie-b74ad.firebaseapp.com",
+  projectId: "buurtpreventie-b74ad",
+  storageBucket: "buurtpreventie-b74ad.firebasestorage.app",
+  messagingSenderId: "374517472678",
+  appId: "1:374517472678:web:8d1b6ecf2c2699769ec367"
 };
 
-const app = initializeApp(firebaseConfig);
+const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db   = getFirestore(app);
 
-let unsubscribePlayers = null;
-let isRegisterMode = false;
+// ─── 2. DOM references ────────────────────────────────────────────
+const authScreen     = document.getElementById("auth-screen");
+const lobbyScreen    = document.getElementById("lobby-screen");
 
-function switchScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
+// Auth
+const tabLogin       = document.getElementById("tab-login");
+const tabRegister    = document.getElementById("tab-register");
+const panelLogin     = document.getElementById("panel-login");
+const panelRegister  = document.getElementById("panel-register");
+const loginEmail     = document.getElementById("login-email");
+const loginPassword  = document.getElementById("login-password");
+const btnLogin       = document.getElementById("btn-login");
+const regUsername    = document.getElementById("reg-username");
+const regEmail       = document.getElementById("reg-email");
+const regPassword    = document.getElementById("reg-password");
+const btnRegister    = document.getElementById("btn-register");
+const authError      = document.getElementById("auth-error");
+
+// Lobby
+const headerUsername = document.getElementById("header-username");
+const btnLogout      = document.getElementById("btn-logout");
+const playerList     = document.getElementById("player-list");
+const playerCount    = document.getElementById("player-count");
+const optOutCheck    = document.getElementById("opt-out-check");
+const optOutStatus   = document.getElementById("opt-out-status");
+const footerYear     = document.getElementById("footer-year");
+
+// ─── 3. Helpers ───────────────────────────────────────────────────
+let unsubscribePlayers = null; // cleanup handle for onSnapshot
+
+/** Show/hide the two main screens */
+function showScreen(name) {
+  authScreen.classList.toggle("hidden", name !== "auth");
+  lobbyScreen.classList.toggle("hidden", name !== "lobby");
 }
 
-function showPlayerList(snapshot) {
-    const playerList = document.getElementById('player-list');
-    playerList.innerHTML = '';
-    
-    const players = [];
-    snapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.online !== false) {
-            players.push({ id: doc.id, name: data.name });
-        }
-    });
-
-    players.sort((a, b) => a.name.localeCompare(b.name, 'nl'));
-
-    players.forEach(player => {
-        const div = document.createElement('div');
-        div.className = 'player-item';
-        div.textContent = player.name;
-        playerList.appendChild(div);
-    });
-
-    const startBtn = document.getElementById('start-voting-btn');
-    startBtn.style.display = players.length >= 2 ? 'block' : 'none';
+/** Display an auth error message */
+function setAuthError(msg) {
+  authError.textContent = msg;
 }
 
-async function createOrUpdatePlayer(user) {
-    const playerRef = doc(db, 'players', user.uid);
-    const playerDoc = await getDoc(playerRef);
+/** Friendly Dutch Firebase error messages */
+function friendlyError(code) {
+  const map = {
+    "auth/user-not-found":        "Geen account gevonden met dit e-mailadres.",
+    "auth/wrong-password":        "Onjuist wachtwoord. Probeer het opnieuw.",
+    "auth/email-already-in-use":  "Dit e-mailadres is al in gebruik.",
+    "auth/weak-password":         "Kies een wachtwoord van minimaal 6 tekens.",
+    "auth/invalid-email":         "Vul een geldig e-mailadres in.",
+    "auth/too-many-requests":     "Te veel pogingen. Wacht even en probeer opnieuw.",
+    "auth/invalid-credential":    "E-mailadres of wachtwoord klopt niet.",
+  };
+  return map[code] ?? "Er ging iets mis. Probeer het opnieuw.";
+}
 
-    if (!playerDoc.exists()) {
-        await setDoc(playerRef, {
-            name: user.displayName || user.email.split('@')[0],
-            email: user.email,
-            canSpin: true,
-            online: true,
-            createdAt: serverTimestamp()
-        });
-    } else {
-        await updateDoc(playerRef, {
-            online: true,
-            lastSeen: serverTimestamp()
-        });
+/** Update the #player-count badge */
+function updateCountBadge(n) {
+  playerCount.textContent = n === 1 ? "1 speler" : `${n} spelers`;
+}
+
+/** Render a single player row inside #player-list */
+function buildPlayerItem(id, data, currentUid) {
+  const li = document.createElement("li");
+  li.className = "player-item";
+  li.dataset.id = id;
+  if (id === currentUid) li.classList.add("player-item--me");
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "player-name";
+  nameSpan.textContent = data.username ?? "Onbekend";
+
+  const badge = document.createElement("span");
+  badge.className = data.canSpin ? "badge badge--spinner" : "badge badge--no-spinner";
+  badge.textContent = data.canSpin ? "Kan draaien" : "Geen draaier";
+
+  if (id === currentUid) {
+    const meBadge = document.createElement("span");
+    meBadge.className = "badge badge--me";
+    meBadge.textContent = "U";
+    li.append(nameSpan, meBadge, badge);
+  } else {
+    li.append(nameSpan, badge);
+  }
+
+  return li;
+}
+
+// ─── 4. Firestore helpers ─────────────────────────────────────────
+
+/** Get a reference to the player's document */
+const playerRef = (uid) => doc(db, "players", uid);
+
+/**
+ * Ensure the player document exists.
+ * Creates it on first login; on subsequent logins only refreshes lastSeen.
+ */
+async function ensurePlayerDoc(uid, username) {
+  const ref  = playerRef(uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      username:  username,
+      canSpin:   true,           // default: willing to spin
+      lastSeen:  serverTimestamp(),
+    });
+  } else {
+    await updateDoc(ref, { lastSeen: serverTimestamp() });
+  }
+}
+
+/**
+ * Update the canSpin field for the current user.
+ * Note: canSpin = true  → user IS willing to spin
+ *       canSpin = false → user opted OUT ("geen draaier")
+ * The checkbox reads "Ik wil GEEN draaier zijn", so:
+ *   checked   → canSpin = false
+ *   unchecked → canSpin = true
+ */
+async function updateCanSpin(uid, checkboxChecked) {
+  const canSpin = !checkboxChecked;
+  try {
+    await updateDoc(playerRef(uid), { canSpin, lastSeen: serverTimestamp() });
+    optOutStatus.textContent = checkboxChecked
+      ? "✔ Opgeslagen: u staat niet op de draailijst."
+      : "✔ Opgeslagen: u kunt draaien!";
+  } catch (err) {
+    console.error("canSpin update failed:", err);
+    optOutStatus.textContent = "⚠ Opslaan mislukt. Controleer uw verbinding.";
+  }
+  // Clear status message after 3 s
+  setTimeout(() => { optOutStatus.textContent = ""; }, 3000);
+}
+
+/**
+ * Start a live Firestore listener on the 'players' collection.
+ * Returns an unsubscribe function.
+ */
+function startPlayerListener(currentUid) {
+  return onSnapshot(
+    collection(db, "players"),
+    (snapshot) => {
+      playerList.innerHTML = "";
+
+      if (snapshot.empty) {
+        const li = document.createElement("li");
+        li.className = "player-placeholder";
+        li.textContent = "Nog niemand aanwezig…";
+        playerList.appendChild(li);
+        updateCountBadge(0);
+        return;
+      }
+
+      updateCountBadge(snapshot.size);
+
+      // Sort: current user first, then alphabetically
+      const docs = snapshot.docs.sort((a, b) => {
+        if (a.id === currentUid) return -1;
+        if (b.id === currentUid) return 1;
+        return (a.data().username ?? "").localeCompare(b.data().username ?? "", "nl");
+      });
+
+      docs.forEach((docSnap) => {
+        playerList.appendChild(buildPlayerItem(docSnap.id, docSnap.data(), currentUid));
+      });
+
+      // Sync the checkbox to Firestore state for the current user
+      const myData = snapshot.docs.find((d) => d.id === currentUid)?.data();
+      if (myData !== undefined) {
+        optOutCheck.checked = !myData.canSpin;
+      }
+    },
+    (err) => {
+      console.error("Player listener error:", err);
+      playerList.innerHTML = `<li class="player-placeholder">⚠ Kan lijst niet laden.</li>`;
     }
+  );
 }
 
-function setupOptOutListener(user) {
-    const checkbox = document.getElementById('opt-out-check');
-    const playerRef = doc(db, 'players', user.uid);
+// ─── 5. Auth state observer ───────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  // Clean up any previous listener
+  if (unsubscribePlayers) {
+    unsubscribePlayers();
+    unsubscribePlayers = null;
+  }
 
-    checkbox.addEventListener('change', async () => {
-        await updateDoc(playerRef, {
-            canSpin: !checkbox.checked
-        });
+  if (!user) {
+    showScreen("auth");
+    return;
+  }
+
+  // ── Logged in ──
+  try {
+    // Fetch the display name from Firestore (email/password auth has no displayName)
+    const snap = await getDoc(playerRef(user.uid));
+    const storedName = snap.exists() ? snap.data().username : user.email;
+
+    headerUsername.textContent = storedName;
+    await ensurePlayerDoc(user.uid, storedName);
+  } catch (err) {
+    console.error("Failed to load player doc:", err);
+    headerUsername.textContent = user.email;
+  }
+
+  showScreen("lobby");
+  unsubscribePlayers = startPlayerListener(user.uid);
+
+  // Opt-out checkbox listener
+  optOutCheck.onchange = () => updateCanSpin(user.uid, optOutCheck.checked);
+});
+
+// ─── 6. Auth UI – tab switching ──────────────────────────────────
+tabLogin.addEventListener("click", () => {
+  tabLogin.classList.add("active");
+  tabLogin.setAttribute("aria-selected", "true");
+  tabRegister.classList.remove("active");
+  tabRegister.setAttribute("aria-selected", "false");
+  panelLogin.classList.remove("hidden");
+  panelRegister.classList.add("hidden");
+  setAuthError("");
+});
+
+tabRegister.addEventListener("click", () => {
+  tabRegister.classList.add("active");
+  tabRegister.setAttribute("aria-selected", "true");
+  tabLogin.classList.remove("active");
+  tabLogin.setAttribute("aria-selected", "false");
+  panelRegister.classList.remove("hidden");
+  panelLogin.classList.add("hidden");
+  setAuthError("");
+});
+
+// ─── 7. Login ─────────────────────────────────────────────────────
+btnLogin.addEventListener("click", async () => {
+  setAuthError("");
+  const email    = loginEmail.value.trim();
+  const password = loginPassword.value;
+
+  if (!email || !password) {
+    setAuthError("Vul uw e-mailadres en wachtwoord in.");
+    return;
+  }
+
+  btnLogin.disabled = true;
+  btnLogin.textContent = "Bezig…";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged handles the rest
+  } catch (err) {
+    setAuthError(friendlyError(err.code));
+  } finally {
+    btnLogin.disabled = false;
+    btnLogin.textContent = "Inloggen";
+  }
+});
+
+// ─── 8. Register ──────────────────────────────────────────────────
+btnRegister.addEventListener("click", async () => {
+  setAuthError("");
+  const username = regUsername.value.trim();
+  const email    = regEmail.value.trim();
+  const password = regPassword.value;
+
+  if (!username) { setAuthError("Vul uw naam in."); return; }
+  if (!email)    { setAuthError("Vul een e-mailadres in."); return; }
+  if (!password) { setAuthError("Kies een wachtwoord."); return; }
+
+  btnRegister.disabled = true;
+  btnRegister.textContent = "Bezig…";
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // Write player doc immediately so the name is available
+    await setDoc(playerRef(cred.user.uid), {
+      username:  username,
+      canSpin:   true,
+      lastSeen:  serverTimestamp(),
     });
-}
+    // onAuthStateChanged handles screen transition
+  } catch (err) {
+    setAuthError(friendlyError(err.code));
+  } finally {
+    btnRegister.disabled = false;
+    btnRegister.textContent = "Account aanmaken";
+  }
+});
 
-function showError(message) {
-    document.getElementById('auth-error').textContent = message;
-}
+// ─── 9. Logout ────────────────────────────────────────────────────
+btnLogout.addEventListener("click", async () => {
+  if (unsubscribePlayers) { unsubscribePlayers(); unsubscribePlayers = null; }
+  await signOut(auth);
+});
 
-function updateAuthUI() {
-    const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-    const subtitle = document.querySelector('#auth-screen .subtitle');
-    
-    if (isRegisterMode) {
-        loginBtn.textContent = 'Registreren';
-        registerBtn.textContent = 'Al een account? Log in';
-        subtitle.textContent = 'Maak een account aan';
-    } else {
-        loginBtn.textContent = 'Inloggen';
-        registerBtn.textContent = 'Registreren';
-        subtitle.textContent = 'Log in om te spelen';
-    }
-}
+// ─── 10. Misc ─────────────────────────────────────────────────────
+footerYear.textContent = new Date().getFullYear();
 
-function initAuth() {
-    const loginForm = document.getElementById('login-form');
-    const emailInput = document.getElementById('email-input');
-    const passwordInput = document.getElementById('password-input');
-    const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-
-    registerBtn.addEventListener('click', () => {
-        isRegisterMode = !isRegisterMode;
-        showError('');
-        updateAuthUI();
-    });
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Even geduld...';
-        showError('');
-
-        try {
-            if (isRegisterMode) {
-                await createUserWithEmailAndPassword(auth, email, password);
-            } else {
-                await signInWithEmailAndPassword(auth, email, password);
-            }
-        } catch (error) {
-            if (error.code === 'auth/invalid-credential') {
-                showError('Verkeerd e-mailadres of wachtwoord');
-            } else if (error.code === 'auth/email-already-in-use') {
-                showError('Dit e-mailadres is al in gebruik');
-            } else if (error.code === 'auth/weak-password') {
-                showError('Wachtwoord moet minimaal 6 tekens zijn');
-            } else {
-                showError(error.message);
-            }
-            loginBtn.disabled = false;
-            loginBtn.textContent = isRegisterMode ? 'Registreren' : 'Inloggen';
-        }
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-        if (unsubscribePlayers) {
-            unsubscribePlayers();
-            unsubscribePlayers = null;
-        }
-
-        if (user) {
-            await createOrUpdatePlayer(user);
-
-            switchScreen('bingo-lobby');
-
-            unsubscribePlayers = onSnapshot(
-                collection(db, 'players'),
-                (snapshot) => {
-                    showPlayerList(snapshot);
-                    const playerData = snapshot.docs.find(d => d.id === user.uid);
-                    if (playerData) {
-                        const checkbox = document.getElementById('opt-out-check');
-                        checkbox.checked = !playerData.data().canSpin;
-                    }
-                },
-                console.error
-            );
-
-            setupOptOutListener(user);
-        } else {
-            switchScreen('auth-screen');
-        }
-    });
-}
-
-initAuth();
+// Allow pressing Enter in auth fields
+[loginPassword, loginEmail].forEach((el) =>
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") btnLogin.click(); })
+);
+[regPassword, regEmail, regUsername].forEach((el) =>
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") btnRegister.click(); })
+);
