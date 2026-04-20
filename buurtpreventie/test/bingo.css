@@ -52,6 +52,54 @@ body {
     margin-bottom: 30px;
 }
 
+#login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#email-input, #password-input {
+    padding: 15px 20px;
+    font-size: 1.3rem;
+    border-radius: 10px;
+    border: 3px solid #5D3A1A;
+    background: #FFF8DC;
+    font-family: 'Nunito', sans-serif;
+    outline: none;
+}
+
+#email-input:focus, #password-input:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+}
+
+.auth-error {
+    color: #FF6B6B;
+    font-size: 1.1rem;
+    margin-top: 15px;
+    min-height: 25px;
+}
+
+.auth-toggle {
+    color: #DEB887;
+    font-size: 1.1rem;
+    margin-top: 20px;
+}
+
+.auth-toggle button {
+    background: none;
+    border: none;
+    color: #FFF8DC;
+    font-size: 1.1rem;
+    text-decoration: underline;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+}
+
+.auth-toggle button:hover {
+    color: #4CAF50;
+}
+
 .btn-primary {
     background: linear-gradient(180deg, #4CAF50, #388E3C);
     color: white;
