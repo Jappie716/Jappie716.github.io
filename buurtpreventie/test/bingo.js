@@ -128,7 +128,7 @@ function buildPlayerItem(id, data, currentUid) {
 // ─── 4. Firestore helpers ─────────────────────────────────────────
 
 /** Get a reference to the player's document */
-const playerRef = (uid) => doc(db, "players", uid);
+const playerRef = (uid) => doc(db, "bingo_players", uid);
 
 /**
  * Ensure the player document exists.
