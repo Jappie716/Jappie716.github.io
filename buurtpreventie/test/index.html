@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buurtpreventie World</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="light-mode">
+
+    <div id="auth-screen" class="screen">
+        <div class="auth-box pulse" id="login-form">
+            <div class="logo-icon"><i data-lucide="shield"></i></div>
+            <h1>Buurtpreventie</h1>
+            <input type="email" id="email" placeholder="E-mail">
+            <input type="password" id="password" placeholder="Wachtwoord">
+            <button id="login-btn" class="primary-btn">Inloggen</button>
+            <button id="register-btn" class="secondary-btn">Account aanmaken</button>
+        </div>
+
+        <div class="auth-box hidden" id="onboarding-form">
+            <h2>Welkom in de buurt! 🏠</h2>
+            <p>Stel je profiel in</p>
+            <input type="text" id="username" placeholder="Gebruikersnaam">
+            <input type="text" id="huisnummer" placeholder="Huisnummer">
+            <div class="row">
+                <input type="number" id="leeftijd" placeholder="Leeftijd">
+                <select id="geslacht">
+                    <option value="Man">Man</option>
+                    <option value="Vrouw">Vrouw</option>
+                    <option value="Anders">Anders</option>
+                </select>
+            </div>
+            <button id="save-profile-btn" class="primary-btn">Starten</button>
+        </div>
+    </div>
+
+    <div id="main-app" class="app-container hidden">
+        
+        <aside class="sidebar">
+            <div class="sidebar-logo">🛡️ Buurtpreventie</div>
+            <nav>
+                <button onclick="showTab('world')" class="nav-btn active"><i data-lucide="map"></i> De Wijk</button>
+                <button onclick="showTab('chat')" class="nav-btn"><i data-lucide="message-circle"></i> BuurtChat</button>
+                <button onclick="showTab('huis')" class="nav-btn"><i data-lucide="home"></i> Mijn Huis</button>
+                <button onclick="showTab('settings')" class="nav-btn"><i data-lucide="settings"></i> Instellingen</button>
+            </nav>
+            <div class="sidebar-footer">
+                <div id="user-display-name">...</div>
+            </div>
+        </aside>
+
+        <div class="content-wrapper">
+            <header class="top-nav">
+                <h2 id="page-title">De Wijk</h2>
+                <div class="header-icons">
+                    <i data-lucide="bell" size="20"></i>
+                </div>
+            </header>
+
+            <main class="viewport">
+                <section id="world-tab" class="tab-content">
+                    <div id="map-container" class="map-container">
+                        <div class="map-zoom-controls">
+                            <button class="zoom-btn" id="zoom-in-btn" title="Inzoomen">+</button>
+                            <button class="zoom-btn" id="zoom-out-btn" title="Uitzoomen">−</button>
+                            <button class="zoom-btn" id="zoom-reset-btn" title="Herstel">⌖</button>
+                        </div>
+                        <div class="map-scroll-wrapper" id="map-scroll-wrapper">
+                            <svg id="neighborhood-svg" viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Achtergrond gras -->
+                                <rect width="900" height="560" fill="#5ecc6e"/>
+                                <!-- Gras stippen textuur -->
+                                <g opacity="0.12" fill="#166534">
+                                    <circle cx="40" cy="30" r="2.5"/><circle cx="120" cy="55" r="2"/><circle cx="200" cy="25" r="3"/>
+                                    <circle cx="320" cy="48" r="2"/><circle cx="420" cy="20" r="2.5"/><circle cx="500" cy="58" r="2"/>
+                                    <circle cx="620" cy="35" r="3"/><circle cx="720" cy="60" r="2"/><circle cx="820" cy="30" r="2.5"/>
+                                    <circle cx="860" cy="55" r="2"/><circle cx="60" cy="490" r="2.5"/><circle cx="150" cy="520" r="2"/>
+                                    <circle cx="260" cy="495" r="3"/><circle cx="380" cy="515" r="2"/><circle cx="480" cy="490" r="2.5"/>
+                                    <circle cx="600" cy="510" r="2"/><circle cx="720" cy="490" r="3"/><circle cx="840" cy="520" r="2"/>
+                                    <circle cx="30" cy="270" r="2"/><circle cx="870" cy="280" r="2.5"/>
+                                </g>
+
+                                <!-- Stoeptegels links en rechts van straat -->
+                                <rect x="0" y="230" width="900" height="12" fill="#c8b97a" opacity="0.8"/>
+                                <rect x="0" y="318" width="900" height="12" fill="#c8b97a" opacity="0.8"/>
+
+                                <!-- DE STRAAT (horizontaal midden) -->
+                                <rect x="0" y="242" width="900" height="76" fill="#b5a97c"/>
+                                <!-- Wegmarkering streepjes -->
+                                <line x1="0" y1="280" x2="900" y2="280" stroke="#e8daa0" stroke-width="2.5" stroke-dasharray="28,18"/>
+                                <!-- Stoeprand schaduw -->
+                                <rect x="0" y="242" width="900" height="3" fill="#8a7d52" opacity="0.5"/>
+                                <rect x="0" y="315" width="900" height="3" fill="#8a7d52" opacity="0.5"/>
+
+                                <!-- Straatnaambord -->
+                                <rect x="390" y="260" width="120" height="22" fill="#1e3a8a" rx="4"/>
+                                <text x="450" y="275" text-anchor="middle" font-size="9" fill="white" font-weight="700" font-family="'Segoe UI', sans-serif">Wijkstraat</text>
+
+                                <!-- PARK (rechts, boven straat) -->
+                                <rect x="730" y="30" width="150" height="188" fill="#22c55e" rx="10"/>
+                                <rect x="730" y="30" width="150" height="188" fill="none" stroke="#16a34a" stroke-width="2.5" rx="10"/>
+                                <!-- Bomen -->
+                                <circle cx="768" cy="78" r="22" fill="#15803d"/><circle cx="768" cy="78" r="14" fill="#16a34a"/>
+                                <circle cx="810" cy="65" r="18" fill="#15803d"/><circle cx="810" cy="65" r="11" fill="#16a34a"/>
+                                <circle cx="850" cy="80" r="20" fill="#15803d"/><circle cx="850" cy="80" r="13" fill="#16a34a"/>
+                                <circle cx="755" cy="140" r="16" fill="#15803d"/><circle cx="755" cy="140" r="10" fill="#16a34a"/>
+                                <circle cx="835" cy="145" r="19" fill="#15803d"/><circle cx="835" cy="145" r="12" fill="#16a34a"/>
+                                <!-- Bankje -->
+                                <rect x="790" y="130" width="26" height="7" fill="#92400e" rx="2"/>
+                                <rect x="793" y="137" width="5" height="6" fill="#78350f"/>
+                                <rect x="808" y="137" width="5" height="6" fill="#78350f"/>
+                                <!-- Pad -->
+                                <path d="M730 180 Q760 165 795 175 Q830 185 880 175" fill="none" stroke="#d4c89a" stroke-width="4" opacity="0.6"/>
+                                <text x="805" y="205" text-anchor="middle" font-size="11" fill="#14532d" font-weight="700" font-family="Georgia, serif">Buurtpark</text>
+                                <rect x="730" y="30" width="150" height="188" fill="transparent" rx="10" onclick="visitPark()" style="cursor:pointer" class="park-clickable"/>
+
+                                <!-- BINGO CLUB (links, boven straat) - uitgebreid gebouw -->
+                                <!-- Fundament / drempel -->
+                                <rect x="12" y="192" width="126" height="8" fill="#94a3b8" rx="2"/>
+                                <!-- Hoofd gebouw -->
+                                <rect x="18" y="52" width="114" height="142" fill="#312e81" rx="6"/>
+                                <!-- Gevelbekleding strepen -->
+                                <rect x="18" y="52" width="114" height="8" fill="#3730a3" rx="3"/>
+                                <rect x="18" y="100" width="114" height="4" fill="#3730a3" opacity="0.5"/>
+                                <rect x="18" y="148" width="114" height="4" fill="#3730a3" opacity="0.5"/>
+                                <!-- Dak met kantelen -->
+                                <rect x="12" y="34" width="126" height="20" fill="#1e1b4b" rx="4"/>
+                                <rect x="16" y="24" width="18" height="14" fill="#1e1b4b" rx="2"/>
+                                <rect x="42" y="24" width="18" height="14" fill="#1e1b4b" rx="2"/>
+                                <rect x="68" y="24" width="18" height="14" fill="#1e1b4b" rx="2"/>
+                                <rect x="94" y="24" width="18" height="14" fill="#1e1b4b" rx="2"/>
+                                <rect x="120" y="24" width="18" height="14" fill="#1e1b4b" rx="2"/>
+                                <!-- Neon uithangbord -->
+                                <rect x="22" y="58" width="106" height="28" fill="#0f0a2e" rx="5"/>
+                                <rect x="22" y="58" width="106" height="28" fill="none" stroke="#fbbf24" stroke-width="1.5" rx="5"/>
+                                <text x="75" y="70" text-anchor="middle" font-size="7" fill="#fbbf24" font-weight="900" font-family="'Segoe UI', sans-serif" letter-spacing="3">BINGO</text>
+                                <text x="75" y="80" text-anchor="middle" font-size="6" fill="#f9a8d4" font-weight="700" font-family="'Segoe UI', sans-serif" letter-spacing="2">CLUB</text>
+                                <!-- Neon gloed effect -->
+                                <rect x="22" y="58" width="106" height="28" fill="none" stroke="#fbbf24" stroke-width="4" rx="5" opacity="0.15"/>
+                                <!-- Raam rij 1 (links + rechts naast bord) -->
+                                <rect x="24" y="92" width="26" height="22" fill="#0ea5e9" rx="3" opacity="0.9"/>
+                                <line x1="37" y1="92" x2="37" y2="114" stroke="white" stroke-width="1" opacity="0.4"/>
+                                <line x1="24" y1="103" x2="50" y2="103" stroke="white" stroke-width="1" opacity="0.4"/>
+                                <rect x="100" y="92" width="26" height="22" fill="#0ea5e9" rx="3" opacity="0.9"/>
+                                <line x1="113" y1="92" x2="113" y2="114" stroke="white" stroke-width="1" opacity="0.4"/>
+                                <line x1="100" y1="103" x2="126" y2="103" stroke="white" stroke-width="1" opacity="0.4"/>
+                                <!-- Raam rij 2 -->
+                                <rect x="24" y="122" width="26" height="22" fill="#7c3aed" rx="3" opacity="0.85"/>
+                                <line x1="37" y1="122" x2="37" y2="144" stroke="white" stroke-width="1" opacity="0.3"/>
+                                <rect x="100" y="122" width="26" height="22" fill="#7c3aed" rx="3" opacity="0.85"/>
+                                <line x1="113" y1="122" x2="113" y2="144" stroke="white" stroke-width="1" opacity="0.3"/>
+                                <!-- Grote deur dubbel -->
+                                <rect x="52" y="148" width="46" height="46" fill="#1e1b4b" rx="3"/>
+                                <rect x="54" y="150" width="20" height="42" fill="#0f172a" rx="2"/>
+                                <rect x="76" y="150" width="20" height="42" fill="#0f172a" rx="2"/>
+                                <circle cx="75" cy="174" r="3" fill="#fbbf24"/>
+                                <!-- Verlichte ramen glow -->
+                                <rect x="24" y="92" width="26" height="22" fill="#bae6fd" rx="3" opacity="0.2"/>
+                                <rect x="100" y="92" width="26" height="22" fill="#bae6fd" rx="3" opacity="0.2"/>
+                                <!-- Stoeppad + lichten -->
+                                <rect x="62" y="198" width="26" height="22" fill="#c8b97a" rx="2"/>
+                                <circle cx="30" cy="200" r="4" fill="#fbbf24" opacity="0.8"/>
+                                <circle cx="120" cy="200" r="4" fill="#fbbf24" opacity="0.8"/>
+                                <!-- Vlag boven -->
+                                <rect x="74" y="10" width="2" height="16" fill="#94a3b8"/>
+                                <polygon points="76,10 90,14 76,18" fill="#ef4444"/>
+                                <!-- Label onder -->
+                                <rect x="30" y="218" width="90" height="12" fill="white" rx="3" opacity="0.85"/>
+                                <text x="75" y="227" text-anchor="middle" font-size="7.5" fill="#312e81" font-weight="800" font-family="'Segoe UI', sans-serif">Bingo Club</text>
+                                <!-- Klikbare overlay -->
+                                <rect x="12" y="10" width="126" height="222" fill="transparent" onclick="openBingo()" style="cursor:pointer"/>
+
+                                <!-- Perceel zones (visuele achtergrond) -->
+                                <!-- Boven: nummers 55,57,59,61,63,65,67,69 (oneven = links rijrichting) -->
+                                <rect x="150" y="30" width="560" height="195" fill="#a7f3d0" rx="6" opacity="0.35"/>
+                                <!-- Onder: nummers 56,58,60,62,64,66,68,70 (even) -->
+                                <rect x="150" y="335" width="560" height="195" fill="#bbf7d0" rx="6" opacity="0.35"/>
+
+                                <!-- Huizen worden dynamisch neergezet door JS -->
+                                <g id="houses-layer"></g>
+                            </svg>
+                            <!-- HTML tooltip (buiten SVG zodat klikken op knop werkt) -->
+                            <div id="map-tooltip" class="map-tooltip hidden">
+                                <div class="mtt-name" id="mtt-name"></div>
+                                <div class="mtt-addr" id="mtt-addr"></div>
+                                <button class="mtt-btn" id="mtt-btn">Aanbellen</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="chat-tab" class="tab-content hidden">
+                    <div class="chat-container">
+                        <div id="chat-messages" class="chat-scroll"></div>
+                        <div class="chat-input-area">
+                            <input type="text" id="chat-input" placeholder="Typ een bericht...">
+                            <button id="send-chat-btn"><i data-lucide="send"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="huis-tab" class="tab-content hidden">
+                    <div class="game-toolbar">
+                        <span class="drag-obj" draggable="true" data-type="🛋️">🛋️</span>
+                        <span class="drag-obj" draggable="true" data-type="🪴">🪴</span>
+                        <span class="drag-obj" draggable="true" data-type="📺">📺</span>
+                        <span class="drag-obj" draggable="true" data-type="🪑">🪑</span>
+                        <span class="drag-obj" draggable="true" data-type="🍕">🍕</span>
+                    </div>
+                    <div id="house-canvas" class="game-room"></div>
+                </section>
+
+                <section id="settings-tab" class="tab-content hidden">
+                    <div class="settings-wrapper">
+                        <div class="settings-card">
+                            <h3 class="settings-title">Profiel</h3>
+                            <div class="form-group">
+                                <label for="settings-username">Naam</label>
+                                <input type="text" id="settings-username" placeholder="Jouw naam">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-huisnummer">Huisnummer</label>
+                                <input type="text" id="settings-huisnummer" placeholder="Bijv. 42">
+                            </div>
+                            <div class="form-group">
+                                <label for="settings-status">Leeftijd</label>
+                                <input type="number" id="settings-status" placeholder="Leeftijd">
+                            </div>
+                            </div>
+                        
+                        <div class="settings-card">
+                            <h3 class="settings-title">Voorkeuren</h3>
+                            <div class="setting-item">
+                                <span>Donkere Modus</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="dark-toggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 16px; margin-bottom: 40px;">
+                            <button id="save-settings-btn" class="save-btn">Opslaan</button>
+                            <button id="logout-btn" class="logout-btn">Log uit</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+        <div id="doorbell-modal" class="hidden auth-box pulse" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; border: 4px solid var(--primary);">
+    <div class="logo-icon">🔔</div>
+    <h2 id="doorbell-msg">Iemand staat voor de deur!</h2>
+    <div class="row">
+        <button id="accept-door-btn" class="primary-btn">Opendoen</button>
+        <button id="decline-door-btn" class="secondary-btn">Negeren</button>
+    </div>
+</div>
+
+        <nav class="mobile-nav">
+            <button onclick="showTab('world')"><i data-lucide="map"></i></button>
+            <button onclick="showTab('chat')"><i data-lucide="message-circle"></i></button>
+            <button onclick="showTab('huis')"><i data-lucide="home"></i></button>
+            <button onclick="showTab('settings')"><i data-lucide="settings"></i></button>
+        </nav>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
