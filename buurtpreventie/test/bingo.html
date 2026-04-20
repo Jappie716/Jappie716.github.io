@@ -12,8 +12,14 @@
         <div id="auth-screen" class="screen active">
             <div class="auth-container">
                 <h1 class="title">Bingo Club</h1>
-                <p class="subtitle">Welkom! Log in om te spelen</p>
-                <button id="login-btn" class="btn-primary">Inloggen met Google</button>
+                <p class="subtitle">Log in om te spelen</p>
+                <form id="login-form">
+                    <input type="email" id="email-input" placeholder="E-mailadres" required>
+                    <input type="password" id="password-input" placeholder="Wachtwoord" required>
+                    <button type="submit" id="login-btn" class="btn-primary">Inloggen</button>
+                </form>
+                <p class="auth-error" id="auth-error"></p>
+                <p class="auth-toggle">Nog geen account? <button type="button" id="register-btn">Registreren</button></p>
             </div>
         </div>
 
