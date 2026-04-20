@@ -35,6 +35,12 @@ onAuthStateChanged(auth, async (user) => {
 
     currentUserProfile = snap.data();
     startApp();
+
+    document.getElementById('no-spinner-check').onchange = async (e) => {
+        await updateDoc(doc(db, "players", auth.currentUser.uid), {
+            wantsToSpin: !e.target.checked
+        });
+    };
 });
 
 /* ================= START ================= */
@@ -51,15 +57,6 @@ async function startApp() {
 }
 
 function setupLobbyListeners() {
-    const noSpinnerCheck = document.getElementById("no-spinner-check");
-    if (noSpinnerCheck) {
-        noSpinnerCheck.addEventListener("change", async (e) => {
-            await updateDoc(doc(db, "players", auth.currentUser.uid), {
-                wantsToSpin: !e.target.checked
-            });
-        });
-    }
-
     const startVoteBtn = document.getElementById("start-vote-btn");
     if (startVoteBtn) {
         startVoteBtn.addEventListener("click", () => {
@@ -98,7 +95,7 @@ function listen() {
         });
 
         renderPlayers();
-        renderLobbyPlayers();
+        updateLobbyUI(allPlayers);
     });
 
     // gameState
@@ -132,16 +129,14 @@ function renderPlayers() {
     });
 }
 
-function renderLobbyPlayers() {
+function updateLobbyUI(players) {
     const list = document.getElementById("lobby-players-list");
     if (!list) return;
-
     list.innerHTML = "";
-
-    allPlayers.forEach(p => {
+    players.forEach(p => {
         const div = document.createElement("div");
-        div.className = "lobby-player-item";
-        div.innerText = "👤 " + p.username;
+        div.className = "player-item";
+        div.innerText = "👤 " + p.username + (p.wantsToSpin === false ? " (Kijkt toe)" : "");
         list.appendChild(div);
     });
 }
