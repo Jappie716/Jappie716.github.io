@@ -41,47 +41,19 @@
 
     <div id="bingo-lobby" class="bingo-lobby hidden">
         <div class="lobby-board">
-            <div class="lobby-header">
-                <h2><i data-lucide="house"></i> Buurthuis Bingo</h2>
-                <p class="lobby-subtitle">Wacht tot het spel begint...</p>
-            </div>
-            
-            <div id="bingo-announcements" class="bingo-announcements hidden">
-                <div class="announcement-text"></div>
-            </div>
-            
-            <div class="lobby-players-section">
-                <h3><i data-lucide="users"></i> Aanwezige Buren</h3>
-                <div id="lobby-players-list"></div>
-            </div>
-            
-            <div id="voting-section" class="voting-section hidden">
-                <h3><i data-lucide="vote"></i> Stem op je Draaier</h3>
-                <p class="voting-hint">Kies wie vandaag de ballen mag trekken!</p>
-                <ul id="voter-list"></ul>
-            </div>
-            
-            <div class="lobby-options" id="lobby-options">
-                <div id="spinner-opt-out">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="no-spinner-check">
-                        <span>Ik wil geen draaier zijn</span>
-                    </label>
-                </div>
-                <button id="start-vote-btn" class="primary-btn">Start Stemmen</button>
-            </div>
-            
-            <div id="voting-timer" class="voting-timer hidden">
-                <span class="timer-icon"><i data-lucide="timer"></i></span>
-                <span id="timer-countdown">30</span>
-                <span>sec</span>
-            </div>
-            
-            <div class="lobby-waiting">
-                <div class="waiting-animation"><i data-lucide="gamepad-2"></i></div>
-                <p>Wacht tot iemand het stemmen start...</p>
-            </div>
-        </div>
+    <h2><i data-lucide="users"></i> De Lobby</h2>
+    <p>Wachten op de buren...</p>
+    
+    <div id="lobby-players-list" class="players-list"></div>
+
+    <div class="lobby-actions">
+        <label class="checkbox-container">
+            <input type="checkbox" id="no-spinner-check">
+            <span>Ik wil GEEN draaier zijn</span>
+        </label>
+        <button id="start-vote-btn" class="primary-btn">Start Stemmen</button>
+    </div>
+</div>
     </div>
 
     <div id="bingo-app" class="app-container hidden">
