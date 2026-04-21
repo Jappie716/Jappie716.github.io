@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCR - Tracker</title>
+    <title>SCR Speler Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <style>
@@ -31,8 +31,8 @@
 
         /* Navbar */
         .navbar {
-            background-color: var(---card);
-            border-bottom: 1px solid var(---border);
+            background-color: var(--scr-card);
+            border-bottom: 1px solid var(--scr-border);
             padding: 0 1.5rem;
             height: 56px;
             display: flex;
@@ -45,15 +45,15 @@
             gap: 10px;
             font-weight: 700;
             font-size: 1.05rem;
-            color: var(---text);
+            color: var(--scr-text);
             text-decoration: none;
         }
         .logo-dot {
             width: 10px; height: 10px;
             border-radius: 50%;
-            background: var(---green);
+            background: var(--scr-green);
         }
-        .navbar-sub { color: var(---muted); font-size: 0.8rem; }
+        .navbar-sub { color: var(--scr-muted); font-size: 0.8rem; }
 
         /* Layout */
         .page {
@@ -67,15 +67,15 @@
             margin-bottom: 0.2rem;
         }
         .page-subtitle {
-            color: var(---muted);
+            color: var(--scr-muted);
             font-size: 0.85rem;
             margin-bottom: 1.5rem;
         }
 
         /* Card */
         .card {
-            background: var(---card);
-            border: 1px solid var(---border);
+            background: var(--scr-card);
+            border: 1px solid var(--scr-border);
             border-radius: 0.75rem;
             overflow: hidden;
             margin-bottom: 1.25rem;
@@ -209,12 +209,12 @@
 
 <div class="page">
 
-    <div class="page-title">Stepford County Railway Tracker</div>
-    <div class="page-subtitle">Voer je Server ID in om het overzicht en specefieke stations te bekijken</div>
+    <div class="page-title">🚆 SCR Speler Tracker</div>
+    <div class="page-subtitle">Voer je Server ID in om snel naar het speleroverzicht en live vertrektijden te gaan.</div>
 
     <!-- Header kaart met input + knoppen -->
     <div class="card">
-        <div class="card-header">Instellingen</div>
+        <div class="card-header">⚙️ Instellingen</div>
         <div class="card-body">
             <div class="input-group">
                 <label for="serverInput">Server ID:</label>
@@ -234,10 +234,10 @@
         <!-- STATIONS -->
         <div id="sectieStations" class="section">
             <div class="card">
-                <div class="card-header">Kies een station</div>
+                <div class="card-header">🚉 Informatie per station</div>
                 <div class="card-body">
                     <div id="stationMenu">
-                        <input type="text" id="zoekBalk" placeholder="Zoek een station..." style="max-width:100%;">
+                        <input type="text" id="zoekBalk" placeholder="🔍 Zoek een station..." style="max-width:100%;">
                         <div id="stationLijst" class="station-list"></div>
                     </div>
 
