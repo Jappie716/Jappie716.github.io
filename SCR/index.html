@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCR Tracker</title>
+    <title>SCR Speler Tracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&family=Ubuntu+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
             --scr-bg:       #040d1c;
-            --scr-card:     #4b8af2;
+            --scr-card:     #091c38;
             --scr-slate:    #19304a;
             --scr-border:   #1e3a5a;
             --scr-green:    #15bd94;
@@ -202,17 +202,19 @@
 <nav class="navbar">
     <a class="navbar-brand" href="#">
         <span class="logo-dot"></span>
-        <img src="https://stepfordcountyrailway.co.uk/_content/Scr.Branding.Common/Assets/Images/ScrLogoWhite.svg" alt="SCR Hub" style="height: 32px;">
+        SCR Hub
     </a>
+    <span class="navbar-sub">/ Speler Tracker</span>
+</nav>
 
 <div class="page">
 
-    <div class="page-title">🚆 Stepford County Railway Tracker</div>
-    <div class="page-subtitle">Voer je Server ID in om je overzicht en specefieke stations te bekijken!</div>
+    <div class="page-title">🚆 SCR Speler Tracker</div>
+    <div class="page-subtitle">Voer je Server ID in om snel naar het speleroverzicht en live vertrektijden te gaan.</div>
 
     <!-- Header kaart met input + knoppen -->
     <div class="card">
-        <div class="card-header">Instellingen</div>
+        <div class="card-header">⚙️ Instellingen</div>
         <div class="card-body">
             <div class="input-group">
                 <label for="serverInput">Server ID:</label>
@@ -232,10 +234,10 @@
         <!-- STATIONS -->
         <div id="sectieStations" class="section">
             <div class="card">
-                <div class="card-header">Kies een station</div>
+                <div class="card-header">🚉 Informatie per station</div>
                 <div class="card-body">
                     <div id="stationMenu">
-                        <input type="text" id="zoekBalk" placeholder="Zoek een station..." style="max-width:100%;">
+                        <input type="text" id="zoekBalk" placeholder="🔍 Zoek een station..." style="max-width:100%;">
                         <div id="stationLijst" class="station-list"></div>
                     </div>
 
