@@ -115,7 +115,7 @@
     <header>
         <h1>🚆 SCR Speler Tracker</h1>
         <div class="input-group">
-            <label for="serverInput"><strong>Server/Player ID:</strong></label>
+            <label for="serverInput"><strong>Server ID:</strong></label>
             <input type="text" id="serverInput" placeholder="Bijv. 934718616">
         </div>
         <nav>
@@ -248,12 +248,11 @@
     }
 
     // -- OVERZICHT LOGICA --
-    document.getElementById('btnOverzicht').addEventListener('click', () => {
-        const id = getServerNummer();
-        if (!id) return;
-        window.open(`https://stepfordcountyrailway.co.uk/Players/934718616/CurrentActivity`, '_blank');
-        toonSectie('sectieOverzicht');
-    });
+document.getElementById('btnOverzicht').addEventListener('click', () => {
+    // We halen de check 'const id = getServerNummer();' en 'if (!id) return;' hier weg
+    window.open(`https://stepfordcountyrailway.co.uk/Players/934718616/CurrentActivity`, '_blank');
+    toonSectie('sectieOverzicht');
+});
 
     // -- STATIONS LOGICA --
     document.getElementById('btnStations').addEventListener('click', () => {
