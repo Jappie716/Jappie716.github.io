@@ -71,6 +71,16 @@
         button.secondary { background-color: #6c757d; color: white; }
         button.secondary:hover { background-color: #5a6268; }
 
+        button.open-btn {
+            background-color: #28a745;
+            color: white;
+            font-size: 16px;
+            padding: 14px 24px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button.open-btn:hover { background-color: #218838; }
+
         .section { display: none; margin-top: 20px; }
         .section.active { display: block; animation: fadeIn 0.3s; }
 
@@ -79,13 +89,42 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        iframe {
-            width: 100%;
-            height: 600px;
-            border: 2px solid #eee;
+        /* Link card – vervangt de iframe */
+        .link-card {
+            margin-top: 20px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .link-card p {
+            margin: 0;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .link-card .url-display {
+            font-family: monospace;
+            font-size: 13px;
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 6px;
+            word-break: break-all;
+            color: #495057;
+        }
+
+        .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
             border-radius: 8px;
-            background-color: #fafafa;
-            margin-top: 15px;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: #856404;
+            margin-top: 12px;
         }
 
         /* Stations Specifiek */
@@ -132,14 +171,20 @@
     </header>
 
     <main>
+        <!-- OVERZICHT -->
         <div id="sectieOverzicht" class="section">
-            <div class="toolbar">
-                <h2>Speler Overzicht</h2>
-                <button id="btnOverzichtNewTab" class="secondary">Open in nieuw tabblad (Als scherm wit blijft)</button>
+            <h2>Speler Overzicht</h2>
+            <div class="notice">
+                ℹ️ <strong>stepfordcountyrailway.co.uk</strong> staat niet toe dat pagina's worden ingeladen in een frame (X-Frame-Options beveiliging). Klik hieronder om de pagina in een nieuw tabblad te openen — je bent daar al ingelogd.
             </div>
-            <iframe id="frameOverzicht" src=""></iframe>
+            <div class="link-card">
+                <p>Link die wordt geopend:</p>
+                <div class="url-display" id="urlOverzicht">—</div>
+                <button class="open-btn" id="btnOpenOverzicht">🔗 Open Speler Overzicht in nieuw tabblad</button>
+            </div>
         </div>
 
+        <!-- STATIONS -->
         <div id="sectieStations" class="section">
             <h2>Live Vertrektijden per Station</h2>
             
@@ -151,16 +196,22 @@
             <div id="stationView" style="display: none;">
                 <div class="toolbar">
                     <button id="btnKlaar" class="danger">← Terug naar lijst</button>
-                    <button id="btnStationNewTab" class="secondary">Open in nieuw tabblad</button>
                 </div>
-                <iframe id="frameStation" src=""></iframe>
+                <div class="notice">
+                    ℹ️ <strong>stepfordcountyrailway.co.uk</strong> staat niet toe dat pagina's worden ingeladen in een frame. Klik hieronder om de vertrektijden in een nieuw tabblad te openen.
+                </div>
+                <div class="link-card">
+                    <p>Geselecteerd station:</p>
+                    <div class="url-display" id="urlStation">—</div>
+                    <button class="open-btn" id="btnOpenStation">🔗 Open Vertrektijden in nieuw tabblad</button>
+                </div>
             </div>
         </div>
     </main>
 </div>
 
 <script>
-    // 1. Vul hier AL je stations in
+    // Vul hier AL je stations in
     const stations = [
         "Stepford Central",
         "City Hospital",
@@ -174,12 +225,10 @@
     ];
 
     const serverInput = document.getElementById('serverInput');
-    const frameOverzicht = document.getElementById('frameOverzicht');
-    const frameStation = document.getElementById('frameStation');
     const zoekBalk = document.getElementById('zoekBalk');
-    let actieveStationLink = ""; // Bewaart de link voor de 'nieuw tabblad' knop
+    let actieveStationLink = "";
 
-    // Bewaar ID
+    // Bewaar ID in localStorage
     if (localStorage.getItem('scrServerNummer')) serverInput.value = localStorage.getItem('scrServerNummer');
     serverInput.addEventListener('input', (e) => localStorage.setItem('scrServerNummer', e.target.value));
 
@@ -198,11 +247,10 @@
     document.getElementById('btnOverzicht').addEventListener('click', () => {
         const id = getServerNummer();
         if (!id) return;
-        const link = `https://stepfordcountyrailway.co.uk/Players/934718616/CurrentActivity`;
-        frameOverzicht.src = link;
-        
-        // Link updaten voor de 'Nieuw Tabblad' knop
-        document.getElementById('btnOverzichtNewTab').onclick = () => window.open(link, '_blank');
+        // BUG FIX: gebruik de `id` variabele in plaats van een hardcoded getal
+        const link = `https://stepfordcountyrailway.co.uk/Players/${id}/CurrentActivity`;
+        document.getElementById('urlOverzicht').textContent = link;
+        document.getElementById('btnOpenOverzicht').onclick = () => window.open(link, '_blank');
         toonSectie('sectieOverzicht');
     });
 
@@ -211,7 +259,6 @@
         toonSectie('sectieStations');
         document.getElementById('stationMenu').style.display = "block";
         document.getElementById('stationView').style.display = "none";
-        frameStation.src = "";
     });
 
     // Bouw de stationslijst op
@@ -228,13 +275,11 @@
             document.getElementById('stationMenu').style.display = "none";
             document.getElementById('stationView').style.display = "block";
 
-            // Formatteer de link, forceer HTTPS. 
-            // Let op: vaak is de syntax /<serverID>/<station>, ik heb een '/' toegevoegd voor de veiligheid. 
-            // Als SCR écht geen slash gebruikt, verander het hieronder naar: `${id}${encodeURIComponent(stationNaam)}`
             const veiligeNaam = encodeURIComponent(stationNaam);
             actieveStationLink = `https://stepfordcountyrailway.co.uk/LiveDepartureBoard/${id}/${veiligeNaam}`;
-            
-            frameStation.src = actieveStationLink;
+
+            document.getElementById('urlStation').textContent = actieveStationLink;
+            document.getElementById('btnOpenStation').onclick = () => window.open(actieveStationLink, '_blank');
         });
         stationLijst.appendChild(btn);
     });
@@ -243,25 +288,15 @@
     zoekBalk.addEventListener('input', (e) => {
         const zoekterm = e.target.value.toLowerCase();
         document.querySelectorAll('.station-btn').forEach(btn => {
-            if (btn.textContent.toLowerCase().includes(zoekterm)) {
-                btn.style.display = "block";
-            } else {
-                btn.style.display = "none";
-            }
+            btn.style.display = btn.textContent.toLowerCase().includes(zoekterm) ? "block" : "none";
         });
     });
 
-    // Station 'Klaar' en 'Nieuw tabblad' knoppen
+    // Terug naar stationslijst
     document.getElementById('btnKlaar').addEventListener('click', () => {
         document.getElementById('stationView').style.display = "none";
         document.getElementById('stationMenu').style.display = "block";
-        frameStation.src = "";
     });
-
-    document.getElementById('btnStationNewTab').addEventListener('click', () => {
-        if (actieveStationLink) window.open(actieveStationLink, '_blank');
-    });
-
 </script>
 </body>
 </html>
