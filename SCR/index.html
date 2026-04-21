@@ -71,15 +71,6 @@
         button.secondary { background-color: #6c757d; color: white; }
         button.secondary:hover { background-color: #5a6268; }
 
-        button.open-btn {
-            background-color: #28a745;
-            color: white;
-            font-size: 16px;
-            padding: 14px 24px;
-            width: 100%;
-            margin-top: 10px;
-        }
-        button.open-btn:hover { background-color: #218838; }
 
         .section { display: none; margin-top: 20px; }
         .section.active { display: block; animation: fadeIn 0.3s; }
@@ -89,43 +80,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Link card – vervangt de iframe */
-        .link-card {
-            margin-top: 20px;
-            background: #f8f9fa;
-            border: 2px solid #dee2e6;
-            border-radius: 10px;
-            padding: 20px 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .link-card p {
-            margin: 0;
-            font-size: 14px;
-            color: #6c757d;
-        }
-
-        .link-card .url-display {
-            font-family: monospace;
-            font-size: 13px;
-            background: #e9ecef;
-            padding: 8px 12px;
-            border-radius: 6px;
-            word-break: break-all;
-            color: #495057;
-        }
-
-        .notice {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 14px;
-            color: #856404;
-            margin-top: 12px;
-        }
 
         /* Stations Specifiek */
         .station-list {
@@ -161,7 +115,7 @@
     <header>
         <h1>🚆 SCR Speler Tracker</h1>
         <div class="input-group">
-            <label for="serverInput"><strong>Server/Player ID:</strong></label>
+            <label for="serverInput"><strong>ServerID:</strong></label>
             <input type="text" id="serverInput" placeholder="Bijv. 934718616">
         </div>
         <nav>
@@ -173,15 +127,6 @@
     <main>
         <!-- OVERZICHT -->
         <div id="sectieOverzicht" class="section">
-            <h2>Speler Overzicht</h2>
-            <div class="notice">
-                ℹ️ <strong>stepfordcountyrailway.co.uk</strong> staat niet toe dat pagina's worden ingeladen in een frame (X-Frame-Options beveiliging). Klik hieronder om de pagina in een nieuw tabblad te openen — je bent daar al ingelogd.
-            </div>
-            <div class="link-card">
-                <p>Link die wordt geopend:</p>
-                <div class="url-display" id="urlOverzicht">—</div>
-                <button class="open-btn" id="btnOpenOverzicht">🔗 Open Speler Overzicht in nieuw tabblad</button>
-            </div>
         </div>
 
         <!-- STATIONS -->
@@ -196,14 +141,6 @@
             <div id="stationView" style="display: none;">
                 <div class="toolbar">
                     <button id="btnKlaar" class="danger">← Terug naar lijst</button>
-                </div>
-                <div class="notice">
-                    ℹ️ <strong>stepfordcountyrailway.co.uk</strong> staat niet toe dat pagina's worden ingeladen in een frame. Klik hieronder om de vertrektijden in een nieuw tabblad te openen.
-                </div>
-                <div class="link-card">
-                    <p>Geselecteerd station:</p>
-                    <div class="url-display" id="urlStation">—</div>
-                    <button class="open-btn" id="btnOpenStation">🔗 Open Vertrektijden in nieuw tabblad</button>
                 </div>
             </div>
         </div>
@@ -314,10 +251,260 @@
     document.getElementById('btnOverzicht').addEventListener('click', () => {
         const id = getServerNummer();
         if (!id) return;
-        // BUG FIX: gebruik de `id` variabele in plaats van een hardcoded getal
-        const link = `https://stepfordcountyrailway.co.uk/Players/934718616/CurrentActivity`;
-        document.getElementById('urlOverzicht').textContent = link;
-        document.getElementById('btnOpenOverzicht').onclick = () => window.open(link, '_blank');
+        window.open(`https://stepfordcountyrailway.co.uk/Players/<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCR Speler Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            padding: 10px 15px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button.primary { background-color: #007bff; color: white; }
+        button.primary:hover { background-color: #0056b3; }
+        
+        button.danger { background-color: #dc3545; color: white; }
+        button.danger:hover { background-color: #c82333; }
+
+        button.secondary { background-color: #6c757d; color: white; }
+        button.secondary:hover { background-color: #5a6268; }
+
+
+        .section { display: none; margin-top: 20px; }
+        .section.active { display: block; animation: fadeIn 0.3s; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+
+        /* Stations Specifiek */
+        .station-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+            padding-right: 5px;
+        }
+
+        .station-btn {
+            text-align: left;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+        
+        .station-btn:hover { background: #e2e6ea; }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🚆 SCR Speler Tracker</h1>
+        <div class="input-group">
+            <label for="serverInput"><strong>Server/Player ID:</strong></label>
+            <input type="text" id="serverInput" placeholder="Bijv. 934718616">
+        </div>
+        <nav>
+            <button id="btnOverzicht" class="primary">Overzicht</button>
+            <button id="btnStations" class="primary">Stations</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- OVERZICHT -->
+        <div id="sectieOverzicht" class="section">
+        </div>
+
+        <!-- STATIONS -->
+        <div id="sectieStations" class="section">
+            <h2>Informatie per station</h2>
+            
+            <div id="stationMenu">
+                <input type="text" id="zoekBalk" placeholder="🔍 Zoek een station..." style="max-width: 100%; margin-bottom: 10px;">
+                <div id="stationLijst" class="station-list"></div>
+            </div>
+
+            <div id="stationView" style="display: none;">
+                <div class="toolbar">
+                    <button id="btnKlaar" class="danger">← Terug naar lijst</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    // Vul hier AL je stations in
+    const stations = [
+        "AirportCentral",
+        "AirportParkway",
+        "AirportWest",
+        "AngelPass",
+        "AshlanPark",
+        "Aslockby",
+        "Barton",
+        "BeaulieuPark",
+        "Beechley",
+        "Benton",
+        "BentonBridge",
+        "Berrily",
+        "Bodin",
+        "Cadoxton",
+        "CambridgeStreet",
+        "CarnaleaBridge",
+        "CityHospital",
+        "Connolly",
+        "Coxly",
+        "CoxlyNewtown",
+        "DentonRoad",
+        "EastBerrily",
+        "EdenQuay",
+        "Edgemead",
+        "ElsemereJunction",
+        "ElsemerePond",
+        "Esterfield",
+        "FaradayRoad",
+        "Farleigh",
+        "Faymere",
+        "FinancialQuarter",
+        "FourWays",
+        "Greenslade",
+        "HamptonHargate",
+        "HemdonPark",
+        "HoughtonRake",
+        "JamesStreet",
+        "LeightonCity",
+        "StepfordRoad",
+        "LeightonWest",
+        "Llyn",
+        "Millcastle",
+        "MillcastleRacecourse",
+        "Morganstown",
+        "MorganstownDocks",
+        "NewHarrow",
+        "Newry",
+        "NewryHarbour",
+        "Northshore",
+        "PortBenton",
+        "RayleighBay",
+        "RobinsonWay",
+        "RocketParade",
+        "RosedaleVillage",
+        "StHelensBridge",
+        "Starryloch",
+        "StepfordBay",
+        "StepfordCentral",
+        "StepfordEast",
+        "HighStreet",
+        "StepfordUnited",
+        "StepfordVictoria",
+        "Terminal1",
+        "Terminal2",
+        "Terminal3",
+        "UpperStaploe",
+        "WaterNewton",
+        "WestBenton",
+        "Westercoast",
+        "Westwyvern",
+        "Whitefield",
+        "WhitefieldLido",
+        "WhitneyGreen",
+        "Willowfield",
+        "WoodheadLane"
+        
+    ];
+
+    const serverInput = document.getElementById('serverInput');
+    const zoekBalk = document.getElementById('zoekBalk');
+    let actieveStationLink = "";
+
+    // Bewaar ID in localStorage
+    if (localStorage.getItem('scrServerNummer')) serverInput.value = localStorage.getItem('scrServerNummer');
+    serverInput.addEventListener('input', (e) => localStorage.setItem('scrServerNummer', e.target.value));
+
+    function getServerNummer() {
+        const nr = serverInput.value.trim();
+        if (!nr) { alert("Vul een Server of Player ID in!"); return null; }
+        return nr;
+    }
+
+    function toonSectie(sectieId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(sectieId).classList.add('active');
+    }
+
+    // -- OVERZICHT LOGICA --
+    document.getElementById('btnOverzicht').addEventListener('click', () => {
+        const id = getServerNummer();
+        if (!id) return;
+        window.open(`https://stepfordcountyrailway.co.uk/Players/${id}/CurrentActivity`, '_blank');
         toonSectie('sectieOverzicht');
     });
 
@@ -339,14 +526,53 @@
             const id = getServerNummer();
             if (!id) return;
 
-            document.getElementById('stationMenu').style.display = "none";
-            document.getElementById('stationView').style.display = "block";
+            const veiligeNaam = encodeURIComponent(stationNaam);
+            actieveStationLink = `https://stepfordcountyrailway.co.uk/LiveDepartureBoard/${id}/${veiligeNaam}`;
+            window.open(actieveStationLink, '_blank');
+        });
+        stationLijst.appendChild(btn);
+    });
+
+    // Zoekfunctie
+    zoekBalk.addEventListener('input', (e) => {
+        const zoekterm = e.target.value.toLowerCase();
+        document.querySelectorAll('.station-btn').forEach(btn => {
+            btn.style.display = btn.textContent.toLowerCase().includes(zoekterm) ? "block" : "none";
+        });
+    });
+
+    // Terug naar stationslijst
+    document.getElementById('btnKlaar').addEventListener('click', () => {
+        document.getElementById('stationView').style.display = "none";
+        document.getElementById('stationMenu').style.display = "block";
+    });
+</script>
+</body>
+</html>/CurrentActivity`, '_blank');
+        toonSectie('sectieOverzicht');
+    });
+
+    // -- STATIONS LOGICA --
+    document.getElementById('btnStations').addEventListener('click', () => {
+        toonSectie('sectieStations');
+        document.getElementById('stationMenu').style.display = "block";
+        document.getElementById('stationView').style.display = "none";
+    });
+
+    // Bouw de stationslijst op
+    const stationLijst = document.getElementById('stationLijst');
+    stations.sort().forEach(stationNaam => {
+        const btn = document.createElement('button');
+        btn.className = 'station-btn';
+        btn.textContent = stationNaam;
+        
+        btn.addEventListener('click', () => {
+            const id = getServerNummer();
+            if (!id) return;
 
             const veiligeNaam = encodeURIComponent(stationNaam);
             actieveStationLink = `https://stepfordcountyrailway.co.uk/LiveDepartureBoard/${id}/${veiligeNaam}`;
-
-            document.getElementById('urlStation').textContent = actieveStationLink;
-            document.getElementById('btnOpenStation').onclick = () => window.open(actieveStationLink, '_blank');
+            window.open(actieveStationLink, '_blank');
         });
         stationLijst.appendChild(btn);
     });
