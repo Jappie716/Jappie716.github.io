@@ -1,110 +1,411 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mestlo | Minecraft Stad</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>X Rail Network</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: #09090b;
+      color: white;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: auto;
+    }
+
+    .hero {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 30px;
+      padding: 40px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 60px;
+      font-weight: 900;
+    }
+
+    .subtitle {
+      color: #a1a1aa;
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: #111827;
+      border: 1px solid #1d4ed8;
+      padding: 20px;
+      border-radius: 20px;
+      min-width: 160px;
+    }
+
+    .stat.green {
+      background: #052e16;
+      border-color: #22c55e;
+    }
+
+    .stat-title {
+      color: #a1a1aa;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 30px;
+      padding: 30px;
+    }
+
+    .card h2 {
+      margin-bottom: 20px;
+      font-size: 30px;
+    }
+
+    .map {
+      position: relative;
+      height: 500px;
+      background: #09090b;
+      border-radius: 25px;
+      overflow: hidden;
+      border: 1px solid #27272a;
+    }
+
+    .line {
+      position: absolute;
+      height: 8px;
+      border-radius: 999px;
+    }
+
+    .blue { background: #3b82f6; }
+    .greenline { background: #22c55e; }
+    .orange { background: #f97316; }
+    .red { background: #ef4444; }
+
+    .station {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      border: 5px solid;
+    }
+
+    .station.blue { border-color: #3b82f6; }
+    .station.greenline { border-color: #22c55e; }
+    .station.orange { border-color: #f97316; }
+    .station.red { border-color: #ef4444; }
+
+    .departures {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .departure {
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 20px;
+      padding: 20px;
+    }
+
+    .departure-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .station-name {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .line-name {
+      color: #a1a1aa;
+      font-size: 14px;
+    }
+
+    .time {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #27272a;
+      color: #d4d4d8;
+      font-size: 13px;
+    }
+
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    .news-item,
+    .company {
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 15px;
+    }
+
+    .news-title {
+      color: #71717a;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .company-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .company-name {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .company p {
+      color: #a1a1aa;
+      line-height: 1.5;
+    }
+
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      color: #71717a;
+      font-size: 14px;
+    }
+
+    @media (max-width: 1000px) {
+      .grid,
+      .bottom-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 42px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
 
-    <nav class="navbar">
-        <div class="logo" onclick="showPage('home')">Mestlo City</div>
-        <div class="nav-links">
-            <a href="#" onclick="showPage('home')">Home</a>
-            <a href="#" onclick="showPage('metro')">Metro</a>
-            <a href="#" onclick="showPage('airport')">Airport</a>
-            <a href="#" onclick="showPage('makelaar')">Makelaar</a>
-            <a href="#" onclick="showPage('map')">Kaart</a>
-            <a href="#" id="admin-link" style="display: none; color: #ef4444; font-weight: bold;" onclick="showPage('admin')">🛠 Beheerpaneel</a>
+    <div class="hero">
+      <div>
+        <h1>X Rail Network</h1>
+        <div class="subtitle">
+          Industrial transit management dashboard because your Minecraft server somehow evolved into a functioning society.
         </div>
-        <div class="nav-actions">
-            <button id="theme-toggle" class="btn-icon">🌙</button>
-            <button id="auth-btn" class="btn-primary">Inloggen</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat green">
+          <div class="stat-title">Server Status</div>
+          <div class="stat-value">ONLINE</div>
         </div>
-        <div class="hamburger" onclick="toggleMenu()">☰</div>
-    </nav>
 
-    <main id="app-content">
-        
-        <section id="home" class="page active">
-            <div style="text-align: center; padding: 3rem;">
-                <h1>Welkom in Mestlo</h1>
-                <p>De meest bruisende Minecraft stad.</p>
-                <button class="btn-primary" onclick="showPage('map')">Verken de stad</button>
+        <div class="stat">
+          <div class="stat-title">Players Active</div>
+          <div class="stat-value">7</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Transit Network Map</h2>
+
+        <div class="map">
+          <div class="line blue" style="left:80px; top:100px; width:70%;"></div>
+          <div class="line greenline" style="left:150px; top:220px; width:55%;"></div>
+          <div class="line orange" style="left:120px; top:340px; width:60%;"></div>
+          <div class="line red" style="left:500px; top:50px; width:8px; height:75%;"></div>
+
+          <div class="station blue" style="left:70px; top:92px;"></div>
+          <div class="station blue" style="left:300px; top:92px;"></div>
+          <div class="station blue" style="left:700px; top:92px;"></div>
+
+          <div class="station greenline" style="left:150px; top:212px;"></div>
+          <div class="station greenline" style="left:500px; top:212px;"></div>
+
+          <div class="station orange" style="left:120px; top:332px;"></div>
+          <div class="station orange" style="left:600px; top:332px;"></div>
+
+          <div class="station red" style="left:492px; top:40px;"></div>
+          <div class="station red" style="left:492px; top:390px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Live Departures</h2>
+
+        <div class="departures">
+          <div class="departure">
+            <div class="departure-top">
+              <div>
+                <div class="station-name">Central Exchange</div>
+                <div class="line-name">Blue Line</div>
+              </div>
+
+              <div class="time">2 min</div>
             </div>
-        </section>
 
-        <section id="metro" class="page">
-            <div class="container">
-                <h2>Mestlo Metro Systeem</h2>
-                <div class="grid" id="metro-display"></div>
+            <div class="badge">Operational</div>
+          </div>
+
+          <div class="departure">
+            <div class="departure-top">
+              <div>
+                <div class="station-name">Northern Greens</div>
+                <div class="line-name">Green Line</div>
+              </div>
+
+              <div class="time">6 min</div>
             </div>
-        </section>
 
-        <section id="airport" class="page">
-            <div class="container">
-                <h2>Mestlo International Airport (MIA)</h2>
-                <div class="card">
-                    <table class="data-table">
-                        <thead><tr><th>Airline</th><th>Bestemming</th><th>Tijd</th></tr></thead>
-                        <tbody id="flight-display"></tbody>
-                    </table>
-                </div>
+            <div class="badge">Minor Delays</div>
+          </div>
+
+          <div class="departure">
+            <div class="departure-top">
+              <div>
+                <div class="station-name">East Shoreline</div>
+                <div class="line-name">Orange Line</div>
+              </div>
+
+              <div class="time">1 min</div>
             </div>
-        </section>
 
-        <section id="makelaar" class="page">
-            <div class="container">
-                <h2>Mestlo Real Estate</h2>
-                <div class="grid" id="house-display"></div>
+            <div class="badge">Operational</div>
+          </div>
+
+          <div class="departure">
+            <div class="departure-top">
+              <div>
+                <div class="station-name">Harbor Junction</div>
+                <div class="line-name">Red Line</div>
+              </div>
+
+              <div class="time">Delayed</div>
             </div>
-        </section>
 
-        <section id="map" class="page" style="padding: 0 !important; margin: 0 !important;">
-            <div style="position: relative; width: 100%; height: calc(100vh - 70px); background: #000;">
-                <div id="map-warning" style="position: absolute; inset: 0; background: #ef4444; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; padding: 2rem;">
-                    <h1 style="font-size: 3.5rem; margin-bottom: 1rem;">LET OP!</h1>
-                    <p style="font-size: 1.5rem; max-width: 800px; margin-bottom: 2rem;">Als de kaart niet laadt, staat de server momenteel uit.</p>
-                    <button onclick="document.getElementById('map-warning').style.display='none'" style="padding: 1.5rem 3rem; font-size: 1.5rem; border-radius: 12px; border: none; background: white; color: #ef4444; font-weight: bold; cursor: pointer;">BEGREPEN</button>
-                </div>
-                <iframe src="https://sprint-frighten-straining.ngrok-free.dev/" style="width: 100%; height: 100%; border:none;"></iframe>
-            </div>
-        </section>
+            <div class="badge">Maintenance</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <section id="admin" class="page">
-            <div class="container">
-                <h2>🛠 Centraal Beheerpaneel</h2>
-                <div class="grid">
-                    <div class="card">
-                        <h3>🚇 Metro</h3>
-                        <input type="text" id="m-lijn" placeholder="Lijn">
-                        <input type="text" id="m-route" placeholder="Route">
-                        <button class="btn-primary" id="btn-add-metro">Opslaan</button>
-                    </div>
-                    <div class="card">
-                        <h3>✈️ Airport</h3>
-                        <input type="text" id="a-airline" placeholder="Airline">
-                        <input type="text" id="a-dest" placeholder="Bestemming">
-                        <input type="time" id="a-time">
-                        <button class="btn-primary" id="btn-add-flight">Opslaan</button>
-                    </div>
-                    <div class="card">
-                        <h3>🏡 Makelaar</h3>
-                        <input type="text" id="h-title" placeholder="Titel">
-                        <input type="number" id="h-price" placeholder="Prijs">
-                        <button class="btn-success" id="btn-add-house">Opslaan</button>
-                    </div>
-                    <div class="card" id="superadmin-sectie" style="display:none; border: 2px solid #ef4444;">
-                        <h3>👑 Beheer Rechten</h3>
-                        <input type="email" id="new-admin-email" placeholder="E-mailadres">
-                        <button class="btn-danger" id="btn-add-admin">Maak Beheerder</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
+    <div class="bottom-grid">
+      <div class="card">
+        <h2>Network News</h2>
 
-    <script type="module" src="script.js"></script>
+        <div class="news-item">
+          <div class="news-title">Breaking Infrastructure News</div>
+          Copper freight traffic increased by 38% this week.
+        </div>
+
+        <div class="news-item">
+          <div class="news-title">Transit Expansion</div>
+          Northern Greens metro expansion approved after 4 hours of Discord arguments.
+        </div>
+
+        <div class="news-item">
+          <div class="news-title">Emergency Services</div>
+          Minor creeper incident near Harbor Junction. Officials deny structural damage.
+        </div>
+
+        <div class="news-item">
+          <div class="news-title">Transit Authority</div>
+          East Shoreline introduces new high-speed passenger service.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Transit Companies</h2>
+
+        <div class="company">
+          <div class="company-header">
+            <div class="company-name">Northern Freight Co.</div>
+            <div class="badge">ACTIVE</div>
+          </div>
+
+          <p>
+            Heavy industrial cargo and ore transport operations across the northern districts.
+          </p>
+        </div>
+
+        <div class="company">
+          <div class="company-header">
+            <div class="company-name">East Shore Transit</div>
+            <div class="badge">ACTIVE</div>
+          </div>
+
+          <p>
+            Fast commuter and intercity passenger services with premium rail infrastructure.
+          </p>
+        </div>
+
+        <div class="company">
+          <div class="company-header">
+            <div class="company-name">Harbor Logistics</div>
+            <div class="badge">ACTIVE</div>
+          </div>
+
+          <p>
+            Dockyard automation, freight distribution and industrial shipping routes.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      X Rail Network • Powered by Create Mod • Somehow functioning despite human management.
+    </div>
+
+  </div>
 </body>
 </html>
